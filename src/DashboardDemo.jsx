@@ -310,9 +310,9 @@ export default function DashboardDemo() {
           </div>
         </div>
 
-        {/* 桌面：單行完整頂欄 */}
-        <div className="hidden lg:flex flex-wrap items-center justify-between gap-x-2 gap-y-2 px-3 py-2 sm:px-4 md:px-6 md:py-3 min-w-0">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+        {/* 桌面：三欄網格頂欄，避免 flex-wrap 與語音面板重疊 */}
+        <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center lg:gap-x-3 px-3 py-2 sm:px-4 md:px-6 md:py-3 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
               onClick={goHome}
@@ -362,7 +362,7 @@ export default function DashboardDemo() {
             </div>
           </div>
 
-          <div className={`flex items-center flex-wrap justify-end gap-1 sm:gap-2 shrink-0 overflow-visible`}>
+          <div className={`flex items-center flex-nowrap justify-end gap-1 sm:gap-2 shrink-0 overflow-visible`}>
             <ColorModeToggle isSEN={isSEN} />
             {activeTask && (
               <SpeechVoiceHeaderMenu

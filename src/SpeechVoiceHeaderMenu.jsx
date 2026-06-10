@@ -65,8 +65,8 @@ const TASK_VOICE_META = {
 };
 
 const DEFAULT_TASK_META = TASK_VOICE_META.dictation;
-const PANEL_Z = 90;
-const BACKDROP_Z = 89;
+const PANEL_Z = 120;
+const BACKDROP_Z = 119;
 
 function isMobileViewport() {
   if (typeof window === 'undefined') return false;
@@ -79,6 +79,7 @@ function isMobileViewport() {
 export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'dictation', prominent = false }) {
   const [open, setOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState(null);
+  const [isMobileSheet, setIsMobileSheet] = useState(false);
   const buttonRef = useRef(null);
   const panelRef = useRef(null);
   const { wordVoiceLang, meaningVoiceLang } = useVoicePreferences();
@@ -94,6 +95,7 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
 
     const rect = btn.getBoundingClientRect();
     const mobile = isMobileViewport();
+    setIsMobileSheet(mobile);
     const margin = 12;
     const gap = 8;
     const maxPanelHeight = Math.min(window.innerHeight * 0.72, 520);
@@ -101,10 +103,14 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
     if (mobile) {
       setPanelStyle({
         position: 'fixed',
-        left: margin,
-        right: margin,
-        top: Math.max(rect.bottom + gap, 72),
-        maxHeight: maxPanelHeight,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        top: 'auto',
+        width: '100%',
+        maxHeight: 'min(88vh, 520px)',
+        borderTopLeftRadius: '1rem',
+        borderTopRightRadius: '1rem',
         zIndex: PANEL_Z,
       });
       return;
@@ -167,9 +173,10 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
   if (taskMeta.showMeaning) summaryParts.push(getSpeechLangLabel(meaningVoiceLang));
   const summary = summaryParts.join(' / ');
 
-  const panelClass = `rounded-xl border-2 shadow-2xl overflow-y-auto xh-scroll
+  const panelClass = `border-2 shadow-2xl overflow-y-auto xh-scroll
+    ${isMobileSheet ? 'rounded-t-2xl border-b-0' : 'rounded-xl'}
     ${isNight ? 'xh-scroll--dark bg-stone-900 border-stone-600 text-stone-100' : 'bg-white border-stone-200 text-stone-800'}
-    ${isSEN ? 'p-4' : 'p-3'}`;
+    ${isSEN ? 'p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]' : 'p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]'}`;
 
   const panelContent = (
     <>
@@ -202,7 +209,7 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
         <button
           type="button"
           aria-label="關閉語音設定"
-          className="fixed inset-0 bg-black/40"
+          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] touch-none"
           style={{ zIndex: BACKDROP_Z }}
           onClick={() => setOpen(false)}
         />
@@ -214,7 +221,23 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
           className={panelClass}
           style={panelStyle}
         >
+          {isMobileSheet && (
+            <div className="flex justify-center mb-2" aria-hidden>
+              <span className={`w-10 h-1 rounded-full ${isNight ? 'bg-stone-600' : 'bg-stone-300'}`} />
+            </div>
+          )}
           {panelContent}
+          {isMobileSheet && (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className={`mt-3 w-full rounded-xl border-2 font-black py-2.5 transition active:scale-[0.98]
+                ${isNight ? 'border-stone-600 bg-stone-800 text-amber-100' : 'border-stone-300 bg-stone-100 text-stone-800'}
+                ${isSEN ? 'text-base' : 'text-sm'}`}
+            >
+              <BilingualLabel zh="關閉" en="Close" size={isSEN ? 'md' : 'sm'} center />
+            </button>
+          )}
         </div>
       </>,
       document.body,
