@@ -26,6 +26,11 @@ export async function checkAzureSpeechHealth() {
       azureAvailable = false;
       return false;
     }
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('json')) {
+      azureAvailable = false;
+      return false;
+    }
     const data = await res.json();
     azureAvailable = Boolean(data.ok);
     return azureAvailable;
@@ -106,24 +111,39 @@ export async function fetchAzureSpeechBlob({
 
   // ── 步驟 3：雲端合成 + 非阻塞寫入快取 ──
   const fetchPromise = (async () => {
-    const res = await fetch(`${API_BASE}/synthesize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: trimmedText, voice: voiceName, rate }),
-      signal,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const mergedSignal = signal
+      ? (() => {
+          signal.addEventListener('abort', () => controller.abort());
+          return controller.signal;
+        })()
+      : controller.signal;
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Azure TTS 失敗 (${res.status})`);
+    try {
+      const res = await fetch(`${API_BASE}/synthesize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: trimmedText, voice: voiceName, rate }),
+        signal: mergedSignal,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Azure TTS 失敗 (${res.status})`);
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('audio')) {
+        throw new Error('語音 API 回應異常（非音檔）');
+      }
+
+      const blob = await res.blob();
+      saveCachedBlob(cacheKey, blob).catch(() => {});
+      return blob;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const blob = await res.blob();
-
-    // 寫入快取與播放解耦：失敗不 throw，不影響回傳 blob
-    saveCachedBlob(cacheKey, blob).catch(() => {});
-
-    return blob;
   })();
 
   inflightRequests.set(cacheKey, fetchPromise);

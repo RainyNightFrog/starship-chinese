@@ -166,6 +166,22 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
   /** 首次點擊 🔊 時才：開 IndexedDB + 檢查 Azure 後端（不合成語音） */
   const ensureSpeechReady = useCallback(async () => {
     await warmSpeechCache();
+
+    const speechApiUrl = (import.meta.env.VITE_SPEECH_API_URL || '').trim();
+    const isDev = import.meta.env.DEV;
+    /** Vercel 靜態站未部署後端時，略過 Azure（避免 /api/speech 回傳 HTML 或 localhost 卡死） */
+    const azureConfigured = Boolean(
+      speechApiUrl
+      && (isDev || !/localhost|127\.0\.0\.1/i.test(speechApiUrl)),
+    );
+
+    if (!azureConfigured) {
+      azureHealthCheckedRef.current = true;
+      useAzureRef.current = false;
+      if (mountedRef.current) setSpeechProvider('browser-fallback');
+      return false;
+    }
+
     if (!azureHealthCheckedRef.current) {
       const ok = await checkAzureSpeechHealth();
       azureHealthCheckedRef.current = true;
@@ -238,18 +254,28 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     runNextInQueueRef.current?.();
   }, []);
 
-  const playWithBrowser = useCallback((text, lang, kind, engineKey, onEnd) => {
-    const voices = getBrowserVoices();
+  const playWithBrowser = useCallback(async (text, lang, kind, engineKey, onEnd) => {
+    let voices = getBrowserVoices();
+    if (voices.length < 2) {
+      voices = await waitForVoices(2500);
+    }
     if (voices.length) voicesRef.current = voices;
 
-    const matchedVoice = resolveVoice(lang, voicesRef.current, engineKey);
+    let matchedVoice = resolveVoice(lang, voicesRef.current, engineKey);
+    if (!matchedVoice && (lang === 'zh-HK' || lang === 'zh-CN')) {
+      matchedVoice = voicesRef.current.find((v) => v.lang?.startsWith('zh')) ?? null;
+    }
+    if (!matchedVoice && lang === 'en-US') {
+      matchedVoice = voicesRef.current.find((v) => v.lang?.startsWith('en')) ?? null;
+    }
+
     if (!matchedVoice) {
       processingRef.current = false;
       setLoadingKind(null);
       setSpeechError(
         lang === 'zh-HK'
-          ? '雲端語音不可用，且找不到本機粵語引擎。請確認 npm run dev 已啟動。'
-          : `雲端語音不可用，且找不到本機${getSpeechLangLabel(lang)}引擎。`,
+          ? '找不到粵語語音。請用 Safari 並在「設定→輔助使用→語音內容」下載中文語音，或本地 npm run dev 使用 Azure 神經語音。'
+          : `找不到本機${getSpeechLangLabel(lang)}語音，請在系統設定中下載語音包。`,
       );
       runNextInQueueRef.current?.();
       return;
@@ -263,27 +289,45 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     utter.lang = matchedVoice.lang || lang;
     utter.rate = getBrowserSpeechRate(lang, isSEN, matchedVoice?.name || engineKey);
 
-    utter.onstart = () => {
-      if (!mountedRef.current) return;
+    let loadingCleared = false;
+    const clearLoadingOnce = () => {
+      if (loadingCleared || !mountedRef.current) return;
+      loadingCleared = true;
       setLoadingKind(null);
       setSpeaking(true);
       setSpeakingKind(kind);
     };
+
+    /** iOS Safari 有時不觸發 onstart — 逾時仍顯示播放中並稍後結束 */
+    const loadingTimer = setTimeout(clearLoadingOnce, 450);
+
+    utter.onstart = () => {
+      clearTimeout(loadingTimer);
+      clearLoadingOnce();
+    };
     utter.onend = () => {
+      clearTimeout(loadingTimer);
       if (!mountedRef.current) return;
       setSpeaking(false);
       setSpeakingKind(null);
       finishSegment(onEnd);
     };
     utter.onerror = () => {
+      clearTimeout(loadingTimer);
       if (!mountedRef.current) return;
       setSpeechError('語音播放失敗，請稍後再試');
       finishSegment(onEnd);
     };
 
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utter);
-    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      /** iOS 需在 cancel 後延遲 speak */
+      window.setTimeout(() => {
+        if (!mountedRef.current) return;
+        window.speechSynthesis.speak(utter);
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+      }, 50);
+    }
   }, [finishSegment, isSEN]);
 
   const runNextInQueueRef = useRef(null);
@@ -304,10 +348,16 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     const azureOk = await ensureSpeechReady();
 
     if (azureOk) {
+      let azureWatchdog;
       try {
         abortRef.current?.abort();
         const controller = new AbortController();
         abortRef.current = controller;
+
+        azureWatchdog = window.setTimeout(() => {
+          controller.abort();
+          useAzureRef.current = false;
+        }, 12000);
 
         const { blob, fromCache } = await fetchAzureSpeechBlob({
           text,
@@ -317,6 +367,8 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
           voice: resolveAzureVoice(lang, engineKey),
           signal: controller.signal,
         });
+
+        window.clearTimeout(azureWatchdog);
 
         if (!mountedRef.current) return;
 
@@ -346,9 +398,14 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
         });
         return;
       } catch (err) {
+        window.clearTimeout(azureWatchdog);
         if (err?.name === 'AbortError') {
           processingRef.current = false;
           setLoadingKind(null);
+          if (mountedRef.current) {
+            setSpeechError('雲端語音逾時，已改用瀏覽器語音');
+          }
+          await playWithBrowser(text, lang, kind, engineKey, onEnd);
           return;
         }
         useAzureRef.current = false;
@@ -362,7 +419,7 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
       }
     }
 
-    playWithBrowser(text, lang, kind, engineKey, onEnd);
+    await playWithBrowser(text, lang, kind, engineKey, onEnd);
   }, [clearBusy, ensureSpeechReady, finishSegment, getEngineKey, isSEN, playWithBrowser]);
 
   runNextInQueueRef.current = runNextInQueue;
