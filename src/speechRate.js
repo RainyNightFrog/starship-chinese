@@ -12,11 +12,6 @@ function isMaleSpeechVoice(voiceKey) {
   return MALE_BROWSER_VOICE_HINTS.some((h) => norm.includes(h));
 }
 
-/** 男聲再放慢（Azure 下限 0.5） */
-function applyMaleSlowdown(rate, min = 0.5, extra = 0) {
-  return Math.max(min, rate - 0.10 - extra);
-}
-
 /** 女聲基準語速（曉佳／曉曉等）— 1.0 = Azure 正常語速；上限 1.2 */
 const FEMALE_AZURE_RATES = {
   'zh-HK': { sen: 1.05, normal: 1.18 },
@@ -24,10 +19,23 @@ const FEMALE_AZURE_RATES = {
   'en-US': { sen: 1.02, normal: 1.15 },
 };
 
+/** 男聲獨立語速（雲龍等）— 略慢於女聲，方便跟讀 */
+const MALE_AZURE_RATES = {
+  'zh-HK': { sen: 0.82, normal: 0.90 },
+  'zh-CN': { sen: 0.78, normal: 0.86 },
+  'en-US': { sen: 0.84, normal: 0.92 },
+};
+
 const FEMALE_BROWSER_RATES = {
   'zh-HK': { sen: 0.92, normal: 1.0 },
   'zh-CN': { sen: 0.88, normal: 0.96 },
   'en-US': { sen: 0.94, normal: 1.02 },
+};
+
+const MALE_BROWSER_RATES = {
+  'zh-HK': { sen: 0.76, normal: 0.84 },
+  'zh-CN': { sen: 0.72, normal: 0.80 },
+  'en-US': { sen: 0.80, normal: 0.88 },
 };
 
 function resolveLangKey(lang) {
@@ -38,27 +46,21 @@ function resolveLangKey(lang) {
 /** Azure SSML rate 倍率（1.0 = 正常語速；伺服器下限 0.5、上限 1.2） */
 export function getAzureSpeechRate(lang, isSEN = false, voiceKey = null) {
   const key = resolveLangKey(lang);
-  const table = FEMALE_AZURE_RATES[key] ?? FEMALE_AZURE_RATES['zh-HK'];
-  let rate = isSEN ? table.sen : table.normal;
-
-  if (isMaleSpeechVoice(voiceKey)) {
-    const cantoneseExtra = key === 'zh-HK' ? 0.04 : 0;
-    rate = applyMaleSlowdown(rate, 0.5, cantoneseExtra);
-  }
-  return rate;
+  const male = isMaleSpeechVoice(voiceKey);
+  const table = male
+    ? (MALE_AZURE_RATES[key] ?? MALE_AZURE_RATES['zh-HK'])
+    : (FEMALE_AZURE_RATES[key] ?? FEMALE_AZURE_RATES['zh-HK']);
+  return isSEN ? table.sen : table.normal;
 }
 
 /** Web Speech API utter.rate（1.0 = 正常） */
 export function getBrowserSpeechRate(lang, isSEN = false, voiceKey = null) {
   const key = resolveLangKey(lang);
-  const table = FEMALE_BROWSER_RATES[key] ?? FEMALE_BROWSER_RATES['zh-HK'];
-  let rate = isSEN ? table.sen : table.normal;
-
-  if (isMaleSpeechVoice(voiceKey)) {
-    const cantoneseExtra = key === 'zh-HK' ? 0.04 : 0;
-    rate = applyMaleSlowdown(rate, 0.30, cantoneseExtra);
-  }
-  return rate;
+  const male = isMaleSpeechVoice(voiceKey);
+  const table = male
+    ? (MALE_BROWSER_RATES[key] ?? MALE_BROWSER_RATES['zh-HK'])
+    : (FEMALE_BROWSER_RATES[key] ?? FEMALE_BROWSER_RATES['zh-HK']);
+  return isSEN ? table.sen : table.normal;
 }
 
 export function getSpeechRateTag(lang, isSEN = false, voiceKey = null) {
