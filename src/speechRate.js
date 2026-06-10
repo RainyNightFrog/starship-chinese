@@ -17,15 +17,32 @@ function applyMaleSlowdown(rate, min = 0.5, extra = 0) {
   return Math.max(min, rate - 0.10 - extra);
 }
 
-/** Azure SSML rate 倍率（1.0 = 正常語速；伺服器下限 0.5） */
+/** 女聲基準語速（曉佳／曉曉等預設引擎）— 略快於以往，方便默書跟讀 */
+const FEMALE_AZURE_RATES = {
+  'zh-HK': { sen: 0.74, normal: 0.82 },
+  'zh-CN': { sen: 0.68, normal: 0.76 },
+  'en-US': { sen: 0.76, normal: 0.84 },
+};
+
+const FEMALE_BROWSER_RATES = {
+  'zh-HK': { sen: 0.56, normal: 0.64 },
+  'zh-CN': { sen: 0.52, normal: 0.58 },
+  'en-US': { sen: 0.60, normal: 0.68 },
+};
+
+function resolveLangKey(lang) {
+  if (lang === 'zh-CN' || lang === 'en-US') return lang;
+  return 'zh-HK';
+}
+
+/** Azure SSML rate 倍率（1.0 = 正常語速；伺服器下限 0.5、上限 1.2） */
 export function getAzureSpeechRate(lang, isSEN = false, voiceKey = null) {
-  let rate;
-  if (lang === 'zh-CN') rate = isSEN ? 0.50 : 0.54;
-  else if (lang === 'en-US') rate = isSEN ? 0.58 : 0.64;
-  else rate = isSEN ? 0.56 : 0.62;
+  const key = resolveLangKey(lang);
+  const table = FEMALE_AZURE_RATES[key] ?? FEMALE_AZURE_RATES['zh-HK'];
+  let rate = isSEN ? table.sen : table.normal;
 
   if (isMaleSpeechVoice(voiceKey)) {
-    const cantoneseExtra = lang === 'zh-HK' ? 0.04 : 0;
+    const cantoneseExtra = key === 'zh-HK' ? 0.04 : 0;
     rate = applyMaleSlowdown(rate, 0.5, cantoneseExtra);
   }
   return rate;
@@ -33,13 +50,12 @@ export function getAzureSpeechRate(lang, isSEN = false, voiceKey = null) {
 
 /** Web Speech API utter.rate（1.0 = 正常） */
 export function getBrowserSpeechRate(lang, isSEN = false, voiceKey = null) {
-  let rate;
-  if (lang === 'zh-CN') rate = isSEN ? 0.38 : 0.44;
-  else if (lang === 'en-US') rate = isSEN ? 0.48 : 0.54;
-  else rate = isSEN ? 0.42 : 0.48;
+  const key = resolveLangKey(lang);
+  const table = FEMALE_BROWSER_RATES[key] ?? FEMALE_BROWSER_RATES['zh-HK'];
+  let rate = isSEN ? table.sen : table.normal;
 
   if (isMaleSpeechVoice(voiceKey)) {
-    const cantoneseExtra = lang === 'zh-HK' ? 0.04 : 0;
+    const cantoneseExtra = key === 'zh-HK' ? 0.04 : 0;
     rate = applyMaleSlowdown(rate, 0.30, cantoneseExtra);
   }
   return rate;
