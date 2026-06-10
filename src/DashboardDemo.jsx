@@ -234,7 +234,7 @@ export default function DashboardDemo() {
             type="button"
             onClick={goHome}
             title={dt('返回學習首頁')}
-            className={`font-black tracking-wider text-left hover:opacity-90 transition-opacity shrink-0 ${isNight ? 'text-amber-300' : 'text-amber-900'} ${isSEN ? 'text-xl' : 'text-lg'}`}
+            className={`font-black tracking-wider text-left hover:opacity-90 transition-opacity shrink-0 ${isNight ? 'text-amber-300' : 'text-amber-900'} ${isSEN ? 'text-3xl' : 'text-2xl'}`}
           >
             {dt('星航中文')} 🔥
           </button>
@@ -264,48 +264,48 @@ export default function DashboardDemo() {
           </div>
         </div>
 
-        {/* 手機：第二行 — 日間/夜間 | 🔊語音 | 語言 | 登出 */}
+        {/* 手機：第二行 — 左：日間/夜間 | 右：語音、語言、登出 */}
         <div
-          className={`lg:hidden flex items-center gap-2 px-3 pb-2 border-b border-black/5 ${isNight ? 'border-white/10' : ''}`}
+          className={`lg:hidden flex items-center justify-between gap-2 px-3 pb-2 border-b border-black/5 ${isNight ? 'border-white/10' : ''}`}
         >
           <ColorModeToggle isSEN={isSEN} compact />
-          {activeTask ? (
-            <SpeechVoiceHeaderMenu
-              isSEN={isSEN}
-              isNight={isNight}
-              theme={theme}
-              task={activeTask}
-              prominent
-            />
-          ) : (
-            <div className="flex-1" />
-          )}
-          <select
-            value={language}
-            onChange={(e) => {
-              const next = e.target.value;
-              setLanguage(next);
-              try { localStorage.setItem(LANGUAGE_STORAGE, next); } catch { /* ignore */ }
-            }}
-            className={`shrink-0 p-1.5 rounded-lg border font-bold transition-colors duration-300 ${theme.select} ${isSEN ? 'text-sm' : 'text-xs'}`}
-          >
-            <option value="zh-HK">繁體</option>
-            <option value="zh-CN">简体</option>
-          </select>
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={authBusy}
-            title={profile?.email ?? ''}
-            className={`shrink-0 rounded-lg border font-bold transition-colors duration-300
-              ${isNight
-                ? 'border-stone-500 bg-stone-800 text-amber-200 hover:bg-stone-700'
-                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}
-              ${isSEN ? 'px-2.5 py-2 text-sm' : 'px-2 py-1.5 text-xs'}
-              disabled:opacity-50`}
-          >
-            {authBusy ? '…' : '登出'}
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            {activeTask && (
+              <SpeechVoiceHeaderMenu
+                isSEN={isSEN}
+                isNight={isNight}
+                theme={theme}
+                task={activeTask}
+                prominent
+              />
+            )}
+            <select
+              value={language}
+              onChange={(e) => {
+                const next = e.target.value;
+                setLanguage(next);
+                try { localStorage.setItem(LANGUAGE_STORAGE, next); } catch { /* ignore */ }
+              }}
+              className={`shrink-0 p-1.5 rounded-lg border font-bold transition-colors duration-300 ${theme.select} ${isSEN ? 'text-sm' : 'text-xs'}`}
+            >
+              <option value="zh-HK">繁體</option>
+              <option value="zh-CN">简体</option>
+            </select>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={authBusy}
+              title={profile?.email ?? ''}
+              className={`shrink-0 rounded-lg border font-bold transition-colors duration-300
+                ${isNight
+                  ? 'border-stone-500 bg-stone-800 text-amber-200 hover:bg-stone-700'
+                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}
+                ${isSEN ? 'px-2.5 py-2 text-sm' : 'px-2 py-1.5 text-xs'}
+                disabled:opacity-50`}
+            >
+              {authBusy ? '…' : '登出'}
+            </button>
+          </div>
         </div>
 
         {/* 桌面：單行完整頂欄 */}
