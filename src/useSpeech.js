@@ -8,7 +8,8 @@ import {
   playAudioBlob,
 } from './azureSpeech';
 import { warmSpeechCache } from './speechCache';
-import { getBrowserVoices, resolveVoice, waitForVoices } from './voicePicker';
+import { getBrowserVoices, isMaleBrowserVoice, resolveVoice, waitForVoices } from './voicePicker';
+import { isMaleAzureVoice } from './azureVoices';
 import { getBrowserSpeechRate } from './speechRate';
 import { convertToSimplified, getDisplayText, isSimplifiedScript as checkSimplifiedScript } from './chineseScript';
 import { sanitizeDictationHint } from './dictationHintUtils';
@@ -276,6 +277,18 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     if (voices.length) voicesRef.current = voices;
 
     let matchedVoice = resolveVoice(lang, voicesRef.current, engineKey);
+    const wantsMale = isMaleAzureVoice(engineKey);
+
+    if (!matchedVoice && wantsMale && lang === 'zh-HK') {
+      processingRef.current = false;
+      setLoadingKind(null);
+      setSpeechError(
+        '已選雲龍男聲，但本機未安裝粵語男聲（Microsoft Danny）。請執行 npm run dev 使用 Azure 雲龍，或在 Windows「設定→時間與語言→語音」新增中文(香港)男聲。',
+      );
+      runNextInQueueRef.current?.();
+      return;
+    }
+
     if (!matchedVoice && (lang === 'zh-HK' || lang === 'zh-CN')) {
       matchedVoice = voicesRef.current.find((v) => v.lang?.startsWith('zh')) ?? null;
     }
@@ -295,13 +308,16 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
       return;
     }
 
-    setSpeechError(null);
+    const maleMismatch = wantsMale && !isMaleBrowserVoice(matchedVoice);
+    setSpeechError(maleMismatch
+      ? '雲端不可用，本機找不到男聲，暫用備援語音。請 npm run dev 啟用 Azure 雲龍。'
+      : null);
     setSpeechProvider('browser-fallback');
 
     const utter = new SpeechSynthesisUtterance(text);
     utter.voice = matchedVoice;
     utter.lang = matchedVoice.lang || lang;
-    utter.rate = getBrowserSpeechRate(lang, isSEN, matchedVoice?.name || engineKey);
+    utter.rate = getBrowserSpeechRate(lang, isSEN, engineKey || matchedVoice?.name);
 
     let loadingCleared = false;
     const clearLoadingOnce = () => {

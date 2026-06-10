@@ -3,10 +3,22 @@
  * 問題：只設 utter.lang=zh-HK 時，Windows/Chrome 仍會用 Huihui 等普通話引擎
  */
 
+import { isMaleAzureVoice } from './azureVoices';
+
 const CANTONESE_NAME_HINTS = [
   'tracy', 'danny', 'cantonese', 'hong kong', 'hongkong', 'yue',
   'sin-ji', 'sinji', 'hiugaai', 'wanlung',
   '粵語', '粤语', '廣東', '广东',
+];
+
+const MALE_BROWSER_HINTS = [
+  'danny', 'david', 'mark', 'wanlung', 'yunxi', 'yunyang', 'kangkang', 'yunjian',
+  '男', 'male',
+];
+
+const FEMALE_BROWSER_HINTS = [
+  'tracy', 'sin-ji', 'sinji', 'hiugaai', 'huihui', 'xiaoxiao', 'zira', 'aria',
+  '女', 'female',
 ];
 
 const MANDARIN_NAME_HINTS = [
@@ -61,6 +73,7 @@ function scoreVoice(voice, lang) {
     else if (vLang.startsWith('yue')) score += 90;
     if (CANTONESE_NAME_HINTS.some((h) => vName.includes(h))) score += 80;
     if (vName.includes('tracy')) score += 30;
+    if (vName.includes('danny')) score += 28;
     if (voice.localService) score += 10;
   } else if (lang === 'zh-CN') {
     if (isCantoneseVoice(voice)) return -999;
@@ -98,6 +111,32 @@ export function pickVoiceForLang(lang, voices = getBrowserVoices()) {
   return ranked[0] ?? null;
 }
 
+export function isMaleBrowserVoice(voice) {
+  const vName = norm(voice?.name);
+  return MALE_BROWSER_HINTS.some((h) => vName.includes(h));
+}
+
+export function isFemaleBrowserVoice(voice) {
+  const vName = norm(voice?.name);
+  return FEMALE_BROWSER_HINTS.some((h) => vName.includes(h));
+}
+
+/** Azure 神經語音 ID → 瀏覽器備援時依性別對應本機引擎 */
+function pickBrowserVoiceForAzureEngine(lang, voices, azureEngineKey) {
+  const ranked = listVoicesForLang(lang, voices);
+  if (!ranked.length) return null;
+
+  const wantMale = isMaleAzureVoice(azureEngineKey);
+  if (wantMale) {
+    const maleVoice = ranked.find((v) => isMaleBrowserVoice(v));
+    if (maleVoice) return maleVoice;
+    return null;
+  }
+
+  const femaleVoice = ranked.find((v) => isFemaleBrowserVoice(v));
+  return femaleVoice ?? ranked[0];
+}
+
 /** 解析最終使用的引擎（手動優先） */
 export function resolveVoice(lang, voices = getBrowserVoices(), manualKey = null) {
   if (manualKey && manualKey !== 'auto') {
@@ -108,6 +147,10 @@ export function resolveVoice(lang, voices = getBrowserVoices(), manualKey = null
       if (lang === 'zh-HK' && isMandarinVoice(manual)) return null;
       if (lang === 'zh-CN' && isCantoneseVoice(manual)) return null;
       return manual;
+    }
+
+    if (manualKey.includes('Neural')) {
+      return pickBrowserVoiceForAzureEngine(lang, voices, manualKey);
     }
   }
   return pickVoiceForLang(lang, voices);

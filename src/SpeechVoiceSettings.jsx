@@ -133,8 +133,8 @@ export default function SpeechVoiceSettings({
 
       {speechProvider === 'browser-fallback' && (
         <BilingualLabel
-          zh="雲端不可用時已自動改用本機語音，仍可繼續溫習。"
-          en="Cloud voice unavailable — using local voice. You can still study."
+          zh="雲端不可用：男聲（雲龍）需 npm run dev 啟用 Azure，或安裝本機 Microsoft Danny 粵語男聲。"
+          en="Cloud off: male voice (Wan Lung) needs npm run dev + Azure, or install Microsoft Danny (Cantonese male)."
           size="sm"
           center
           className={`font-bold ${isNight ? 'text-amber-300' : 'text-amber-700'}`}
