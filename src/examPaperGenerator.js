@@ -5,7 +5,14 @@
  */
 
 import { getUploadImageCount, mergeUploadImagesIntoContent } from './uploadMetaUtils';
-import { ingestFromExamPatterns, generateContributorLabel } from './globalSharedPool';
+import {
+  ingestFromExamPatterns,
+  generateContributorLabel,
+  getGlobalSharedIdioms,
+  getGlobalSharedMethods,
+  methodPoolItemToSspaQuestion,
+} from './globalSharedPool';
+import { idiomExamPoolToQuizPool, idiomExamPoolToSspaPool } from './idiomExamPool';
 
 /** AI 解析動畫步驟（約 3 秒，由 UI 定時播放） */
 export const EXAM_PARSE_STEPS = [
@@ -286,9 +293,23 @@ export function generateExamVariantPack(meta = {}) {
 
   const sentence = sentenceBank[0];
 
+  /** 混入中央共享池：30 題核心詞彙 + 四大寫作手法 + UGC 滾雪球題目 */
+  const sharedIdiomSlice = pickN(getGlobalSharedIdioms(), Math.min(5, getGlobalSharedIdioms().length), seed + 401);
+  const sharedMethodSlice = pickN(getGlobalSharedMethods(), Math.min(2, getGlobalSharedMethods().length), seed + 402);
+  const sharedQuiz = idiomExamPoolToQuizPool(sharedIdiomSlice);
+  const sharedSspa = [
+    ...idiomExamPoolToSspaPool(pickN(getGlobalSharedIdioms(), Math.min(3, getGlobalSharedIdioms().length), seed + 403)),
+    ...sharedMethodSlice.map((tpl, i) => methodPoolItemToSspaQuestion(tpl, 900 + i)),
+  ];
+
+  const mergeById = (base, extra) => {
+    const ids = new Set(base.map((q) => String(q.id)));
+    return [...base, ...extra.filter((q) => !ids.has(String(q.id)))];
+  };
+
   return {
-    quizBank: shuffleArray(quizBank, seed),
-    sspaBank: shuffleArray(sspaBank, seed),
+    quizBank: shuffleArray(mergeById(quizBank, sharedQuiz), seed),
+    sspaBank: shuffleArray(mergeById(sspaBank, sharedSspa), seed),
     sentenceBank,
     sentence,
     seed,

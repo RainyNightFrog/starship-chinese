@@ -6,7 +6,11 @@
  * · 學生端 Fisher-Yates 抽題一律讀取本模組最新池
  */
 
-import { IDIOM_EXAM_POOL, idiomExamPoolToQuizPool } from './idiomExamPool.js';
+import {
+  IDIOM_EXAM_POOL,
+  idiomExamPoolToQuizPool,
+  idiomExamPoolToSspaPool,
+} from './idiomExamPool.js';
 import { EXAM_METHOD_TEMPLATES } from './readingGoldenTechniquePool.js';
 
 export const LS_GLOBAL_IDIOMS = 'starship_global_idioms';
@@ -447,26 +451,81 @@ export function getContributorBadgeForItem(item) {
   };
 }
 
-export function enrichQuizItemWithContributor(quizItem) {
-  if (quizItem.isCommunityShared) return quizItem;
-  const word = quizItem.word ?? quizItem.sourceIdiom;
-  if (!word) return quizItem;
-
-  const shared = GLOBAL_SHARED_IDIOMS.find((i) => i.word === word && i.isCommunityShared);
-  if (!shared) return quizItem;
+export function methodPoolItemToSspaQuestion(tpl, index = 0) {
+  const correctIdx = Number(tpl.correctAnswerIndex ?? 0);
+  const correctText = tpl.options?.[correctIdx] ?? '';
 
   return {
-    ...quizItem,
-    isCommunityShared: true,
-    contributorLabel: shared.contributorLabel,
-    sharedPoolId: shared.sharedPoolId ?? `idiom:${word}`,
+    id: tpl.id ?? `sspa_method_${index}`,
+    text: tpl.questionText,
+    hint: stripHintPrefix(tpl.hint),
+    subType: '四大寫作手法',
+    category: tpl.category ?? 'writing_technique',
+    methodType: tpl.type,
+    options: [...(tpl.options ?? [])],
+    correctIndex: correctIdx,
+    explanation: `正確分析：${correctText}`,
+    isCommunityShared: Boolean(tpl.isCommunityShared),
+    contributorLabel: tpl.contributorLabel,
+    sharedPoolId: tpl.sharedPoolId ?? `method:${tpl.id}`,
+    source: tpl.source ?? 'starship_global_methods',
   };
+}
+
+export function enrichPoolItemWithContributor(item) {
+  if (!item || item.isCommunityShared) return item;
+
+  const word = item.word ?? item.sourceIdiom;
+  if (word) {
+    const shared = GLOBAL_SHARED_IDIOMS.find((i) => i.word === word && i.isCommunityShared);
+    if (shared) {
+      return {
+        ...item,
+        isCommunityShared: true,
+        contributorLabel: shared.contributorLabel,
+        sharedPoolId: shared.sharedPoolId ?? `idiom:${word}`,
+      };
+    }
+  }
+
+  const stem = item.text ?? item.questionText;
+  if (stem) {
+    const sharedMethod = GLOBAL_SHARED_METHODS.find(
+      (i) => i.questionText === stem && i.isCommunityShared,
+    );
+    if (sharedMethod) {
+      return {
+        ...item,
+        isCommunityShared: true,
+        contributorLabel: sharedMethod.contributorLabel,
+        sharedPoolId: sharedMethod.sharedPoolId ?? `method:${sharedMethod.id}`,
+      };
+    }
+  }
+
+  return item;
+}
+
+export function enrichQuizItemWithContributor(quizItem) {
+  return enrichPoolItemWithContributor(quizItem);
 }
 
 export function buildQuizPoolWithGlobal(quizPoolCore, idiomToQuiz = idiomExamPoolToQuizPool) {
   return [
     ...quizPoolCore,
     ...idiomToQuiz(getGlobalSharedIdioms()),
+  ];
+}
+
+/** 呈分試池 = 靜態核心 + 中央共享 30 題詞彙語意 + 四大寫作手法 */
+export function buildSspaPoolWithGlobal(
+  sspaPoolCore,
+  idiomToSspa = idiomExamPoolToSspaPool,
+) {
+  return [
+    ...sspaPoolCore,
+    ...idiomToSspa(getGlobalSharedIdioms()),
+    ...getGlobalSharedMethods().map(methodPoolItemToSspaQuestion),
   ];
 }
 

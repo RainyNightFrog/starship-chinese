@@ -14,11 +14,19 @@ import { IDIOM_EXAM_POOL, idiomExamPoolToQuizPool } from './idiomExamPool.js';
 import { EXAM_METHOD_TEMPLATES } from './readingGoldenTechniquePool.js';
 import {
   buildQuizPoolWithGlobal,
+  buildSspaPoolWithGlobal,
   globalIdiomsToVocabPool,
   getGlobalSharedIdioms,
   enrichQuizItemWithContributor,
+  enrichPoolItemWithContributor,
   getGlobalPoolStats,
 } from './globalSharedPool.js';
+
+/** 基礎 30 題小五/小六呈分試核心詞彙矩陣（答案已完全隔離）— 黃金種子庫 */
+export const BASE_IDIOM_POOL = IDIOM_EXAM_POOL;
+
+/** 基礎四大寫作手法題型池 — 黃金種子庫 */
+export const BASE_METHOD_TEMPLATES = EXAM_METHOD_TEMPLATES;
 
 export const DICTATION_VOCAB_POOL = [
   { id: 'dict-001', tc: '恍然大悟', sc: '恍然大悟', py: 'huǎng rán dà wù', jp: 'fong2 jin4 daai6 ng6', en: 'Suddenly understand', radical: '忄', body: '𡿺', hintTc: '突然之間徹底明白、豁然開竅', hintSc: '突然之间彻底明白、豁然开朗' },
@@ -155,13 +163,21 @@ export {
   getSharedItemStudyCount,
   getContributorBadgeForItem,
   enrichQuizItemWithContributor,
+  enrichPoolItemWithContributor,
   buildQuizPoolWithGlobal,
+  buildSspaPoolWithGlobal,
+  methodPoolItemToSspaQuestion,
   getGlobalPoolStats,
 } from './globalSharedPool.js';
 
 /** 單元測驗池 = 靜態核心 + 最新 GLOBAL_SHARED_IDIOMS */
 export function getQuizPoolWithGlobal() {
   return buildQuizPoolWithGlobal(QUIZ_POOL_CORE);
+}
+
+/** 呈分試池 = 靜態核心 + 中央共享 30 題詞彙語意 + 四大寫作手法 + UGC */
+export function getSspaPoolWithGlobal() {
+  return buildSspaPoolWithGlobal(SSPA_POOL);
 }
 
 export function getPoolByTaskId(taskId) {
@@ -174,7 +190,8 @@ export function getPoolByTaskId(taskId) {
       return globalIdiomsToVocabPool(getGlobalSharedIdioms());
     case 'quiz':
       return getQuizPoolWithGlobal().map(enrichQuizItemWithContributor);
-    case 'sspa': return SSPA_POOL;
+    case 'sspa':
+      return getSspaPoolWithGlobal().map(enrichPoolItemWithContributor);
     case 'sentence': return SENTENCE_POOL;
     case 'reading': return READING_POOL;
     default: return [];
@@ -184,11 +201,12 @@ export function getPoolByTaskId(taskId) {
 export function getQuestionBankStats() {
   const globalStats = getGlobalPoolStats();
   const quizPool = getQuizPoolWithGlobal();
+  const sspaPool = getSspaPoolWithGlobal();
   return {
     dictation: globalStats.globalSharedIdioms,
     prestudy: globalStats.globalSharedIdioms,
     quiz: quizPool.length,
-    sspa: SSPA_POOL.length,
+    sspa: sspaPool.length,
     sentence: SENTENCE_POOL.length,
     reading: READING_POOL.length,
     advancedReading: ADVANCED_QUESTION_POOL.length,

@@ -419,6 +419,15 @@ function stripHintPrefix(hint) {
  * · options[].detail 不含語意解析，避免選項本身洩漏答案
  * · explanation 僅供答錯後反饋使用
  */
+function buildIdiomPoolMeta(item) {
+  return {
+    isCommunityShared: Boolean(item.isCommunityShared),
+    contributorLabel: item.contributorLabel,
+    sharedPoolId: item.sharedPoolId ?? (item.word ? `idiom:${item.word}` : undefined),
+    source: item.source ?? 'idiom_exam_pool',
+  };
+}
+
 export function idiomExamPoolToQuizPool(pool = IDIOM_EXAM_POOL) {
   return pool.map((item) => {
     const correctIdx = Number(item.correctAnswerIndex ?? 0);
@@ -441,7 +450,30 @@ export function idiomExamPoolToQuizPool(pool = IDIOM_EXAM_POOL) {
       })),
       correctKey,
       explanation: `「${item.word}」的正確語意：${correctText}`,
-      source: 'idiom_exam_pool',
+      ...buildIdiomPoolMeta(item),
+    };
+  });
+}
+
+/** 轉為呈分試模擬（sspa）引擎格式 */
+export function idiomExamPoolToSspaPool(pool = IDIOM_EXAM_POOL) {
+  return pool.map((item, index) => {
+    const correctIdx = Number(item.correctAnswerIndex ?? 0);
+    const correctText = item.options[correctIdx] ?? '';
+
+    return {
+      id: item.id ?? `sspa_voc_${index}`,
+      text: item.questionText,
+      hint: stripHintPrefix(item.hint),
+      word: item.word,
+      subType: '核心詞彙語意',
+      category: 'vocab_inference',
+      isIdiomExam: true,
+      options: [...(item.options ?? [])],
+      correctIndex: correctIdx,
+      explanation: `「${item.word}」的正確語意：${correctText}`,
+      ...buildIdiomPoolMeta(item),
+      source: item.source ?? 'starship_global_idioms',
     };
   });
 }
