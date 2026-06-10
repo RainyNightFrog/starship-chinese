@@ -160,8 +160,8 @@ export default function DictationMode({
       />
 
       <BilingualLabel
-        zh={dt('語音設定已移至右上角 🔊（夜間按鈕右側）')}
-        en="Voice settings moved to top-right 🔊 (next to Night mode)"
+        zh={dt('點頂部橙色 🔊 語音 按鈕，可切換人聲與語言')}
+        en="Tap the orange 🔊 Voice button at the top to change voice"
         size="sm"
         center
         className={`font-bold ${getMutedTextClass(isNight, isSEN ? 'text-xs' : 'text-[10px]')}`}

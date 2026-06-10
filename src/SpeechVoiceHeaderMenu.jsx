@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getSpeechLangLabel } from './useSpeech';
 import { useVoicePreferences } from './VoicePreferencesContext';
 import { useSpeechContext } from './SpeechContext';
@@ -65,9 +66,9 @@ const TASK_VOICE_META = {
 const DEFAULT_TASK_META = TASK_VOICE_META.dictation;
 
 /**
- * Header 語音選單 — 所有學習模式統一置於右上角（夜間按鈕右側）
+ * Header 語音選單 — 手機版全屏彈層，桌面版下拉
  */
-export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'dictation' }) {
+export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'dictation', prominent = false }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const { wordVoiceLang, meaningVoiceLang } = useVoicePreferences();
@@ -77,20 +78,23 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
 
   useEffect(() => {
     if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
     const onPointerDown = (e) => {
+      if (!window.matchMedia('(min-width: 1024px)').matches) return;
       if (rootRef.current && !rootRef.current.contains(e.target)) {
         setOpen(false);
       }
     };
-    const onKey = (e) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
     document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKey);
-    };
+    return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open]);
 
   const summaryParts = [];
@@ -98,60 +102,91 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
   if (taskMeta.showMeaning) summaryParts.push(getSpeechLangLabel(meaningVoiceLang));
   const summary = summaryParts.join(' / ');
 
+  const panelClass = `rounded-xl border-2 shadow-2xl overflow-y-auto max-h-[min(70vh,520px)] xh-scroll
+    ${isNight ? 'xh-scroll--dark bg-stone-900 border-stone-600 text-stone-100' : 'bg-white border-stone-200 text-stone-800'}
+    ${isSEN ? 'p-4' : 'p-3'}`;
+
+  const panelContent = (
+    <>
+      <BilingualLabel
+        zh={taskMeta.dialogTitle}
+        en={taskMeta.dialogTitleEn}
+        size={isSEN ? 'md' : 'sm'}
+        center
+        className={`font-black mb-3 ${isNight ? '[&_span:first-child]:text-amber-200' : theme?.accent ?? 'text-sky-800'}`}
+      />
+      <SpeechVoiceSettings
+        isSEN={isSEN}
+        isNight={isNight}
+        disabled={speechBusy}
+        speechError={speechError}
+        speechProvider={speechProvider}
+        lastFromCache={lastFromCache}
+        subtitle={taskMeta.subtitle}
+        subtitleEn={taskMeta.subtitleEn}
+        showWord={taskMeta.showWord}
+        showMeaning={taskMeta.showMeaning}
+        compact
+      />
+    </>
+  );
+
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={`relative ${prominent ? 'flex-1 flex justify-center min-w-0 max-w-[8rem]' : ''}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="dialog"
         title={`${taskMeta.buttonTitle} / Voice`}
-        className={`flex items-center gap-1.5 rounded-xl border-2 font-black transition-all duration-300
+        className={`flex items-center justify-center gap-1 rounded-xl border-2 font-black transition-all duration-300
+          ${prominent
+            ? 'w-full flex-col py-2 px-3 min-h-[2.75rem] ring-2 ring-amber-400/50'
+            : 'gap-1.5'}
           ${isNight
-            ? 'bg-stone-800 border-amber-600/70 text-amber-100 hover:bg-stone-700'
-            : 'bg-sky-50 border-sky-300 text-sky-900 hover:bg-sky-100'}
-          ${open ? 'ring-2 ring-amber-400/60' : ''}
+            ? 'bg-amber-500/25 border-amber-500 text-amber-100 hover:bg-amber-500/35'
+            : 'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-200'}
+          ${open ? 'ring-2 ring-amber-400 scale-[1.02]' : ''}
           ${speechError ? 'border-rose-400' : ''}
-          ${isSEN ? 'px-3 py-2 text-sm' : 'px-2.5 py-1.5 text-xs'}`}
+          ${isSEN ? 'text-sm' : 'text-xs'}`}
       >
-        <span aria-hidden>🔊</span>
-        <span className="hidden sm:inline flex flex-col leading-tight">
-          <span>語音</span>
-          <span className="text-[9px] font-normal opacity-60">Voice</span>
+        <span className={prominent ? 'text-xl' : 'text-base'} aria-hidden>🔊</span>
+        <span className="flex flex-col leading-tight text-center">
+          <span className={prominent ? 'text-xs font-black' : ''}>語音</span>
+          <span className={`font-normal opacity-70 ${prominent ? 'text-[9px]' : 'text-[9px] hidden sm:block'}`}>Voice</span>
         </span>
-        <span className="opacity-60 hidden md:inline max-w-[5rem] truncate">{summary}</span>
-        <span className="opacity-50 text-[10px]" aria-hidden>{open ? '▼' : '▶'}</span>
+        {!prominent && (
+          <span className="opacity-60 hidden md:inline max-w-[5rem] truncate">{summary}</span>
+        )}
+        <span className="opacity-50 text-[10px] hidden sm:inline" aria-hidden>{open ? '▼' : '▶'}</span>
       </button>
+
+      {open && typeof document !== 'undefined' && createPortal(
+        <>
+          <button
+            type="button"
+            aria-label="關閉語音設定"
+            className="lg:hidden fixed inset-0 z-[78] bg-black/45"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-label={taskMeta.dialogTitle}
+            className={`lg:hidden fixed left-3 right-3 top-[max(5.5rem,env(safe-area-inset-top))] z-[79] ${panelClass}`}
+          >
+            {panelContent}
+          </div>
+        </>,
+        document.body,
+      )}
 
       {open && (
         <div
           role="dialog"
           aria-label={taskMeta.dialogTitle}
-          className={`absolute right-0 top-full mt-2 z-[60] w-[min(320px,calc(100vw-2rem))] rounded-xl border-2 shadow-2xl
-            overflow-y-auto max-h-[min(70vh,520px)] xh-scroll
-            ${isNight ? 'xh-scroll--dark bg-stone-900 border-stone-600 text-stone-100' : 'bg-white border-stone-200 text-stone-800'}
-            ${isSEN ? 'p-4' : 'p-3'}`}
+          className={`hidden lg:block absolute right-0 top-full mt-2 z-[80] w-[min(320px,calc(100vw-2rem))] ${panelClass}`}
         >
-          <BilingualLabel
-            zh={taskMeta.dialogTitle}
-            en={taskMeta.dialogTitleEn}
-            size={isSEN ? 'md' : 'sm'}
-            center
-            className={`font-black mb-3 ${isNight ? '[&_span:first-child]:text-amber-200' : theme?.accent ?? 'text-sky-800'}`}
-          />
-          <SpeechVoiceSettings
-            isSEN={isSEN}
-            isNight={isNight}
-            disabled={speechBusy}
-            speechError={speechError}
-            speechProvider={speechProvider}
-            lastFromCache={lastFromCache}
-            subtitle={taskMeta.subtitle}
-            subtitleEn={taskMeta.subtitleEn}
-            showWord={taskMeta.showWord}
-            showMeaning={taskMeta.showMeaning}
-            compact
-          />
+          {panelContent}
         </div>
       )}
     </div>

@@ -225,10 +225,89 @@ export default function DashboardDemo() {
     >
 
       <header
-        className={`xh-app-header sticky top-0 z-[70] border-b overflow-hidden transition-colors duration-500 ${theme.header}`}
+        className={`xh-app-header sticky top-0 z-[70] border-b overflow-x-hidden transition-colors duration-500 ${theme.header}`}
         style={{ backgroundColor: surfaces.header }}
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 px-3 py-2 sm:px-4 md:px-6 md:py-3 min-w-0">
+        {/* 手機：第一行 — 標題 + 連擊 + 金幣 */}
+        <div className="flex lg:hidden items-center justify-between gap-2 px-3 py-2 min-w-0">
+          <button
+            type="button"
+            onClick={goHome}
+            title={dt('返回學習首頁')}
+            className={`font-black tracking-wider text-left hover:opacity-90 transition-opacity shrink-0 ${isNight ? 'text-amber-300' : 'text-amber-900'} ${isSEN ? 'text-xl' : 'text-lg'}`}
+          >
+            {dt('星航中文')} 🔥
+          </button>
+          <div className={`flex items-center shrink-0 ${isSEN ? 'gap-2' : 'gap-1.5'}`}>
+            <StreakWidget
+              streakCount={streakState.streakCount}
+              streakClaimed={streakState.claimedToday}
+              streakShields={streakState.streakShields ?? 0}
+              weekCheckIns={streakState.weekCheckIns}
+              checkInDates={streakState.checkInDates ?? []}
+              shieldNotice={streakState.shieldUsedNotice}
+              isSEN={isSEN}
+              isNight={isNight}
+              onClaim={handleStreakClaim}
+            />
+            <CoinCounter
+              coins={coins}
+              floatingDelta={coinFloat}
+              isDeducting={coinDeducting}
+              isSEN={isSEN}
+              isNight={isNight}
+              ownedCount={ownedRewards.length}
+              onClick={() => setShowCoinPanel((v) => !v)}
+            />
+          </div>
+        </div>
+
+        {/* 手機：第二行 — 日間/夜間 | 🔊語音 | 語言 | 登出 */}
+        <div
+          className={`lg:hidden flex items-center gap-2 px-3 pb-2 border-b border-black/5 ${isNight ? 'border-white/10' : ''}`}
+        >
+          <ColorModeToggle isSEN={isSEN} compact />
+          {activeTask ? (
+            <SpeechVoiceHeaderMenu
+              isSEN={isSEN}
+              isNight={isNight}
+              theme={theme}
+              task={activeTask}
+              prominent
+            />
+          ) : (
+            <div className="flex-1" />
+          )}
+          <select
+            value={language}
+            onChange={(e) => {
+              const next = e.target.value;
+              setLanguage(next);
+              try { localStorage.setItem(LANGUAGE_STORAGE, next); } catch { /* ignore */ }
+            }}
+            className={`shrink-0 p-1.5 rounded-lg border font-bold transition-colors duration-300 ${theme.select} ${isSEN ? 'text-sm' : 'text-xs'}`}
+          >
+            <option value="zh-HK">繁體</option>
+            <option value="zh-CN">简体</option>
+          </select>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={authBusy}
+            title={profile?.email ?? ''}
+            className={`shrink-0 rounded-lg border font-bold transition-colors duration-300
+              ${isNight
+                ? 'border-stone-500 bg-stone-800 text-amber-200 hover:bg-stone-700'
+                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}
+              ${isSEN ? 'px-2.5 py-2 text-sm' : 'px-2 py-1.5 text-xs'}
+              disabled:opacity-50`}
+          >
+            {authBusy ? '…' : '登出'}
+          </button>
+        </div>
+
+        {/* 桌面：單行完整頂欄 */}
+        <div className="hidden lg:flex flex-wrap items-center justify-between gap-x-2 gap-y-2 px-3 py-2 sm:px-4 md:px-6 md:py-3 min-w-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <button
               type="button"
@@ -326,12 +405,13 @@ export default function DashboardDemo() {
                 ${isSEN ? 'px-2.5 py-2 text-sm' : 'px-2 py-1.5 text-xs'}
                 disabled:opacity-50`}
             >
-              {authBusy ? dt('…') : dt('登出')}
-            </button>
-          </div>
+            {authBusy ? dt('…') : dt('登出')}
+            {!authBusy && <span className="hidden sm:block text-[9px] font-normal opacity-70">Log out</span>}
+          </button>
+        </div>
         </div>
 
-        {/* 手機版：固定顯示學習模式切換（取代隱藏的左側欄） */}
+        {/* 手機版：學習模式切換 */}
         <nav
           className={`lg:hidden border-t ${theme.sidebar}`}
           style={{ backgroundColor: surfaces.sidebar }}
