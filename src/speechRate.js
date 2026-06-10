@@ -1,11 +1,14 @@
 import { isMaleAzureVoice } from './azureVoices';
 
+/** 語速／快取結構版本 — 變更時自動作廢舊 IndexedDB 快取 */
+export const SPEECH_RATE_VERSION = 'v6';
+
 /** 本機瀏覽器男聲名稱特徵（Azure 以外降級路徑） */
 const MALE_BROWSER_VOICE_HINTS = [
   'danny', 'david', 'mark', 'wanlung', 'yunxi', 'yunyang', 'kangkang', 'yunjian',
 ];
 
-function isMaleSpeechVoice(voiceKey) {
+export function isMaleSpeechVoice(voiceKey) {
   if (!voiceKey) return false;
   if (isMaleAzureVoice(voiceKey)) return true;
   const norm = String(voiceKey).toLowerCase();
@@ -19,12 +22,15 @@ const FEMALE_AZURE_RATES = {
   'en-US': { sen: 1.02, normal: 1.15 },
 };
 
-/** 男聲獨立語速（雲龍等）— 接近 Azure 下限 0.5，方便慢速跟讀 */
+/** 男聲獨立語速（雲龍等）— Azure 下限 0.5 */
 const MALE_AZURE_RATES = {
-  'zh-HK': { sen: 0.54, normal: 0.58 },
-  'zh-CN': { sen: 0.52, normal: 0.56 },
-  'en-US': { sen: 0.56, normal: 0.60 },
+  'zh-HK': { sen: 0.50, normal: 0.50 },
+  'zh-CN': { sen: 0.50, normal: 0.50 },
+  'en-US': { sen: 0.52, normal: 0.54 },
 };
+
+/** 男聲播放時再放慢（修正舊快取／Azure 實際語速偏快） */
+export const MALE_PLAYBACK_RATE = 0.82;
 
 const FEMALE_BROWSER_RATES = {
   'zh-HK': { sen: 0.92, normal: 1.0 },
@@ -65,5 +71,13 @@ export function getBrowserSpeechRate(lang, isSEN = false, voiceKey = null) {
 
 export function getSpeechRateTag(lang, isSEN = false, voiceKey = null) {
   const male = isMaleSpeechVoice(voiceKey) ? '-M' : '';
-  return `${lang}-${Math.round(getAzureSpeechRate(lang, isSEN, voiceKey) * 100)}${male}`;
+  const pct = Math.round(getAzureSpeechRate(lang, isSEN, voiceKey) * 100);
+  return `${SPEECH_RATE_VERSION}-${lang}-${pct}${male}`;
+}
+
+/** 合成語速 + 播放倍率 → 使用者聽到的有效語速 */
+export function getEffectiveSpeechRate(lang, isSEN = false, voiceKey = null) {
+  const synthesis = getAzureSpeechRate(lang, isSEN, voiceKey);
+  const playback = isMaleSpeechVoice(voiceKey) ? MALE_PLAYBACK_RATE : 1;
+  return synthesis * playback;
 }

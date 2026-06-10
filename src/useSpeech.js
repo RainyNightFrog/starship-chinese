@@ -396,7 +396,11 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
           controller.abort();
         }, 12000);
 
-        const { blob, fromCache } = await fetchAzureSpeechBlob({
+        const {
+          blob,
+          fromCache,
+          playbackRate = 1,
+        } = await fetchAzureSpeechBlob({
           text,
           lang,
           isSEN,
@@ -413,6 +417,7 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
         setSpeechProvider(fromCache ? 'azure-cached' : 'azure-neural');
 
         audioCtrlRef.current = playAudioBlob(blob, {
+          playbackRate,
           onStart: () => {
             if (!mountedRef.current) return;
             setLoadingKind(null);

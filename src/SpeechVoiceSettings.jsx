@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { getSpeechLangLabel } from './useSpeech';
 import { getAzureVoiceStatus } from './azureVoices';
+import { getEffectiveSpeechRate } from './speechRate';
 import { useVoicePreferences } from './VoicePreferencesContext';
 import VoiceLangPicker from './VoiceLangPicker';
 import VoiceEngineSelect from './VoiceEngineSelect';
@@ -61,6 +62,15 @@ export default function SpeechVoiceSettings({
     [meaningVoiceLang, meaningEngineKey],
   );
 
+  const wordEffectiveRate = useMemo(
+    () => Math.round(getEffectiveSpeechRate(wordVoiceLang, isSEN, wordEngineKey) * 100),
+    [wordVoiceLang, isSEN, wordEngineKey],
+  );
+  const meaningEffectiveRate = useMemo(
+    () => Math.round(getEffectiveSpeechRate(meaningVoiceLang, isSEN, meaningEngineKey) * 100),
+    [meaningVoiceLang, isSEN, meaningEngineKey],
+  );
+
   const providerLabel = (() => {
     if (speechProvider === 'azure-cached' || lastFromCache) return PROVIDER_LABELS.cached;
     if (speechProvider === 'azure-neural') return PROVIDER_LABELS.neural;
@@ -113,13 +123,17 @@ export default function SpeechVoiceSettings({
         {showWord && (
           <p className={`font-bold ${isNight ? 'text-emerald-400' : 'text-emerald-600'}`}>
             {FIELD_LABELS.word.zh}：{getSpeechLangLabel(wordVoiceLang)} · {wordVoiceStatus.label}
-            <span className="block text-[9px] opacity-70">{FIELD_LABELS.word.en}: {wordVoiceStatus.label}</span>
+            <span className="block text-[9px] opacity-70">
+              {FIELD_LABELS.word.en}: {wordVoiceStatus.label} · 語速 ~{wordEffectiveRate}%
+            </span>
           </p>
         )}
         {showMeaning && (
           <p className={`font-bold ${isNight ? 'text-emerald-400' : 'text-emerald-600'}`}>
             {FIELD_LABELS.meaning.zh}：{getSpeechLangLabel(meaningVoiceLang)} · {meaningVoiceStatus.label}
-            <span className="block text-[9px] opacity-70">{FIELD_LABELS.meaning.en}: {meaningVoiceStatus.label}</span>
+            <span className="block text-[9px] opacity-70">
+              {FIELD_LABELS.meaning.en}: {meaningVoiceStatus.label} · 語速 ~{meaningEffectiveRate}%
+            </span>
           </p>
         )}
       </div>

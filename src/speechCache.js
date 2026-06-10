@@ -1,9 +1,13 @@
+import { SPEECH_RATE_VERSION } from './speechRate.js';
+
+const CACHE_SCHEMA_KEY = 'xinghang_speech_cache_schema';
+
 /**
  * Azure TTS 音訊本地快取層
  *
  * 策略：記憶體 Map（同分頁即時重播） + IndexedDB（跨分頁／跨次登入持久化）
- * Key 格式：{字詞文字}|{語音引擎}|{語速標籤}
- * 例：「安慰|zh-HK-HiuGaaiNeural|zh-HK-100」
+ * Key 格式：{語速版本}|{字詞文字}|{語音引擎}|{語速標籤}
+ * 例：「v6|安慰|zh-HK-WanLungNeural|v6-zh-HK-50-M」
  *
  * 設計原則：快取讀寫失敗絕不阻斷播放；寫入採非阻塞 fire-and-forget。
  */
@@ -47,8 +51,32 @@ function openDB() {
 /**
  * 預熱 IndexedDB — 可在 useSpeech 掛載時呼叫，減少首次播放延遲
  */
+/** 語速版本變更時清空快取，避免舊高速音檔被重播 */
+export async function purgeSpeechCacheIfStale() {
+  try {
+    const stored = localStorage.getItem(CACHE_SCHEMA_KEY);
+    if (stored === SPEECH_RATE_VERSION) return false;
+
+    memoryCache.clear();
+    const db = await openDB();
+    if (db) {
+      await new Promise((resolve) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    }
+    localStorage.setItem(CACHE_SCHEMA_KEY, SPEECH_RATE_VERSION);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function warmSpeechCache() {
   try {
+    await purgeSpeechCacheIfStale();
     await openDB();
   } catch {
     /* 預熱失敗不影響主流程 */
@@ -61,7 +89,7 @@ export async function warmSpeechCache() {
  */
 export function buildCacheKey({ text, voice, rateTag }) {
   const normalizedText = (text || '').trim();
-  return `${normalizedText}|${voice}|${rateTag}`;
+  return `${SPEECH_RATE_VERSION}|${normalizedText}|${voice}|${rateTag}`;
 }
 
 /** 從記憶體快取讀取 */

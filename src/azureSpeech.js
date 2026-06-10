@@ -5,7 +5,12 @@ import {
   saveCachedBlob,
   warmSpeechCache,
 } from './speechCache';
-import { getAzureSpeechRate, getSpeechRateTag } from './speechRate';
+import {
+  getAzureSpeechRate,
+  getSpeechRateTag,
+  isMaleSpeechVoice,
+  MALE_PLAYBACK_RATE,
+} from './speechRate';
 
 const API_BASE = import.meta.env.VITE_SPEECH_API_URL || '/api/speech';
 
@@ -84,15 +89,19 @@ export async function fetchAzureSpeechBlob({
   }
 
   const voiceName = voice || resolveAzureVoice(lang, engineKey);
-  const rate = getAzureSpeechRate(lang, isSEN, voiceName);
-  const rateTag = getSpeechRateTag(lang, isSEN, voiceName);
+  const rateKey = engineKey && engineKey !== 'auto' ? engineKey : voiceName;
+  const rate = getAzureSpeechRate(lang, isSEN, rateKey);
+  const rateTag = getSpeechRateTag(lang, isSEN, rateKey);
+  const playbackRate = isMaleSpeechVoice(rateKey) ? MALE_PLAYBACK_RATE : 1;
   const cacheKey = buildCacheKey({ text: trimmedText, voice: voiceName, rateTag });
 
   // ── 步驟 1：本地快取命中 → 100% 阻截 Azure ──
   try {
     const cached = await getCachedBlob(cacheKey);
     if (cached) {
-      return { blob: cached, voiceName, fromCache: true, cacheKey };
+      return {
+        blob: cached, voiceName, fromCache: true, cacheKey, synthesisRate: rate, playbackRate,
+      };
     }
   } catch (err) {
     console.warn('[AzureSpeech] 讀取快取失敗，改走雲端:', err?.message);
@@ -102,7 +111,9 @@ export async function fetchAzureSpeechBlob({
   if (inflightRequests.has(cacheKey)) {
     try {
       const blob = await inflightRequests.get(cacheKey);
-      return { blob, voiceName, fromCache: false, cacheKey, deduped: true };
+      return {
+        blob, voiceName, fromCache: false, cacheKey, deduped: true, synthesisRate: rate, playbackRate,
+      };
     } catch (err) {
       inflightRequests.delete(cacheKey);
       throw err;
@@ -150,7 +161,7 @@ export async function fetchAzureSpeechBlob({
 
   try {
     const blob = await fetchPromise;
-    return { blob, voiceName, fromCache: false, cacheKey };
+    return { blob, voiceName, fromCache: false, cacheKey, synthesisRate: rate, playbackRate };
   } finally {
     inflightRequests.delete(cacheKey);
   }
@@ -160,9 +171,10 @@ export async function fetchAzureSpeechBlob({
  * 播放 Audio Blob — 含 object URL 清理，防止記憶體洩漏
  * @returns {{ stop: () => void }}
  */
-export function playAudioBlob(blob, { onStart, onEnd, onError } = {}) {
+export function playAudioBlob(blob, { onStart, onEnd, onError, playbackRate = 1 } = {}) {
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
+  audio.playbackRate = Math.min(1.2, Math.max(0.5, playbackRate));
   let ended = false;
 
   const cleanup = () => {
