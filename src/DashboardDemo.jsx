@@ -431,7 +431,7 @@ export default function DashboardDemo() {
       <div
         className={`flex flex-col lg:flex-row min-w-0 transition-colors duration-500
           ${parentPanelOpen
-            ? 'pb-[calc(min(680px,72vh)+3.5rem+env(safe-area-inset-bottom,0px))] lg:pb-[min(520px,52vh)]'
+            ? 'pb-[calc(min(560px,calc(100vh-11rem))+3.5rem+env(safe-area-inset-bottom,0px))] lg:pb-[min(520px,52vh)]'
             : 'pb-[calc(4.5rem+env(safe-area-inset-bottom,0px)+0.75rem)] lg:pb-16'}`}
       >
         <aside
