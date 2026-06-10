@@ -227,7 +227,7 @@ export default function DashboardDemo() {
     >
 
       <header
-        className={`xh-app-header sticky top-0 z-[70] border-b overflow-x-hidden transition-colors duration-500 ${theme.header}`}
+        className={`xh-app-header sticky top-0 z-[70] border-b overflow-x-clip overflow-y-visible transition-colors duration-500 ${theme.header}`}
         style={{ backgroundColor: surfaces.header }}
       >
         {/* 手機：第一行 — 標題 + 連擊 + 金幣 */}
@@ -362,7 +362,7 @@ export default function DashboardDemo() {
             </div>
           </div>
 
-          <div className={`flex items-center flex-wrap justify-end gap-1 sm:gap-2 shrink-0`}>
+          <div className={`flex items-center flex-wrap justify-end gap-1 sm:gap-2 shrink-0 overflow-visible`}>
             <ColorModeToggle isSEN={isSEN} />
             {activeTask && (
               <SpeechVoiceHeaderMenu

@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getSpeechLangLabel } from './useSpeech';
 import { useVoicePreferences } from './VoicePreferencesContext';
 import { useSpeechContext } from './SpeechContext';
 import SpeechVoiceSettings from './SpeechVoiceSettings';
 import { BilingualLabel } from './BilingualLabel';
+import { useBodyScrollLock } from './useBodyScrollLock';
 
 const TASK_VOICE_META = {
   dictation: {
@@ -64,17 +65,82 @@ const TASK_VOICE_META = {
 };
 
 const DEFAULT_TASK_META = TASK_VOICE_META.dictation;
+const PANEL_Z = 90;
+const BACKDROP_Z = 89;
+
+function isMobileViewport() {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 1023px)').matches;
+}
 
 /**
- * Header 語音選單 — 手機版全屏彈層，桌面版下拉
+ * Header 語音選單 — Portal 浮層，避免被 sticky header overflow 裁切
  */
 export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'dictation', prominent = false }) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef(null);
+  const [panelStyle, setPanelStyle] = useState(null);
+  const buttonRef = useRef(null);
+  const panelRef = useRef(null);
   const { wordVoiceLang, meaningVoiceLang } = useVoicePreferences();
   const { speechBusy, speechError, clearSpeechError, speechProvider, lastFromCache } = useSpeechContext();
 
   const taskMeta = TASK_VOICE_META[task] ?? DEFAULT_TASK_META;
+
+  useBodyScrollLock(open);
+
+  const updatePanelPosition = useCallback(() => {
+    const btn = buttonRef.current;
+    if (!btn) return;
+
+    const rect = btn.getBoundingClientRect();
+    const mobile = isMobileViewport();
+    const margin = 12;
+    const gap = 8;
+    const maxPanelHeight = Math.min(window.innerHeight * 0.72, 520);
+
+    if (mobile) {
+      setPanelStyle({
+        position: 'fixed',
+        left: margin,
+        right: margin,
+        top: Math.max(rect.bottom + gap, 72),
+        maxHeight: maxPanelHeight,
+        zIndex: PANEL_Z,
+      });
+      return;
+    }
+
+    const panelWidth = Math.min(340, window.innerWidth - margin * 2);
+    let left = rect.right - panelWidth;
+    left = Math.max(margin, Math.min(left, window.innerWidth - panelWidth - margin));
+
+    let top = rect.bottom + gap;
+    if (top + maxPanelHeight > window.innerHeight - margin) {
+      top = Math.max(margin, rect.top - maxPanelHeight - gap);
+    }
+
+    setPanelStyle({
+      position: 'fixed',
+      top,
+      left,
+      width: panelWidth,
+      maxHeight: maxPanelHeight,
+      zIndex: PANEL_Z,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    updatePanelPosition();
+
+    const onLayout = () => updatePanelPosition();
+    window.addEventListener('resize', onLayout);
+    window.addEventListener('scroll', onLayout, true);
+    return () => {
+      window.removeEventListener('resize', onLayout);
+      window.removeEventListener('scroll', onLayout, true);
+    };
+  }, [open, updatePanelPosition]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -88,10 +154,9 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (e) => {
-      if (!window.matchMedia('(min-width: 1024px)').matches) return;
-      if (rootRef.current && !rootRef.current.contains(e.target)) {
-        setOpen(false);
-      }
+      const target = e.target;
+      if (buttonRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
@@ -102,7 +167,7 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
   if (taskMeta.showMeaning) summaryParts.push(getSpeechLangLabel(meaningVoiceLang));
   const summary = summaryParts.join(' / ');
 
-  const panelClass = `rounded-xl border-2 shadow-2xl overflow-y-auto max-h-[min(70vh,520px)] xh-scroll
+  const panelClass = `rounded-xl border-2 shadow-2xl overflow-y-auto xh-scroll
     ${isNight ? 'xh-scroll--dark bg-stone-900 border-stone-600 text-stone-100' : 'bg-white border-stone-200 text-stone-800'}
     ${isSEN ? 'p-4' : 'p-3'}`;
 
@@ -131,69 +196,72 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
     </>
   );
 
-  return (
-    <div ref={rootRef} className={`relative ${prominent ? 'shrink-0' : ''}`}>
-      <button
-        type="button"
-        onClick={() => {
-          setOpen((v) => {
-            if (!v) clearSpeechError();
-            return !v;
-          });
-        }}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        title={`${taskMeta.buttonTitle} / Voice`}
-        className={`flex items-center justify-center gap-1 rounded-lg border font-black transition-all duration-300
-          ${prominent
-            ? 'flex-row px-2 py-1 min-h-0'
-            : 'gap-1.5 rounded-xl'}
-          ${isNight
-            ? 'bg-amber-500/20 border-amber-600/70 text-amber-100 hover:bg-amber-500/30'
-            : 'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-200'}
-          ${open ? 'ring-1 ring-amber-400/60' : ''}
-          ${speechError ? 'border-rose-400' : ''}
-          ${isSEN ? 'text-sm' : 'text-xs'}`}
-      >
-        <span className="text-sm leading-none" aria-hidden>🔊</span>
-        <span className="flex flex-col leading-none text-center">
-          <span className="text-[10px] font-black">語音</span>
-          {!prominent && <span className="text-[9px] font-normal opacity-70 hidden sm:block">Voice</span>}
-        </span>
-        {!prominent && (
-          <span className="opacity-60 hidden md:inline max-w-[5rem] truncate">{summary}</span>
-        )}
-        <span className="opacity-50 text-[10px] hidden sm:inline" aria-hidden>{open ? '▼' : '▶'}</span>
-      </button>
-
-      {open && typeof document !== 'undefined' && createPortal(
-        <>
-          <button
-            type="button"
-            aria-label="關閉語音設定"
-            className="lg:hidden fixed inset-0 z-[78] bg-black/45"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            role="dialog"
-            aria-label={taskMeta.dialogTitle}
-            className={`lg:hidden fixed left-3 right-3 top-[max(5.5rem,env(safe-area-inset-top))] z-[79] ${panelClass}`}
-          >
-            {panelContent}
-          </div>
-        </>,
-        document.body,
-      )}
-
-      {open && (
+  const portal = open && typeof document !== 'undefined' && panelStyle
+    ? createPortal(
+      <>
+        <button
+          type="button"
+          aria-label="關閉語音設定"
+          className="fixed inset-0 bg-black/40"
+          style={{ zIndex: BACKDROP_Z }}
+          onClick={() => setOpen(false)}
+        />
         <div
+          ref={panelRef}
           role="dialog"
+          aria-modal="true"
           aria-label={taskMeta.dialogTitle}
-          className={`hidden lg:block absolute right-0 top-full mt-2 z-[80] w-[min(320px,calc(100vw-2rem))] ${panelClass}`}
+          className={panelClass}
+          style={panelStyle}
         >
           {panelContent}
         </div>
-      )}
-    </div>
+      </>,
+      document.body,
+    )
+    : null;
+
+  return (
+    <>
+      <div className={`relative ${prominent ? 'shrink-0' : ''}`}>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => {
+            setOpen((v) => {
+              if (!v) {
+                clearSpeechError();
+                requestAnimationFrame(() => updatePanelPosition());
+              }
+              return !v;
+            });
+          }}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          title={`${taskMeta.buttonTitle} / Voice`}
+          className={`flex items-center justify-center gap-1 rounded-lg border font-black transition-all duration-300
+            ${prominent
+              ? 'flex-row px-2 py-1 min-h-0'
+              : 'gap-1.5 rounded-xl'}
+            ${isNight
+              ? 'bg-amber-500/20 border-amber-600/70 text-amber-100 hover:bg-amber-500/30'
+              : 'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-200'}
+            ${open ? 'ring-1 ring-amber-400/60' : ''}
+            ${speechError ? 'border-rose-400' : ''}
+            ${isSEN ? 'text-sm' : 'text-xs'}`}
+        >
+          <span className="text-sm leading-none" aria-hidden>🔊</span>
+          <span className="flex flex-col leading-none text-center">
+            <span className="text-[10px] font-black">語音</span>
+            {!prominent && <span className="text-[9px] font-normal opacity-70 hidden sm:block">Voice</span>}
+          </span>
+          {!prominent && (
+            <span className="opacity-60 hidden md:inline max-w-[5rem] truncate">{summary}</span>
+          )}
+          <span className="opacity-50 text-[10px] hidden sm:inline" aria-hidden>{open ? '▼' : '▶'}</span>
+        </button>
+      </div>
+      {portal}
+    </>
   );
 }
