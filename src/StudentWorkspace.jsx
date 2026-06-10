@@ -402,7 +402,7 @@ export default function StudentWorkspace({
   const wrapWithReview = (content) => {
     if (!QUIZ_TASKS.has(activeTask)) return content;
     return (
-      <div className="flex flex-col xl:flex-row gap-4 xl:gap-5 items-start w-full">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-start w-full min-w-0">
         <div className="flex-1 min-w-0 w-full">{content}</div>
         <WrongAnswerReviewPanel
           items={wrongAnswerReviews}
@@ -491,7 +491,7 @@ export default function StudentWorkspace({
   // ── 默書特訓：語音盲聽默寫 ──
   if (activeTask === 'dictation') {
     return (
-      <div className="space-y-6 transition-all duration-300">
+      <div className="space-y-4 sm:space-y-6 transition-all duration-300">
         <TaskHeader
           title={dt('🎧 默書特訓 · 聽音默寫')}
           titleEn={TASK_HEADERS.dictation.titleEn}
@@ -526,7 +526,7 @@ export default function StudentWorkspace({
   // ── 課文預習：可見詞表 + 聽音 ──
   if (activeTask === 'prestudy') {
     return (
-      <div className="space-y-6 transition-all duration-300">
+      <div className="space-y-4 sm:space-y-6 transition-all duration-300">
         <TaskHeader
           title={dt('🌱 課文預習 · 校本專屬詞彙')}
           titleEn={TASK_HEADERS.prestudy.titleEn}
@@ -576,7 +576,7 @@ export default function StudentWorkspace({
     const correctExplain = quiz.options.find((o) => o.key === quiz.correctKey)?.detail || quiz.explanation;
     const quizStemClass = `text-center font-bold leading-relaxed mb-3 ${isNight ? 'text-stone-100' : 'text-slate-800'} ${isSEN ? 'text-2xl leading-loose' : 'text-lg'}`;
     return wrapWithReview(
-      <div className="space-y-6 transition-all duration-300">
+      <div className="space-y-4 sm:space-y-6 transition-all duration-300">
         <AnswerResultEffect type={answerFx} isSEN={isSEN} isNight={isNight} />
         {reshuffled && <DeckReshuffledBanner isSEN={isSEN} isNight={isNight} total={todayProgress.total} dt={dt} />}
         <TaskHeader
@@ -623,7 +623,7 @@ export default function StudentWorkspace({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {quiz.options.map((opt) => {
             const isCorrect = opt.key === quiz.correctKey;
             const isSelected = attempt === opt.key;
@@ -680,7 +680,7 @@ export default function StudentWorkspace({
     const sspaCorrectAnswer = stripOptionLetterPrefix(sspa.options[sspa.correctIndex] ?? '');
     const sspaCorrectExplain = sspa.explanation || `正確答案：${sspaCorrectAnswer}`;
     return wrapWithReview(
-      <div className="space-y-6 transition-all duration-300">
+      <div className="space-y-4 sm:space-y-6 transition-all duration-300">
         <AnswerResultEffect type={answerFx} isSEN={isSEN} isNight={isNight} />
         {reshuffled && <DeckReshuffledBanner isSEN={isSEN} isNight={isNight} total={todayProgress.total} dt={dt} />}
         <TaskHeader
@@ -785,7 +785,7 @@ export default function StudentWorkspace({
     }
     const allPlaced = unscrambledOrder.length === correctOrder.length && sentenceWords.length === 0;
     return wrapWithReview(
-      <div className="space-y-6 transition-all duration-300">
+      <div className="space-y-4 sm:space-y-6 transition-all duration-300">
         <AnswerResultEffect type={answerFx} isSEN={isSEN} isNight={isNight} />
         {reshuffled && <DeckReshuffledBanner isSEN={isSEN} isNight={isNight} total={todayProgress.total} dt={dt} />}
         <TaskHeader
@@ -1123,8 +1123,8 @@ function VocabCards({
               markVocabRead(vocab);
             }
           }}
-          className={`rounded-xl border-2 flex flex-wrap items-center justify-between gap-4 transition-all duration-300 cursor-pointer
-            ${isSEN ? 'p-5' : 'p-4'}
+          className={`rounded-xl border-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between transition-all duration-300 cursor-pointer
+            ${isSEN ? 'p-4 sm:p-5' : 'p-3 sm:p-4'}
             ${isRead
               ? (isNight
                 ? 'bg-emerald-950/35 border-emerald-600/70 ring-2 ring-emerald-700/40'
@@ -1162,7 +1162,7 @@ function VocabCards({
             )}
           </div>
           {decomp?.chars?.length > 0 && (
-            <div className={`rounded-xl font-bold shrink-0 border-2 flex flex-col gap-1.5
+            <div className={`rounded-xl font-bold w-full sm:w-auto sm:shrink-0 border-2 flex flex-col gap-1.5
               ${isNight ? 'bg-stone-900 border-amber-600 text-stone-200' : 'bg-white border-amber-200 text-slate-800'}
               ${isSEN ? 'text-sm px-4 py-2' : 'text-xs px-3 py-1.5'}`}>
               <span>{getDisplayText('字形拆解：', { language, studentType })}</span>
@@ -1182,7 +1182,7 @@ function VocabCards({
               ))}
             </div>
           )}
-          <div className="flex flex-col gap-2 shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto sm:shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <SpeechPlayButton
               label="🔊 聽詞"
               labelEn="Hear Word"

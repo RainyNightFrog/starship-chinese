@@ -117,7 +117,7 @@ export default function DictationMode({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {linkedFromPrestudy && linkedWordCount > 0 && (
         <div
           className={`rounded-2xl border-2 px-4 py-3 animate-[fadeSlideIn_0.35s_ease-out]
@@ -170,7 +170,7 @@ export default function DictationMode({
       <div
         className={`rounded-2xl border-2 border-dashed text-center transition-all duration-500
           ${isNight ? theme.hint : 'xh-day-hint'}
-          ${isSEN ? 'py-14 px-8' : 'py-12 px-6'}
+          ${isSEN ? 'py-10 px-4 sm:py-14 sm:px-8' : 'py-8 px-4 sm:py-12 sm:px-6'}
           ${speakingKind === 'word' ? (isNight ? 'ring-4 ring-sky-700 scale-[1.01]' : 'ring-4 ring-sky-200 scale-[1.01]') : ''}`}
         aria-live="polite"
       >

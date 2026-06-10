@@ -284,10 +284,10 @@ export default function DashboardDemo() {
       </header>
 
       <div
-        className={`flex transition-colors duration-500 ${parentPanelOpen ? 'pb-[min(520px,52vh)]' : 'pb-16'}`}
+        className={`flex flex-col lg:flex-row min-w-0 transition-colors duration-500 ${parentPanelOpen ? 'pb-[min(520px,52vh)]' : 'pb-16'}`}
       >
         <aside
-          className={`xh-app-sidebar w-72 min-h-[calc(100vh-4.5rem)] p-4 border-r transition-colors duration-500 ${theme.sidebar}`}
+          className={`xh-app-sidebar hidden lg:block w-72 shrink-0 min-h-[calc(100vh-4.5rem)] p-4 border-r transition-colors duration-500 ${theme.sidebar}`}
           style={{ backgroundColor: surfaces.sidebar }}
         >
           <div
@@ -360,11 +360,11 @@ export default function DashboardDemo() {
         </aside>
 
         <main
-          className="xh-app-main flex-1 p-8 transition-all duration-500"
+          className="xh-app-main flex-1 min-w-0 p-3 sm:p-4 lg:p-8 transition-all duration-500"
           style={{ backgroundColor: surfaces.main }}
         >
           <div
-            className={`xh-app-card max-w-6xl mx-auto rounded-2xl transition-all duration-500 ${theme.card} ${isSEN ? 'p-8' : 'p-6'}`}
+            className={`xh-app-card max-w-6xl mx-auto rounded-2xl transition-all duration-500 ${theme.card} ${isSEN ? 'p-4 sm:p-6 lg:p-8' : 'p-3 sm:p-4 lg:p-6'}`}
             style={{ backgroundColor: surfaces.card }}
           >
               <StudentWorkspace

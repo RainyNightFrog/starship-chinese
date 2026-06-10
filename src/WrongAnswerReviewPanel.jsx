@@ -82,8 +82,8 @@ export default function WrongAnswerReviewPanel({
   return (
     <aside
       className={`shrink-0 transition-all duration-300 ease-out
-        ${panelOpen ? (isSEN ? 'w-full xl:w-72' : 'w-full xl:w-64') : (isSEN ? 'w-12' : 'w-10')}
-        sticky top-2 xl:top-4 self-start`}
+        ${panelOpen ? (isSEN ? 'w-full lg:w-72' : 'w-full lg:w-64') : (isSEN ? 'w-12' : 'w-10')}
+        sticky top-2 lg:top-4 self-start`}
     >
       {!panelOpen ? (
         <button

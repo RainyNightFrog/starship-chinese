@@ -39,6 +39,9 @@ lerna-debug.log*
 *.sln
 *.sw?
 .cursor/
+!.cursor/hooks.json
+!.cursor/hooks/
+!.cursor/rules/
 *.code-workspace
 
 # ── 作業系統暫存 ─────────────────────────────────────────────────
