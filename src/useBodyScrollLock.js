@@ -8,12 +8,15 @@ function isMobileViewport() {
 }
 
 /**
- * 手機版鎖定背景頁面滾動 — 家長端展開時防止 scroll chaining 穿透至主內容
- * iOS Safari 需 position:fixed + 還原 scrollY，否則僅 overflow:hidden 不足
+ * 鎖定背景頁面滾動 — 模態／底部面板開啟時防止 scroll chaining
+ * @param {boolean} locked
+ * @param {{ allViewports?: boolean }} [options] — 預設僅手機；模態框可設 allViewports: true
  */
-export function useBodyScrollLock(locked) {
+export function useBodyScrollLock(locked, options = {}) {
+  const { allViewports = false } = options;
+
   useEffect(() => {
-    if (!locked || !isMobileViewport()) return undefined;
+    if (!locked || (!allViewports && !isMobileViewport())) return undefined;
 
     const html = document.documentElement;
     const body = document.body;
@@ -26,7 +29,7 @@ export function useBodyScrollLock(locked) {
     const prevBodyWidth = body.style.width;
 
     html.style.overflow = 'hidden';
-    html.dataset.parentPanelOpen = 'true';
+    html.dataset.scrollLock = 'true';
     body.style.overflow = 'hidden';
     body.style.position = 'fixed';
     body.style.top = `-${scrollY}px`;
@@ -34,12 +37,12 @@ export function useBodyScrollLock(locked) {
 
     return () => {
       html.style.overflow = prevHtmlOverflow;
-      delete html.dataset.parentPanelOpen;
+      delete html.dataset.scrollLock;
       body.style.overflow = prevBodyOverflow;
       body.style.position = prevBodyPosition;
       body.style.top = prevBodyTop;
       body.style.width = prevBodyWidth;
       window.scrollTo(0, scrollY);
     };
-  }, [locked]);
+  }, [locked, allViewports]);
 }

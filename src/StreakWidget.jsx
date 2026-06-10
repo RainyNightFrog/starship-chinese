@@ -4,6 +4,40 @@ import { WEEK_LABELS, buildMonthGrid } from './streakStore';
 import { BilingualLabel } from './BilingualLabel';
 
 const EMPTY_WEEK = [false, false, false, false, false, false, false];
+const VIEWPORT_PAD = 12;
+const MOBILE_BREAKPOINT = 640;
+
+function getPopoverWidth(isSEN) {
+  return isSEN ? 280 : 260;
+}
+
+/** 計算日曆 popover 位置 — 手機置中、桌面依按鈕並 clamp 在視窗內 */
+function computeCalendarPosition(anchorRect, isSEN) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const popoverW = Math.min(getPopoverWidth(isSEN), vw - VIEWPORT_PAD * 2);
+  const half = popoverW / 2;
+  const isMobile = vw < MOBILE_BREAKPOINT;
+
+  let left;
+  if (isMobile) {
+    /** 手機：水平置中，避免右上角按鈕導致 popover 溢出右側 */
+    left = vw / 2;
+  } else {
+    left = anchorRect.left + anchorRect.width / 2;
+    left = Math.max(VIEWPORT_PAD + half, Math.min(vw - VIEWPORT_PAD - half, left));
+  }
+
+  /** 優先顯示在按鈕下方；空間不足則改顯示在上方 */
+  const belowTop = anchorRect.bottom + 8;
+  const estimatedHeight = isSEN ? 420 : 380;
+  let top = belowTop;
+  if (belowTop + estimatedHeight > vh - VIEWPORT_PAD) {
+    top = Math.max(VIEWPORT_PAD, anchorRect.top - estimatedHeight - 8);
+  }
+
+  return { top, left, width: popoverW, isMobile };
+}
 
 /**
  * 🔥 打卡連擊組件
@@ -32,11 +66,8 @@ export default function StreakWidget({
   const updateCalendarPosition = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    setCalendarPos({
-      top: rect.bottom + 8,
-      left: rect.left + rect.width / 2,
-    });
-  }, []);
+    setCalendarPos(computeCalendarPosition(rect, isSEN));
+  }, [isSEN]);
 
   const safeCheckInDates = Array.isArray(checkInDates) ? checkInDates : [];
   const safeWeekCheckIns = Array.isArray(weekCheckIns) && weekCheckIns.length === 7
@@ -89,13 +120,14 @@ export default function StreakWidget({
     setViewMonth(d.getMonth());
   }, []);
 
-  /** 點擊外部關閉日曆 */
+  /** 開啟日曆或簽到完成後 — 計算 popover 位置（含首幀重算） */
   useEffect(() => {
-    if (!showCalendar) {
-      setCalendarPos(null);
+    if (!showCalendar || !streakClaimed) {
+      if (!showCalendar) setCalendarPos(null);
       return undefined;
     }
     updateCalendarPosition();
+    const raf = requestAnimationFrame(() => updateCalendarPosition());
     window.addEventListener('resize', updateCalendarPosition);
     window.addEventListener('scroll', updateCalendarPosition, true);
 
@@ -107,15 +139,17 @@ export default function StreakWidget({
     };
     document.addEventListener('pointerdown', handleOutside);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', updateCalendarPosition);
       window.removeEventListener('scroll', updateCalendarPosition, true);
       document.removeEventListener('pointerdown', handleOutside);
     };
-  }, [showCalendar, updateCalendarPosition]);
+  }, [showCalendar, streakClaimed, updateCalendarPosition]);
 
   const handleClick = () => {
     if (!streakClaimed) {
       onClaim?.();
+      setShowCalendar(true);
       return;
     }
     toggleCalendar();
@@ -124,6 +158,15 @@ export default function StreakWidget({
   const isViewingCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
 
   const calendarPopover = streakClaimed && showCalendar && calendarPos && (
+    <>
+      {calendarPos.isMobile && (
+        <button
+          type="button"
+          aria-label="關閉打卡日曆"
+          className="fixed inset-0 z-[99] bg-black/30"
+          onClick={() => setShowCalendar(false)}
+        />
+      )}
     <div
       id="streak-calendar-popover"
       role="dialog"
@@ -133,11 +176,13 @@ export default function StreakWidget({
         top: calendarPos.top,
         left: calendarPos.left,
         transform: 'translateX(-50%)',
+        width: calendarPos.width,
+        maxWidth: `calc(100vw - ${VIEWPORT_PAD * 2}px)`,
         zIndex: 100,
       }}
-      className={`rounded-xl border-2 shadow-lg animate-[fadeSlideIn_0.2s_ease-out] px-3 py-2.5 w-[260px]
+      className={`rounded-xl border-2 shadow-lg animate-[fadeSlideIn_0.2s_ease-out] px-3 py-2.5
         ${isNight ? 'bg-stone-800 border-amber-600/60 text-stone-100' : 'bg-white border-amber-200 text-stone-800'}
-        ${isSEN ? 'py-3 w-[280px]' : ''}`}
+        ${isSEN ? 'py-3' : ''}`}
     >
       <div className="flex items-center justify-between mb-2">
         <button
@@ -260,6 +305,7 @@ export default function StreakWidget({
         </div>
       </div>
     </div>
+    </>
   );
 
   return (

@@ -7,7 +7,8 @@ body,
   max-width: 100%;
 }
 
-/* 家長端展開時禁止背景 overscroll 反彈（配合 useBodyScrollLock） */
+/* 模態／家長端展開時禁止背景 overscroll 反彈（配合 useBodyScrollLock） */
+html[data-scroll-lock="true"],
 html[data-parent-panel-open="true"] {
   overscroll-behavior: none;
 }
