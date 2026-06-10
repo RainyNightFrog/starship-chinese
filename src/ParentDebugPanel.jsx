@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { applyExamPaperUpload } from './examPaperGenerator';
 import { applyVocabListUpload } from './vocabListGenerator';
 import { getQuestionBankStats } from './mockDatabase';
@@ -15,6 +15,7 @@ import { applyReadingPaperUpload } from './readingPaperGenerator';
 import { clearAllUploads, removeUploadImage } from './uploadContentManager';
 import ParentAnalyticsPanel from './components/parent/ParentAnalyticsPanel';
 import { useLearningAnalytics } from './context/LearningAnalyticsContext';
+import { useBodyScrollLock } from './useBodyScrollLock';
 
 /**
  * 👨‍👩‍👦 家長端後台模擬器（Debug Panel）
@@ -122,6 +123,30 @@ export default function ParentDebugPanel({
   const analytics = useLearningAnalytics();
   const liveAiAnalysis = analytics?.snapshot?.aiAnalysis ?? parentConfig.aiAnalysis;
 
+  const backdropRef = useRef(null);
+  const panelScrollRef = useRef(null);
+
+  /** 展開時鎖定背景頁面，避免手機滑動穿透 */
+  useBodyScrollLock(isOpen);
+
+  /** 遮罩層阻擋 touchmove，防止滑動傳至背景頁 */
+  useEffect(() => {
+    const el = backdropRef.current;
+    if (!isOpen || !el) return undefined;
+    const blockTouch = (e) => e.preventDefault();
+    el.addEventListener('touchmove', blockTouch, { passive: false });
+    return () => el.removeEventListener('touchmove', blockTouch);
+  }, [isOpen]);
+
+  /** 面板內 touchmove 不冒泡，避免部分 Android 瀏覽器 scroll chaining */
+  useEffect(() => {
+    const el = panelScrollRef.current;
+    if (!isOpen || !el) return undefined;
+    const stopBubble = (e) => e.stopPropagation();
+    el.addEventListener('touchmove', stopBubble, { passive: true });
+    return () => el.removeEventListener('touchmove', stopBubble);
+  }, [isOpen]);
+
   return (
     <>
       <VocabUploadModal
@@ -142,14 +167,15 @@ export default function ParentDebugPanel({
 
       {isOpen && (
         <button
+          ref={backdropRef}
           type="button"
           aria-label="收起家長端後台"
-          className="lg:hidden fixed inset-0 z-[67] bg-black/35 backdrop-blur-[1px]"
+          className="lg:hidden fixed inset-0 z-[67] bg-black/35 backdrop-blur-[1px] touch-none"
           onClick={() => onOpenChange?.(false)}
         />
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-[68] border-t-4 border-slate-700 shadow-2xl pb-[env(safe-area-inset-bottom,0px)] flex flex-col-reverse">
+      <div className="fixed bottom-0 left-0 right-0 z-[68] border-t-4 border-slate-700 shadow-2xl pb-[env(safe-area-inset-bottom,0px)] flex flex-col-reverse touch-manipulation">
         <div className="relative flex items-stretch bg-slate-800 text-white min-h-[2.75rem] lg:min-h-[3rem] shrink-0">
           <button
             type="button"
@@ -194,9 +220,10 @@ export default function ParentDebugPanel({
         </div>
 
         <div
-          className={`overflow-y-auto xh-scroll xh-scroll--dark transition-all duration-300 ease-in-out bg-slate-900 text-slate-100 min-h-0
+          ref={panelScrollRef}
+          className={`xh-parent-panel-scroll overflow-y-auto overscroll-contain xh-scroll xh-scroll--dark transition-all duration-300 ease-in-out bg-slate-900 text-slate-100 min-h-0
             ${isOpen
-              ? 'max-h-[min(560px,calc(100vh-11rem-env(safe-area-inset-bottom,0px)))] lg:max-h-[min(560px,58vh)] opacity-100'
+              ? 'max-h-[min(560px,calc(100vh-11rem-env(safe-area-inset-bottom,0px)))] lg:max-h-[min(560px,58vh)] opacity-100 touch-pan-y'
               : 'max-h-0 opacity-0 overflow-hidden pointer-events-none'}`}
         >
           {isOpen && (

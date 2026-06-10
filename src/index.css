@@ -7,6 +7,17 @@ body,
   max-width: 100%;
 }
 
+/* 家長端展開時禁止背景 overscroll 反彈（配合 useBodyScrollLock） */
+html[data-parent-panel-open="true"] {
+  overscroll-behavior: none;
+}
+
+/* 家長端面板內滾動 —  containment 防止 scroll chaining 至背景頁 */
+.xh-parent-panel-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── 星航中文 · 全局自訂滾軸（日間 / 夜間 / SEN 加寬） ── */
 :root {
   --xh-page-bg: #f5f0e6;
