@@ -1,0 +1,9 @@
+{
+  "name": "xinghang-chinese-server",
+  "private": true,
+  "type": "module",
+  "description": "星航中文後端 OCR 依賴（Tesseract.js）",
+  "dependencies": {
+    "tesseract.js": "^7.0.0"
+  }
+}

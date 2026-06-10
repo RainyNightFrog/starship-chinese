@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-HK">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>星航中文 · 小六呈分試特訓</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <script>
+      (function () {
+        var KEY = 'xinghang_color_mode_v3';
+        var mode = 'day';
+        try {
+          var v = localStorage.getItem(KEY);
+          if (v === 'night') mode = 'night';
+          else {
+            localStorage.removeItem('xinghang_color_mode');
+            localStorage.removeItem('xinghang_color_mode_v2');
+            localStorage.setItem(KEY, 'day');
+            mode = 'day';
+          }
+        } catch (e) {}
+        var bg = mode === 'night' ? '#1c1917' : '#C2410C';
+        var fg = mode === 'night' ? '#f5f5f4' : '#FFF7ED';
+        var html = document.documentElement;
+        html.dataset.colorMode = mode;
+        html.style.backgroundColor = bg;
+        html.style.color = fg;
+        function paintSurfaces() {
+          if (document.body) document.body.style.backgroundColor = bg;
+          var root = document.getElementById('root');
+          if (root) root.style.backgroundColor = bg;
+        }
+        if (document.body) paintSurfaces();
+        else document.addEventListener('DOMContentLoaded', paintSurfaces);
+      })();
+    </script>
+  </head>
+  <body style="margin:0;background-color:#C2410C">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // 若直接對根目錄 Go Live（未經 dist 建置）會空白 — 顯示指引
+      setTimeout(function () {
+        var root = document.getElementById('root');
+        if (!root || root.childElementCount > 0) return;
+        root.innerHTML =
+          '<div style="max-width:32rem;margin:4rem auto;padding:2rem;font-family:system-ui,sans-serif;text-align:center;line-height:1.6">' +
+          '<p style="font-size:3rem;margin:0 0 1rem">📚</p>' +
+          '<h1 style="font-size:1.25rem;font-weight:800;margin:0 0 0.75rem">星航中文未能載入</h1>' +
+          '<p style="color:#475569;margin:0 0 1rem">請在終端執行：</p>' +
+          '<p style="margin:0 0 1rem"><code style="background:#f1f5f9;padding:0.35rem 0.6rem;border-radius:4px;font-size:1rem">npm run live</code></p>' +
+          '<p style="font-size:0.875rem;color:#64748b;margin:0">會自動開啟 <a href="http://127.0.0.1:5501">http://127.0.0.1:5501</a>，無需 Go Live 擴充套件</p>' +
+          '</div>';
+      }, 2500);
+    </script>
+  </body>
+</html>

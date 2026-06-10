@@ -1,0 +1,45 @@
+{
+  "name": "xinghang-chinese",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n web,speech -c cyan,magenta \"vite\" \"node --watch server/index.js\"",
+    "dev:stop": "powershell -ExecutionPolicy Bypass -File scripts/kill-dev-ports.ps1",
+    "dev:fresh": "npm run dev:stop && npm run dev",
+    "live": "node scripts/go-live.mjs",
+    "live:server": "node server/liveServer.js",
+    "dev:client": "vite",
+    "dev:server": "node server/index.js",
+    "setup": "node scripts/setup-speech.mjs",
+    "setup:auth": "node scripts/setup-google-auth.mjs",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.107.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "microsoft-cognitiveservices-speech-sdk": "^1.42.0",
+    "opencc-js": "^1.3.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.1.2",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "tailwindcss": "^4.3.0",
+    "vite": "^8.0.12"
+  }
+}

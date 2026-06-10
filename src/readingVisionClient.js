@@ -1,0 +1,177 @@
+/**
+ * 閱讀理解 OCR — 前端呼叫後端 Node.js Tesseract API
+ * 路由：POST /api/reading/vision · POST /api/reading/vision-stitch
+ */
+
+import {
+  READING_BLUR_ERROR_CODE,
+  READING_BACKEND_UNAVAILABLE_CODE,
+  READING_BACKEND_UNAVAILABLE_MESSAGE,
+} from './readingDualTrackEngine';
+
+let ocrAvailableCache = null;
+let resolvedApiBase = null;
+
+function getReadingApiBase() {
+  const speechUrl = import.meta.env.VITE_SPEECH_API_URL?.trim();
+  if (speechUrl) {
+    return speechUrl.replace(/\/api\/speech\/?$/, '');
+  }
+  return resolvedApiBase ?? '';
+}
+
+const OCR_HEALTH_PATH = '/api/reading/health';
+
+async function fetchHealthCheck() {
+  const bases = [
+    import.meta.env.VITE_SPEECH_API_URL?.trim()
+      ? import.meta.env.VITE_SPEECH_API_URL.trim().replace(/\/api\/speech\/?$/, '')
+      : null,
+    '',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+  ].filter((v, i, arr) => v != null && arr.indexOf(v) === i);
+
+  for (const base of bases) {
+    try {
+      const res = await fetch(`${base}${OCR_HEALTH_PATH}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok) {
+          resolvedApiBase = base;
+          return { ok: true, data };
+        }
+      }
+    } catch {
+      /* 嘗試下一個 base */
+    }
+  }
+  resolvedApiBase = null;
+  return { ok: false, data: null };
+}
+
+function throwBackendUnavailable(cause) {
+  const err = new Error(READING_BACKEND_UNAVAILABLE_MESSAGE);
+  err.code = READING_BACKEND_UNAVAILABLE_CODE;
+  err.cause = cause;
+  throw err;
+}
+
+async function fetchOcrApi(path, options) {
+  if (!resolvedApiBase) {
+    await fetchHealthCheck();
+  }
+  const bases = [
+    resolvedApiBase ?? '',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+  ].filter((v, i, arr) => v != null && arr.indexOf(v) === i);
+
+  let lastErr;
+  for (const base of bases) {
+    try {
+      const res = await fetch(`${base}${path}`, options);
+      resolvedApiBase = base;
+      return res;
+    } catch (netErr) {
+      lastErr = netErr;
+    }
+  }
+  throwBackendUnavailable(lastErr);
+}
+
+function throwOcrError(data, status) {
+  const message = data.userMessage
+    || data.error
+    || `後端 OCR API 錯誤 (${status})`;
+
+  const err = new Error(message);
+
+  if (data.code === READING_BLUR_ERROR_CODE) {
+    err.code = READING_BLUR_ERROR_CODE;
+  } else if (data.code === 'tesseract_module_not_found') {
+    err.code = 'tesseract_module_not_found';
+  } else if (data.code === READING_BACKEND_UNAVAILABLE_CODE) {
+    err.code = READING_BACKEND_UNAVAILABLE_CODE;
+  } else if (status === 503 || status === 502) {
+    err.code = READING_BACKEND_UNAVAILABLE_CODE;
+    err.message = READING_BACKEND_UNAVAILABLE_MESSAGE;
+  }
+
+  throw err;
+}
+
+async function parseOcrResponse(res) {
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throwBackendUnavailable(new Error(`HTTP ${res.status}`));
+    }
+    throwOcrError(data, res.status);
+  }
+
+  if (data.code === READING_BLUR_ERROR_CODE || data.ok === false) {
+    throwOcrError(data, 422);
+  }
+
+  /** 防呆：questions 必須是物件陣列，不可為字串 */
+  if (typeof data.questions === 'string') {
+    data.questions = [];
+  }
+
+  return data;
+}
+
+export async function checkReadingVisionAvailable(force = false) {
+  if (!force && ocrAvailableCache !== null) return ocrAvailableCache;
+  const result = await fetchHealthCheck();
+  ocrAvailableCache = result.ok;
+  return ocrAvailableCache;
+}
+
+/** 單張圖片 — 後端 OCR */
+export async function analyzeReadingImageWithVision({ imageDataUrl, fileName, onProgress }) {
+  onProgress?.(0.15);
+
+  const res = await fetchOcrApi('/api/reading/vision', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageDataUrl, fileName }),
+  });
+
+  onProgress?.(0.85);
+  const data = await parseOcrResponse(res);
+  onProgress?.(1);
+  return data;
+}
+
+/** 多張圖片 — 後端 OCR 合併 */
+export async function analyzeReadingImagesStitchedWithVision({
+  images = [],
+  onProgress,
+  onStitchPage,
+} = {}) {
+  const payload = images.map((item, order) => ({
+    order,
+    fileName: item.fileName ?? `第${order + 1}頁`,
+    imageDataUrl: item.previewUrl ?? item.imageDataUrl,
+  }));
+
+  const total = payload.length;
+  onStitchPage?.(1, total);
+  onProgress?.(0.08);
+
+  const res = await fetchOcrApi('/api/reading/vision-stitch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ images: payload }),
+  });
+
+  onStitchPage?.(total, total);
+  onProgress?.(0.92);
+
+  const data = await parseOcrResponse(res);
+  onProgress?.(1);
+  return data;
+}

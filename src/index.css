@@ -1,0 +1,301 @@
+@import "tailwindcss";
+
+/* ── 星航中文 · 全局自訂滾軸（日間 / 夜間 / SEN 加寬） ── */
+:root {
+  --xh-page-bg: #f5f0e6;
+  --xh-text: #44403c;
+  --xh-scroll-width: 10px;
+  --xh-scroll-track: #e5ddd0;
+  --xh-scroll-track-border: #d6ccc0;
+  --xh-scroll-thumb: #d4a574;
+  --xh-scroll-thumb-hover: #c4884a;
+  --xh-scroll-thumb-border: #ede6d8;
+}
+
+[data-color-mode="day"] {
+  --xh-page-bg: #f5f0e6;
+  --xh-shell-bg: #f5f0e6;
+  --xh-header-bg: #ede6d8;
+  --xh-sidebar-bg: #e5ddd0;
+  --xh-card-bg: #fffcf7;
+  --xh-text: #44403c;
+  --xh-scroll-track: #e5ddd0;
+  --xh-scroll-track-border: #d6ccc0;
+  --xh-scroll-thumb: #d4a574;
+  --xh-scroll-thumb-hover: #c4884a;
+  --xh-scroll-thumb-border: #ede6d8;
+}
+
+[data-color-mode="day"] .xh-scroll--warm {
+  --xh-scroll-track: #fef3c7;
+  --xh-scroll-track-border: #fde68a;
+  --xh-scroll-thumb-border: #fffbeb;
+}
+
+[data-color-mode="night"] {
+  --xh-page-bg: #1c1917;
+  --xh-shell-bg: #1c1917;
+  --xh-header-bg: #292524;
+  --xh-sidebar-bg: #1f1c1a;
+  --xh-card-bg: #292524;
+  --xh-text: #f5f5f4;
+  --xh-scroll-track: #292524;
+  --xh-scroll-track-border: #44403c;
+  --xh-scroll-thumb: #f59e0b;
+  --xh-scroll-thumb-hover: #fbbf24;
+  --xh-scroll-thumb-border: #44403c;
+}
+
+[data-sen="true"] {
+  --xh-scroll-width: 14px;
+}
+
+/** 固定深色區域（家長後台等）— 不受日間模式影響 */
+.xh-scroll--dark {
+  --xh-scroll-track: #1c1917;
+  --xh-scroll-track-border: #44403c;
+  --xh-scroll-thumb: #d97706;
+  --xh-scroll-thumb-hover: #fbbf24;
+  --xh-scroll-thumb-border: #292524;
+}
+
+/** 米黃 SEN 日間卡片內滾動 */
+.xh-scroll--warm {
+  --xh-scroll-track: #fef3c7;
+  --xh-scroll-track-border: #fde68a;
+  --xh-scroll-thumb: #d97706;
+  --xh-scroll-thumb-hover: #b45309;
+  --xh-scroll-thumb-border: #fffbeb;
+}
+
+/* Firefox */
+html,
+.xh-scroll,
+.xh-scroll--dark,
+.xh-scroll--warm {
+  scrollbar-width: thin;
+  scrollbar-color: var(--xh-scroll-thumb) var(--xh-scroll-track);
+}
+
+/* Chromium / Safari / Edge */
+html::-webkit-scrollbar,
+.xh-scroll::-webkit-scrollbar,
+.xh-scroll--dark::-webkit-scrollbar,
+.xh-scroll--warm::-webkit-scrollbar {
+  width: var(--xh-scroll-width);
+  height: var(--xh-scroll-width);
+}
+
+html::-webkit-scrollbar-track,
+.xh-scroll::-webkit-scrollbar-track,
+.xh-scroll--dark::-webkit-scrollbar-track,
+.xh-scroll--warm::-webkit-scrollbar-track {
+  background: var(--xh-scroll-track);
+  border-radius: 999px;
+  border: 1px solid var(--xh-scroll-track-border);
+}
+
+html::-webkit-scrollbar-thumb,
+.xh-scroll::-webkit-scrollbar-thumb,
+.xh-scroll--dark::-webkit-scrollbar-thumb,
+.xh-scroll--warm::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--xh-scroll-thumb) 0%, var(--xh-scroll-thumb-hover) 100%);
+  border-radius: 999px;
+  border: 2px solid var(--xh-scroll-thumb-border);
+  min-height: 40px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.xh-scroll::-webkit-scrollbar-thumb:hover,
+.xh-scroll--dark::-webkit-scrollbar-thumb:hover,
+.xh-scroll--warm::-webkit-scrollbar-thumb:hover {
+  background: var(--xh-scroll-thumb-hover);
+}
+
+html::-webkit-scrollbar-corner,
+.xh-scroll::-webkit-scrollbar-corner,
+.xh-scroll--dark::-webkit-scrollbar-corner,
+.xh-scroll--warm::-webkit-scrollbar-corner {
+  background: var(--xh-scroll-track);
+}
+
+html,
+body,
+#root {
+  background-color: var(--xh-page-bg);
+}
+
+[data-color-mode="day"] .xh-app-shell {
+  background-color: var(--xh-shell-bg) !important;
+}
+
+[data-color-mode="day"] .xh-app-header {
+  background-color: var(--xh-header-bg) !important;
+}
+
+[data-color-mode="day"] .xh-app-sidebar {
+  background-color: var(--xh-sidebar-bg) !important;
+}
+
+[data-color-mode="day"] .xh-app-main {
+  background-color: var(--xh-shell-bg) !important;
+}
+
+[data-color-mode="day"] .xh-app-card {
+  background-color: var(--xh-card-bg) !important;
+  color: #44403c !important;
+}
+
+/* 日間內容區 — 柔和暖色塊（低飽和護眼） */
+[data-color-mode="day"] .xh-day-panel {
+  background-color: #ede6d8 !important;
+  border-color: #d4a574 !important;
+  color: #57534e !important;
+}
+
+[data-color-mode="day"] .xh-day-timer {
+  background-color: #fffcf7 !important;
+  border-color: #d4a574 !important;
+  color: #78716c !important;
+}
+
+[data-color-mode="day"] .xh-day-hint {
+  background-color: #fffcf7 !important;
+  border-color: #d4a574 !important;
+  color: #44403c !important;
+}
+
+[data-color-mode="day"] .xh-day-meaning {
+  background-color: #fffcf7 !important;
+  border-color: #d4a574 !important;
+  color: #44403c !important;
+}
+
+[data-color-mode="day"] .xh-day-chip {
+  background-color: #ede6d8 !important;
+  border-color: #d4a574 !important;
+  color: #57534e !important;
+}
+
+/* 安全網：深夜 class 殘留時，改為柔和日間色（含邊框） */
+html[data-color-mode="day"] .xh-app-card [class*="bg-stone-8"],
+html[data-color-mode="day"] .xh-app-card [class*="bg-stone-9"],
+html[data-color-mode="day"] .xh-app-card [class*="rose-950"],
+html[data-color-mode="day"] .xh-app-card [class*="rose-900"],
+html[data-color-mode="day"] .xh-app-card [class*="amber-950"],
+html[data-color-mode="day"] .xh-app-card [class*="amber-900"],
+html[data-color-mode="day"] .xh-app-card [class*="violet-900"],
+html[data-color-mode="day"] .xh-app-card [class*="bg-\\[#1c1917\\]"],
+html[data-color-mode="day"] .xh-app-card [class*="bg-\\[#292524\\]"] {
+  background-color: #fffbeb !important;
+  color: #44403c !important;
+}
+
+html[data-color-mode="day"] .xh-app-card [class*="border-stone-5"],
+html[data-color-mode="day"] .xh-app-card [class*="border-stone-6"],
+html[data-color-mode="day"] .xh-app-card [class*="border-rose-5"],
+html[data-color-mode="day"] .xh-app-card [class*="border-rose-6"],
+html[data-color-mode="day"] .xh-app-card [class*="border-rose-7"],
+html[data-color-mode="day"] .xh-app-card [class*="border-amber-6"],
+html[data-color-mode="day"] .xh-app-card [class*="border-violet-5"] {
+  border-color: #e7e5e4 !important;
+}
+
+html[data-color-mode="day"] .xh-app-card [class*="text-stone-1"],
+html[data-color-mode="day"] .xh-app-card [class*="text-rose-50"],
+html[data-color-mode="day"] .xh-app-card [class*="text-rose-100"],
+html[data-color-mode="day"] .xh-app-card [class*="text-amber-100"],
+html[data-color-mode="day"] .xh-app-card [class*="text-amber-200"] {
+  color: #44403c !important;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@keyframes coinFloat {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  70% { opacity: 1; transform: translateY(-1.25rem) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-2rem) scale(0.9); }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/** SEN 友善：緩慢脈動，避免強烈閃爍干擾 ADHD 學童 */
+@keyframes gentlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.88; }
+}
+
+/** 金幣 3D 翻轉 — 緩慢、輕量 */
+@keyframes coinSpin {
+  0% { transform: perspective(120px) rotateY(0deg); }
+  50% { transform: perspective(120px) rotateY(180deg); }
+  100% { transform: perspective(120px) rotateY(360deg); }
+}
+
+/** 答題特效 — 全屏淡入淡出閃光 */
+@keyframes answerFlash {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/** 答對 — 勾號彈出 */
+@keyframes correctPop {
+  0% { opacity: 0; transform: scale(0.35); }
+  35% { opacity: 1; transform: scale(1.12); }
+  55% { transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.04); }
+}
+
+/** 答對 — 擴散光環 */
+@keyframes correctRing {
+  0% { transform: scale(0.4); opacity: 0.75; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+/** 答錯 — 輕微左右晃動（無刺耳視覺） */
+@keyframes wrongShake {
+  0% { opacity: 0; transform: translateX(0) scale(0.9); }
+  12% { opacity: 1; transform: translateX(0) scale(1); }
+  24% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  56% { transform: translateX(-4px); }
+  72% { transform: translateX(4px); }
+  88% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(0); }
+}
+
+/** 答對 — 彩屑向上飛散 */
+@keyframes confettiBurst {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  20% { opacity: 1; transform: translateY(-12px) scale(1); }
+  100% { opacity: 0; transform: translateY(-48px) scale(0.6); }
+}
+
+/** 選項按鈕 — 答對彈跳 */
+@keyframes correctOptionPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/** 選項按鈕 — 答錯輕晃 */
+@keyframes wrongOptionPulse {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
