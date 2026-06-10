@@ -12,6 +12,7 @@
     "dev:client": "vite",
     "dev:server": "node server/index.js",
     "setup": "node scripts/setup-speech.mjs",
+    "test:speech": "node scripts/test-speech.mjs",
     "setup:auth": "node scripts/setup-google-auth.mjs",
     "build": "vite build",
     "lint": "eslint .",

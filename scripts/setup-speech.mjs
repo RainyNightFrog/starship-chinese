@@ -11,8 +11,8 @@ if (!fs.existsSync(envPath) && fs.existsSync(examplePath)) {
   console.log('✓ 已建立 .env（請填入 AZURE_SPEECH_KEY）');
 }
 
-const envContent = fs.readFileSync(envPath, 'utf8');
-const hasKey = /^AZURE_SPEECH_KEY=(?!your_subscription_key_here|)$/m.test(envContent);
+const envContent = fs.readFileSync(envPath, 'utf8').replace(/^\uFEFF/, '');
+const hasKey = /^AZURE_SPEECH_KEY=(?!your_subscription_key_here)\S+/m.test(envContent);
 
 console.log('\n星航中文 — Azure 語音設定檢查');
 console.log('─────────────────────────────');

@@ -180,13 +180,23 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
 
     const speechApiUrl = (import.meta.env.VITE_SPEECH_API_URL || '').trim();
     const isDev = import.meta.env.DEV;
-    /** Vercel 靜態站未部署後端時，略過 Azure（避免 /api/speech 回傳 HTML 或 localhost 卡死） */
-    const azureConfigured = Boolean(
-      speechApiUrl
-      && (isDev || !/localhost|127\.0\.0\.1/i.test(speechApiUrl)),
-    );
 
-    if (!azureConfigured) {
+    const shouldAttemptAzure = (() => {
+      if (isDev) return true;
+      if (!speechApiUrl) return false;
+      if (typeof window === 'undefined') {
+        return !/localhost|127\.0\.0\.1/i.test(speechApiUrl);
+      }
+      try {
+        const api = new URL(speechApiUrl, window.location.href);
+        if (api.origin === window.location.origin) return true;
+      } catch {
+        return false;
+      }
+      return !/localhost|127\.0\.0\.1/i.test(speechApiUrl);
+    })();
+
+    if (!shouldAttemptAzure) {
       azureHealthCheckedRef.current = true;
       useAzureRef.current = false;
       if (mountedRef.current) setSpeechProvider('browser-fallback');
