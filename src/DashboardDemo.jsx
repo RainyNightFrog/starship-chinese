@@ -347,7 +347,10 @@ export default function DashboardDemo() {
       </header>
 
       <div
-        className={`flex flex-col lg:flex-row min-w-0 transition-colors duration-500 ${parentPanelOpen ? 'pb-[min(520px,52vh)]' : 'pb-16'}`}
+        className={`flex flex-col lg:flex-row min-w-0 transition-colors duration-500
+          ${parentPanelOpen
+            ? 'pb-[calc(min(340px,40vh)+3.5rem+env(safe-area-inset-bottom,0px))] lg:pb-[min(520px,52vh)]'
+            : 'pb-[calc(4.5rem+env(safe-area-inset-bottom,0px)+0.75rem)] lg:pb-16'}`}
       >
         <aside
           className={`xh-app-sidebar hidden lg:block w-72 shrink-0 min-h-[calc(100vh-4.5rem)] p-4 border-r transition-colors duration-500 ${theme.sidebar}`}

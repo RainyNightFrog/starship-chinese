@@ -140,14 +140,23 @@ export default function ParentDebugPanel({
         onComplete={handleReadingUploadComplete}
       />
 
-      <div className="fixed bottom-0 left-0 right-0 z-[65] border-t-4 border-slate-700 shadow-2xl">
-        <div className="relative flex items-stretch bg-slate-800 text-white min-h-[3rem]">
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="收起家長端後台"
+          className="lg:hidden fixed inset-0 z-[64] bg-black/35 backdrop-blur-[1px]"
+          onClick={() => onOpenChange?.(false)}
+        />
+      )}
+
+      <div className="fixed bottom-0 left-0 right-0 z-[65] border-t-4 border-slate-700 shadow-2xl pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="relative flex items-stretch bg-slate-800 text-white min-h-[2.75rem] lg:min-h-[3rem]">
           <button
             type="button"
             onClick={() => {
               onGoHome?.();
             }}
-            className="shrink-0 px-3 sm:px-4 py-3 bg-amber-500 hover:bg-amber-400 text-xs font-black text-slate-900 border-r border-slate-700"
+            className="hidden lg:flex shrink-0 px-3 sm:px-4 py-3 bg-amber-500 hover:bg-amber-400 text-xs font-black text-slate-900 border-r border-slate-700"
           >
             🏠 首頁
           </button>
@@ -156,23 +165,22 @@ export default function ParentDebugPanel({
             onClick={() => {
               onReturnToStudy?.();
             }}
-            className="shrink-0 px-3 sm:px-4 py-3 bg-amber-600/90 hover:bg-amber-500 text-xs font-black text-slate-900 border-r border-slate-700"
+            className="hidden lg:flex shrink-0 px-3 sm:px-4 py-3 bg-amber-600/90 hover:bg-amber-500 text-xs font-black text-slate-900 border-r border-slate-700"
           >
             ↑ 學習區
           </button>
           <button
             type="button"
             onClick={() => onOpenChange?.(!isOpen)}
-            className="relative flex-1 flex items-center justify-center gap-4 px-6 py-3 hover:bg-slate-700 transition-colors min-w-0"
+            className="relative flex-1 flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 lg:py-3 hover:bg-slate-700 transition-colors min-w-0"
           >
-            <div className="flex items-center justify-center gap-3 text-center min-w-0">
-              <span className="text-lg shrink-0">👨‍👩‍👦</span>
+            <div className="flex items-center gap-2 sm:gap-3 text-left min-w-0 flex-1">
+              <span className="text-base sm:text-lg shrink-0">👨‍👩‍👦</span>
               <BilingualLabel
                 zh="家長端後台"
-                en="Parent Dashboard (Debug)"
-                size="md"
-                center
-                className="text-white [&_span:last-child]:text-slate-400"
+                en="Parent Dashboard"
+                size="sm"
+                className="text-white [&_span:last-child]:hidden sm:[&_span:last-child]:block [&_span:last-child]:text-slate-400"
               />
             </div>
             <BilingualLabel
@@ -180,14 +188,16 @@ export default function ParentDebugPanel({
               en={isOpen ? 'Collapse' : 'Expand'}
               size="sm"
               center
-              className="absolute right-4 bg-slate-600 px-3 py-1.5 rounded-lg [&_span:first-child]:text-white [&_span:last-child]:text-slate-300"
+              className="shrink-0 bg-slate-600 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg [&_span:first-child]:text-white [&_span:last-child]:hidden sm:[&_span:last-child]:block [&_span:last-child]:text-slate-300"
             />
           </button>
         </div>
 
         <div
           className={`overflow-y-auto xh-scroll xh-scroll--dark transition-all duration-300 ease-in-out bg-slate-900 text-slate-100
-            ${isOpen ? 'max-h-[min(560px,58vh)] opacity-100' : 'max-h-0 opacity-0 overflow-hidden pointer-events-none'}`}
+            ${isOpen
+              ? 'max-h-[min(340px,40vh)] lg:max-h-[min(560px,58vh)] opacity-100'
+              : 'max-h-0 opacity-0 overflow-hidden pointer-events-none'}`}
         >
           <p className="text-center py-2 px-4 bg-slate-800/80 border-b border-slate-700 text-xs">
             <span className="font-bold text-amber-300">中文為主 · English shown alongside</span>
@@ -195,7 +205,7 @@ export default function ParentDebugPanel({
             <span className="text-slate-400">設定會即時同步至上方學生端 · Changes sync instantly to student view</span>
           </p>
 
-          <div className="p-6 space-y-6 max-w-7xl mx-auto">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
             {/* 操作區 — 選擇功能在上 */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 

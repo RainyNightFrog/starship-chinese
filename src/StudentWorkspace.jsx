@@ -831,7 +831,7 @@ export default function StudentWorkspace({
           ))}
         </div>
 
-        <div className={`flex flex-wrap justify-center ${isSEN ? 'gap-4' : 'gap-3'}`}>
+        <div className={`flex flex-wrap justify-center mb-6 lg:mb-0 ${isSEN ? 'gap-4' : 'gap-3'}`}>
           {sentenceWords.map((word, idx) => (
             <button
               key={`${word}-${idx}`}
