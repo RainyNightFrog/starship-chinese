@@ -19,11 +19,11 @@ const FEMALE_AZURE_RATES = {
   'en-US': { sen: 1.02, normal: 1.15 },
 };
 
-/** 男聲獨立語速（雲龍等）— 略慢於女聲，方便跟讀 */
+/** 男聲獨立語速（雲龍等）— 明顯慢於女聲，方便跟讀 */
 const MALE_AZURE_RATES = {
-  'zh-HK': { sen: 0.82, normal: 0.90 },
-  'zh-CN': { sen: 0.78, normal: 0.86 },
-  'en-US': { sen: 0.84, normal: 0.92 },
+  'zh-HK': { sen: 0.66, normal: 0.72 },
+  'zh-CN': { sen: 0.64, normal: 0.70 },
+  'en-US': { sen: 0.70, normal: 0.76 },
 };
 
 const FEMALE_BROWSER_RATES = {
@@ -33,9 +33,9 @@ const FEMALE_BROWSER_RATES = {
 };
 
 const MALE_BROWSER_RATES = {
-  'zh-HK': { sen: 0.76, normal: 0.84 },
-  'zh-CN': { sen: 0.72, normal: 0.80 },
-  'en-US': { sen: 0.80, normal: 0.88 },
+  'zh-HK': { sen: 0.68, normal: 0.74 },
+  'zh-CN': { sen: 0.64, normal: 0.70 },
+  'en-US': { sen: 0.72, normal: 0.78 },
 };
 
 function resolveLangKey(lang) {
