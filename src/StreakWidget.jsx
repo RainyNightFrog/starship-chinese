@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WEEK_LABELS, buildMonthGrid } from './streakStore';
 import { BilingualLabel } from './BilingualLabel';
@@ -87,9 +87,25 @@ export default function StreakWidget({
     [safeCheckInDates, viewYear, viewMonth],
   );
 
+  const openCalendar = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setCalendarPos(computeCalendarPosition(rect, isSEN));
+    }
+    setShowCalendar(true);
+  }, [isSEN]);
+
   const toggleCalendar = useCallback(() => {
-    if (streakClaimed) setShowCalendar((v) => !v);
-  }, [streakClaimed]);
+    if (!streakClaimed) return;
+    setShowCalendar((v) => {
+      if (v) return false;
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setCalendarPos(computeCalendarPosition(rect, isSEN));
+      }
+      return true;
+    });
+  }, [streakClaimed, isSEN]);
 
   const goToPrevMonth = useCallback((e) => {
     e.stopPropagation();
@@ -120,16 +136,23 @@ export default function StreakWidget({
     setViewMonth(d.getMonth());
   }, []);
 
-  /** 開啟日曆或簽到完成後 — 計算 popover 位置（含首幀重算） */
-  useEffect(() => {
+  /** 開啟日曆後 — 首幀前重算位置，避免 popover 閃到錯誤座標 */
+  useLayoutEffect(() => {
     if (!showCalendar || !streakClaimed) {
       if (!showCalendar) setCalendarPos(null);
       return undefined;
     }
     updateCalendarPosition();
-    const raf = requestAnimationFrame(() => updateCalendarPosition());
     window.addEventListener('resize', updateCalendarPosition);
     window.addEventListener('scroll', updateCalendarPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateCalendarPosition);
+      window.removeEventListener('scroll', updateCalendarPosition, true);
+    };
+  }, [showCalendar, streakClaimed, updateCalendarPosition]);
+
+  useEffect(() => {
+    if (!showCalendar || !streakClaimed) return undefined;
 
     const handleOutside = (e) => {
       if (containerRef.current?.contains(e.target)) return;
@@ -138,18 +161,13 @@ export default function StreakWidget({
       setShowCalendar(false);
     };
     document.addEventListener('pointerdown', handleOutside);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', updateCalendarPosition);
-      window.removeEventListener('scroll', updateCalendarPosition, true);
-      document.removeEventListener('pointerdown', handleOutside);
-    };
-  }, [showCalendar, streakClaimed, updateCalendarPosition]);
+    return () => document.removeEventListener('pointerdown', handleOutside);
+  }, [showCalendar, streakClaimed]);
 
   const handleClick = () => {
     if (!streakClaimed) {
       onClaim?.();
-      setShowCalendar(true);
+      openCalendar();
       return;
     }
     toggleCalendar();
@@ -180,10 +198,12 @@ export default function StreakWidget({
         maxWidth: `calc(100vw - ${VIEWPORT_PAD * 2}px)`,
         zIndex: 100,
       }}
-      className={`rounded-xl border-2 shadow-lg animate-[fadeSlideIn_0.2s_ease-out] px-3 py-2.5
-        ${isNight ? 'bg-stone-800 border-amber-600/60 text-stone-100' : 'bg-white border-amber-200 text-stone-800'}
-        ${isSEN ? 'py-3' : ''}`}
     >
+      <div
+        className={`rounded-xl border-2 shadow-lg animate-[fadeSlideIn_0.2s_ease-out] px-3 py-2.5
+          ${isNight ? 'bg-stone-800 border-amber-600/60 text-stone-100' : 'bg-white border-amber-200 text-stone-800'}
+          ${isSEN ? 'py-3' : ''}`}
+      >
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
@@ -303,6 +323,7 @@ export default function StreakWidget({
             );
           })}
         </div>
+      </div>
       </div>
     </div>
     </>
