@@ -31,10 +31,11 @@ import {
   isFragmentWorksheet,
 } from './readingDynamicQuestionEngine.js';
 import {
-  ingestFromOcrText,
+  syncAndExpandSharedPool,
   pickRandomSharedIdiomQuestions,
   pickRandomSharedMethodQuestions,
-} from './mockDatabase.js';
+  generateContributorLabel,
+} from './globalSharedPool.js';
 
 const DEFAULT_QUESTION_COUNT = 5;
 
@@ -193,15 +194,19 @@ export function generateQuestionsFromOcr(ocrText = '', options = {}) {
 
   const cleanedText = denoiseOcrText(ocrText);
 
-  // ② UGC 自動匯入：OCR 辨識的新詞／新題寫入中央共享庫（智能去重）
-  const ingestMeta = {
-    seed: seed ?? Date.now(),
-    contributorLabel: options.contributorLabel,
-  };
-  const ingestResult = ingestFromOcrText(cleanedText, ingestMeta);
-
   // ① 前置結構隔離器 — 100% 剝除考卷試題／選項行
   const { cleanArticleLines, droppedCount, hitWorksheet } = advancedSanitizeOcrText(cleanedText);
+
+  // ② UGC Auto-Ingestor：以「清洗後正文」掃描新詞 → 去重 → 寫入 starship_global_idioms
+  const storyBody = cleanArticleLines.join('\n');
+  const ugcIngest = syncAndExpandSharedPool(storyBody, {
+    seed: seed ?? Date.now(),
+    contributorLabel: options.contributorLabel ?? generateContributorLabel(seed ?? Date.now()),
+    source: 'ugc_photo_scan',
+    customIdioms: options.customIdioms,
+    customMethods: options.customMethods,
+  });
+
   const coreKeywords = extractCoreKeywords(cleanArticleLines);
 
   const resolved = resolveArticleFromOcr(cleanedText, cleanArticleLines, coreKeywords);
@@ -232,6 +237,6 @@ export function generateQuestionsFromOcr(ocrText = '', options = {}) {
     expandedBy,
     source: 'ocr-dynamic-engine',
     sanitizer: { droppedCount, hitWorksheet },
-    ugcIngest: ingestResult,
+    ugcIngest,
   };
 }

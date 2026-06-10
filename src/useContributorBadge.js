@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getContributorBadgeForItem, recordSharedItemStudy } from './mockDatabase';
+import { getContributorBadgeForItem, recordSharedItemStudy } from './globalSharedPool';
 
 /**
  * 共享題貢獻者榮譽徽章 — 首次瀏覽時累計溫習人次

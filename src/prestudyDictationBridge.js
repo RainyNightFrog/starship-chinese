@@ -5,7 +5,7 @@
  * · 默書端：讀取快取，100% 鎖定剛溫習詞語並隨機聽寫順序
  */
 
-import { getGlobalSharedIdioms } from './mockDatabase.js';
+import { getGlobalSharedIdioms, shuffleGlobalIdiomPool } from './globalSharedPool.js';
 import { fisherYatesShuffle } from './questionEngineCore.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
 
@@ -33,8 +33,10 @@ export function idiomItemToVocabItem(item) {
     hintSc: meaning,
     hint: stripHintPrefix(item.hint),
     en: '',
-    source: 'idiom_exam_pool',
+    source: item.source ?? 'starship_global_idioms',
     idiomWord: item.word,
+    isCommunityShared: Boolean(item.isCommunityShared),
+    sharedPoolId: item.sharedPoolId ?? `idiom:${item.word}`,
   });
 }
 
@@ -50,8 +52,8 @@ export function getPrestudyIdiomVocabList(count = PRESTUDY_IDIOM_COUNT) {
     /* 快取損壞 → 重建 */
   }
 
-  const pool = getGlobalSharedIdioms();
-  const picked = fisherYatesShuffle([...pool]).slice(
+  const pool = shuffleGlobalIdiomPool(Date.now());
+  const picked = pool.slice(
     0,
     Math.min(count, pool.length),
   );

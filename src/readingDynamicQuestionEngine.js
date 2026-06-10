@@ -67,7 +67,7 @@ import {
   PRIORITY_TEMPLATE_IDS,
 } from './readingAdvancedQuestionPool.js';
 import { buildTypeSafeOptions } from './readingTypeSafeOptions.js';
-import { getGlobalSharedMethods } from './mockDatabase.js';
+import { getGlobalSharedMethods } from './globalSharedPool.js';
 
 /** 將樣版實例化為標準 schema 題目（題型-選項強綁定） */
 function instantiateTemplate(template, ctx) {

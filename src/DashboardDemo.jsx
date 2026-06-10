@@ -20,6 +20,7 @@ import { makeDisplayText } from './chineseScript';
 import { LearningAnalyticsProvider } from './context/LearningAnalyticsContext';
 import { BilingualLabel } from './BilingualLabel';
 import { STUDENT_THEME_LABELS } from './studentI18n';
+import { reloadGlobalSharedPools } from './globalSharedPool';
 
 const LANGUAGE_STORAGE = 'xinghang_ui_language';
 
@@ -53,6 +54,7 @@ export default function DashboardDemo() {
   const [parentRedemptions, setParentRedemptions] = useState([]);
 
   useEffect(() => {
+    reloadGlobalSharedPools();
     setWrongWordReminders(loadAllAsList());
     setWrongAnswerReviews(loadWrongAnswers());
   }, []);

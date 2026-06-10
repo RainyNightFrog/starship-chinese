@@ -5,7 +5,7 @@
  */
 
 import { getUploadImageCount, mergeUploadImagesIntoContent } from './uploadMetaUtils';
-import { ingestFromExamPatterns, generateContributorLabel } from './mockDatabase';
+import { ingestFromExamPatterns, generateContributorLabel } from './globalSharedPool';
 
 /** AI 解析動畫步驟（約 3 秒，由 UI 定時播放） */
 export const EXAM_PARSE_STEPS = [
