@@ -12,7 +12,19 @@ import {
   MALE_PLAYBACK_RATE,
 } from './speechRate';
 
-const API_BASE = import.meta.env.VITE_SPEECH_API_URL || '/api/speech';
+/** 解析語音 API 根路徑 — 本機 live 一律走同域 /api/speech */
+export function resolveSpeechApiBase() {
+  const env = (import.meta.env.VITE_SPEECH_API_URL || '').trim();
+  if (env) return env.replace(/\/$/, '');
+
+  if (typeof window !== 'undefined') {
+    const { hostname, origin } = window.location;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `${origin}/api/speech`;
+    }
+  }
+  return '/api/speech';
+}
 
 let azureAvailable = null;
 
@@ -26,7 +38,8 @@ const inflightRequests = new Map();
 /** 檢查 Azure 後端是否就緒 */
 export async function checkAzureSpeechHealth() {
   try {
-    const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+    const apiBase = resolveSpeechApiBase();
+    const res = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) {
       azureAvailable = false;
       return false;
@@ -132,7 +145,8 @@ export async function fetchAzureSpeechBlob({
       : controller.signal;
 
     try {
-      const res = await fetch(`${API_BASE}/synthesize`, {
+      const apiBase = resolveSpeechApiBase();
+      const res = await fetch(`${apiBase}/synthesize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: trimmedText, voice: voiceName, rate }),
@@ -172,9 +186,15 @@ export async function fetchAzureSpeechBlob({
  * @returns {{ stop: () => void }}
  */
 export function playAudioBlob(blob, { onStart, onEnd, onError, playbackRate = 1 } = {}) {
+  if (!blob || blob.size < 64) {
+    onError?.(new Error('音檔為空或損壞'));
+    return { stop: () => {} };
+  }
+
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   audio.playbackRate = Math.min(1.2, Math.max(0.5, playbackRate));
+  audio.volume = 1;
   let ended = false;
 
   const cleanup = () => {

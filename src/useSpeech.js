@@ -11,6 +11,7 @@ import { warmSpeechCache } from './speechCache';
 import {
   getBrowserVoices,
   isMaleBrowserVoice,
+  pickVoiceForLang,
   resolveVoice,
   waitForVoices,
 } from './voicePicker';
@@ -194,6 +195,10 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
 
     const shouldAttemptAzure = (() => {
       if (isDev) return true;
+      if (typeof window !== 'undefined') {
+        const host = window.location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1') return true;
+      }
       if (!speechApiUrl) return false;
       if (typeof window === 'undefined') {
         return !/localhost|127\.0\.0\.1/i.test(speechApiUrl);
@@ -305,12 +310,13 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
       matchedVoice = null;
     }
 
-    if (!matchedVoice && wantsMale) {
-      setSpeechError(
-        '已選雲龍男聲，瀏覽器找不到男聲。請用 npm run live 開啟 http://127.0.0.1:5501 使用 Azure 雲龍。',
-      );
-      finishSegment(onEnd);
-      return;
+    if (!matchedVoice && wantsMale && lang === 'zh-HK') {
+      matchedVoice = pickVoiceForLang(lang, voicesRef.current);
+      if (matchedVoice) {
+        setSpeechError(
+          '雲端男聲未連線，暫用本機語音。請用 npm run live 開啟 http://127.0.0.1:5501 聽雲龍男聲。',
+        );
+      }
     }
 
     if (!matchedVoice && (lang === 'zh-HK' || lang === 'zh-CN')) {
@@ -396,27 +402,48 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
 
     const azureOk = await ensureSpeechReady();
 
-    const failMaleWithoutAzure = (message) => {
-      setSpeechError(message);
-      finishSegment(onEnd);
+    const tryPlayAzureBlob = async (blob, fromCache, playbackRate = 1) => {
+      if (!blob || blob.size < 64) {
+        throw new Error('音檔為空');
+      }
+      if (!mountedRef.current) return false;
+
+      setLastFromCache(fromCache);
+      setSpeechProvider(fromCache ? 'azure-cached' : 'azure-neural');
+
+      audioCtrlRef.current = playAudioBlob(blob, {
+        playbackRate,
+        onStart: () => {
+          if (!mountedRef.current) return;
+          setLoadingKind(null);
+          setSpeaking(true);
+          setSpeakingKind(kind);
+        },
+        onEnd: () => {
+          if (!mountedRef.current) return;
+          audioCtrlRef.current = null;
+          setSpeaking(false);
+          setSpeakingKind(null);
+          finishSegment(onEnd);
+        },
+        onError: (err) => {
+          if (!mountedRef.current) return;
+          audioCtrlRef.current = null;
+          setSpeechError(err.message || '音檔播放失敗');
+          finishSegment(onEnd);
+        },
+      });
+      return true;
     };
 
-    if (azureOk) {
-      let azureWatchdog;
+    const synthesizeWithAzure = async () => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const watchdog = window.setTimeout(() => controller.abort(), 15000);
       try {
-        abortRef.current?.abort();
-        const controller = new AbortController();
-        abortRef.current = controller;
-
-        azureWatchdog = window.setTimeout(() => {
-          controller.abort();
-        }, 12000);
-
-        const {
-          blob,
-          fromCache,
-          playbackRate = 1,
-        } = await fetchAzureSpeechBlob({
+        const result = await fetchAzureSpeechBlob({
           text,
           lang,
           isSEN,
@@ -424,65 +451,42 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
           voice: resolveAzureVoice(lang, engineKey),
           signal: controller.signal,
         });
+        return result;
+      } finally {
+        window.clearTimeout(watchdog);
+      }
+    };
 
-        window.clearTimeout(azureWatchdog);
-
-        if (!mountedRef.current) return;
-
-        setLastFromCache(fromCache);
-        setSpeechProvider(fromCache ? 'azure-cached' : 'azure-neural');
-
-        audioCtrlRef.current = playAudioBlob(blob, {
-          playbackRate,
-          onStart: () => {
-            if (!mountedRef.current) return;
-            setLoadingKind(null);
-            setSpeaking(true);
-            setSpeakingKind(kind);
-          },
-          onEnd: () => {
-            if (!mountedRef.current) return;
-            audioCtrlRef.current = null;
-            setSpeaking(false);
-            setSpeakingKind(null);
-            finishSegment(onEnd);
-          },
-          onError: (err) => {
-            if (!mountedRef.current) return;
-            audioCtrlRef.current = null;
-            setSpeechError(err.message || '音檔播放失敗');
-            finishSegment(onEnd);
-          },
-        });
-        return;
-      } catch (err) {
-        window.clearTimeout(azureWatchdog);
-        if (err?.name === 'AbortError') {
-          if (wantsMaleAzure) {
-            failMaleWithoutAzure('雲龍男聲逾時。請確認 npm run live 已啟動並開啟 http://127.0.0.1:5501');
+    if (azureOk) {
+      try {
+        let result = await synthesizeWithAzure();
+        if (await tryPlayAzureBlob(result.blob, result.fromCache, result.playbackRate ?? 1)) {
+          return;
+        }
+      } catch (firstErr) {
+        console.warn('[Speech] Azure 首次失敗，重試一次:', firstErr?.message);
+        useAzureRef.current = false;
+        azureHealthCheckedRef.current = false;
+        try {
+          await checkAzureSpeechHealth();
+          const result = await synthesizeWithAzure();
+          if (await tryPlayAzureBlob(result.blob, result.fromCache, result.playbackRate ?? 1)) {
             return;
           }
-          if (mountedRef.current) setSpeechError('雲端語音逾時，已改用瀏覽器語音');
-          await playWithBrowser(text, lang, kind, engineKey, onEnd);
-          return;
+        } catch (retryErr) {
+          console.warn('[Speech] Azure 重試失敗，改瀏覽器備援:', retryErr?.message);
+          if (mountedRef.current) {
+            const msg = retryErr?.name === 'AbortError'
+              ? '雲端語音逾時，已改用本機語音'
+              : wantsMaleAzure
+                ? '雲龍男聲連線失敗，暫用本機語音。請確認 npm run live 已啟動。'
+                : '雲端語音失敗，已改用瀏覽器語音';
+            setSpeechError(msg);
+          }
         }
-        if (wantsMaleAzure) {
-          failMaleWithoutAzure('雲龍男聲需 Azure 雲端。請執行 npm run live 開啟 http://127.0.0.1:5501');
-          return;
-        }
-        if (mountedRef.current) {
-          const msg = err.message?.includes('503') || err.message?.includes('429')
-            ? '雲端語音額度或連線暫不可用，已改用瀏覽器語音'
-            : '雲端語音失敗，已改用瀏覽器語音';
-          setSpeechError(msg);
-        }
-        console.warn('[Speech] Azure 失敗，降級瀏覽器語音:', err.message);
       }
-    }
-
-    if (wantsMaleAzure) {
-      failMaleWithoutAzure('雲龍男聲需 Azure 雲端。請執行 npm run live 開啟 http://127.0.0.1:5501');
-      return;
+    } else if (wantsMaleAzure && mountedRef.current) {
+      setSpeechError('雲端未就緒，暫用本機語音。請用 npm run live 開啟 http://127.0.0.1:5501');
     }
 
     await playWithBrowser(text, lang, kind, engineKey, onEnd);
