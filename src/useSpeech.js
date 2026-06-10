@@ -12,6 +12,7 @@ import { getBrowserVoices, resolveVoice, waitForVoices } from './voicePicker';
 import { getBrowserSpeechRate } from './speechRate';
 import { convertToSimplified, getDisplayText, isSimplifiedScript as checkSimplifiedScript } from './chineseScript';
 import { sanitizeDictationHint } from './dictationHintUtils';
+import { getVocabHintEn } from './vocabHints';
 
 export { getDisplayText, makeDisplayText } from './chineseScript';
 
@@ -85,8 +86,14 @@ export function getVocabMeaning(vocab, { voiceLang, studentType, language = 'zh-
   const displaySc = isSimplifiedScript(language, studentType);
 
   if (lang === 'en-US') {
-    const en = vocab.en || vocab.tc;
-    return { text: en, lang: 'en-US', label: `英文：${en}` };
+    const hintEn = getVocabHintEn(vocab);
+    const text = hintEn || vocab.en || vocab.tc;
+    return {
+      text,
+      lang: 'en-US',
+      label: hintEn || vocab.en || vocab.tc,
+      hintEn,
+    };
   }
 
   const scChar = vocab.sc || convertToSimplified(vocab.tc);
@@ -114,10 +121,13 @@ export function getVocabMeaning(vocab, { voiceLang, studentType, language = 'zh-
     ? resolveHint(rawHintSc, true)
     : resolveHint(rawHintTc, false);
 
+  const hintEn = getVocabHintEn(vocab);
+
   return {
     text: speechText,
     lang: lang === 'zh-CN' ? 'zh-CN' : 'zh-HK',
     label: displayLabel,
+    hintEn,
   };
 }
 

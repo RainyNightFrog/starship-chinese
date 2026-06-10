@@ -220,9 +220,14 @@ export default function DictationMode({
               <p className={`font-bold leading-relaxed ${isSEN ? 'text-base' : 'text-sm'} ${isNight ? 'text-stone-200' : 'text-slate-700'}`}>
                 {meaning.label}
               </p>
-              {meaningVoiceLang !== 'en-US' && current?.en && (
-                <p className={`text-purple-700 text-xs mt-1.5 font-bold opacity-80 ${isNight ? 'text-purple-300' : ''}`}>
-                  Eng: {current.en}
+              {(meaning.hintEn || current?.hintEn) && (
+                <p className={`text-purple-700 text-sm mt-1.5 font-bold leading-relaxed ${isNight ? 'text-purple-300' : ''}`}>
+                  Eng: {meaning.hintEn || current.hintEn}
+                </p>
+              )}
+              {current?.en && (
+                <p className={`text-purple-700 text-xs mt-1 font-bold opacity-80 ${isNight ? 'text-purple-400/80' : ''}`}>
+                  Word: {current.en}
                 </p>
               )}
             </div>

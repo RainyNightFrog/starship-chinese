@@ -304,20 +304,24 @@ export function ingestFromExamPatterns(idiomPatterns = [], meta = {}) {
 }
 
 export function globalIdiomsToVocabPool(idiomPool = getGlobalSharedIdioms()) {
-  return idiomPool.map((item) => ({
-    id: item.id ?? `global-vocab-${item.word}`,
-    tc: item.word,
-    sc: item.word,
-    hintTc: stripHintPrefix(item.hint),
-    hintSc: stripHintPrefix(item.hint),
-    hint: stripHintPrefix(item.hint),
-    en: item.en ?? '',
-    word: item.word,
-    isCommunityShared: Boolean(item.isCommunityShared),
-    contributorLabel: item.contributorLabel,
-    sharedPoolId: item.sharedPoolId ?? `idiom:${item.word}`,
-    source: item.source ?? 'starship_global_idioms',
-  }));
+  return idiomPool.map((item) => {
+    const correctIdx = Number(item.correctAnswerIndex ?? 0);
+    const meaning = item.options?.[correctIdx] ?? stripHintPrefix(item.hint);
+    return {
+      id: item.id ?? `global-vocab-${item.word}`,
+      tc: item.word,
+      sc: item.word,
+      hintTc: meaning,
+      hintSc: meaning,
+      hint: stripHintPrefix(item.hint),
+      en: item.en ?? '',
+      word: item.word,
+      isCommunityShared: Boolean(item.isCommunityShared),
+      contributorLabel: item.contributorLabel,
+      sharedPoolId: item.sharedPoolId ?? `idiom:${item.word}`,
+      source: item.source ?? 'starship_global_idioms',
+    };
+  });
 }
 
 export function idiomPoolItemToQuestion(item, index = 0) {

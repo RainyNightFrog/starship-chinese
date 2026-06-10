@@ -1160,9 +1160,19 @@ function VocabCards({
             <p className={`mt-1.5 font-bold leading-relaxed ${isSEN ? 'text-base' : 'text-sm'} ${isNight ? 'text-stone-200' : 'text-slate-700'}`}>
               {meaning.label}
             </p>
-            {vocab.en && (
+            {(meaning.hintEn || vocab.hintEn) && (
+              <span className={`text-sm block mt-1.5 font-bold leading-relaxed ${isNight ? 'text-purple-300' : 'text-purple-700'}`}>
+                Eng: {meaning.hintEn || vocab.hintEn}
+              </span>
+            )}
+            {vocab.en && !(meaning.hintEn || vocab.hintEn) && (
               <span className={`text-sm block mt-1 font-bold ${isNight ? 'text-purple-300' : 'text-purple-700'}`}>
                 Eng: {vocab.en}
+              </span>
+            )}
+            {vocab.en && (meaning.hintEn || vocab.hintEn) && (
+              <span className={`text-xs block mt-0.5 opacity-75 ${isNight ? 'text-purple-400/80' : 'text-purple-600/80'}`}>
+                Word: {vocab.en}
               </span>
             )}
           </div>

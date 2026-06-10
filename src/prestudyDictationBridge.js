@@ -8,6 +8,7 @@
 import { getGlobalSharedIdioms, shuffleGlobalIdiomPool } from './globalSharedPool.js';
 import { fisherYatesShuffle } from './questionEngineCore.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
+import { withHints, getVocabHintEn } from './vocabHints.js';
 
 /** 最近一次溫習完成的詞語（純文字陣列） */
 export const STUDIED_WORDS_STORAGE_KEY = 'starship_last_studied_words';
@@ -25,19 +26,19 @@ function stripHintPrefix(hint) {
 export function idiomItemToVocabItem(item) {
   const correctIdx = Number(item.correctAnswerIndex ?? 0);
   const meaning = item.options[correctIdx] ?? '';
-  return applyVocabDecomposition({
+  return withHints(applyVocabDecomposition({
     id: item.id,
     tc: item.word,
     sc: item.word,
     hintTc: meaning,
     hintSc: meaning,
     hint: stripHintPrefix(item.hint),
-    en: '',
+    en: item.en ?? '',
     source: item.source ?? 'starship_global_idioms',
     idiomWord: item.word,
     isCommunityShared: Boolean(item.isCommunityShared),
     sharedPoolId: item.sharedPoolId ?? `idiom:${item.word}`,
-  });
+  }));
 }
 
 /** 從中央共享 GLOBAL_SHARED_IDIOMS 建立本次預習 15 詞（session 內固定） */
@@ -113,16 +114,17 @@ export function buildDictationListFromStudiedWords(words) {
   const items = words.map((word, index) => {
     const idiom = byWord.get(word);
     if (idiom) return idiomItemToVocabItem(idiom);
-    return {
+    return withHints({
       id: `linked-dict-${index}`,
       tc: word,
       sc: word,
       hintTc: word,
       hintSc: word,
+      hintEn: getVocabHintEn({ tc: word, sc: word }),
       en: '',
       source: 'prestudy_linked',
       idiomWord: word,
-    };
+    });
   });
 
   return fisherYatesShuffle(items);
