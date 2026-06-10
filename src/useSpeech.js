@@ -228,6 +228,10 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     setLoadingKind(null);
   }, []);
 
+  const clearSpeechError = useCallback(() => {
+    setSpeechError(null);
+  }, []);
+
   const cancel = useCallback(() => {
     queueRef.current = [];
     processingRef.current = false;
@@ -460,6 +464,7 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     loadingKind,
     speechBusy,
     speechError,
+    clearSpeechError,
     speechProvider,
     lastFromCache,
     wordLang,

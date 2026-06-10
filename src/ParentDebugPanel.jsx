@@ -180,15 +180,6 @@ export default function ParentDebugPanel({
           <button
             type="button"
             onClick={() => {
-              onGoHome?.();
-            }}
-            className="hidden lg:flex shrink-0 px-3 sm:px-4 py-3 bg-amber-500 hover:bg-amber-400 text-xs font-black text-slate-900 border-r border-slate-700"
-          >
-            🏠 首頁
-          </button>
-          <button
-            type="button"
-            onClick={() => {
               onReturnToStudy?.();
             }}
             className="hidden lg:flex shrink-0 px-3 sm:px-4 py-3 bg-amber-600/90 hover:bg-amber-500 text-xs font-black text-slate-900 border-r border-slate-700"

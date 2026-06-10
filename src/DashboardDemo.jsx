@@ -364,19 +364,6 @@ export default function DashboardDemo() {
 
           <div className={`flex items-center flex-wrap justify-end gap-1 sm:gap-2 shrink-0`}>
             <ColorModeToggle isSEN={isSEN} />
-            <button
-              type="button"
-              onClick={goHome}
-              title={dt('返回學習首頁')}
-              className={`rounded-lg border font-bold transition-colors duration-300
-                ${isNight
-                  ? 'border-amber-600/60 bg-stone-800 text-amber-200 hover:bg-stone-700'
-                  : 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'}
-                ${isSEN ? 'px-2.5 py-2 text-sm' : 'px-2 py-1.5 text-xs'}`}
-            >
-              <span aria-hidden>🏠</span>
-              <span className="hidden sm:inline">{dt(' 首頁')}</span>
-            </button>
             {activeTask && (
               <SpeechVoiceHeaderMenu
                 isSEN={isSEN}

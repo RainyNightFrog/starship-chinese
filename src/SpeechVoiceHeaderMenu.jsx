@@ -72,7 +72,7 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const { wordVoiceLang, meaningVoiceLang } = useVoicePreferences();
-  const { speechBusy, speechError, speechProvider, lastFromCache } = useSpeechContext();
+  const { speechBusy, speechError, clearSpeechError, speechProvider, lastFromCache } = useSpeechContext();
 
   const taskMeta = TASK_VOICE_META[task] ?? DEFAULT_TASK_META;
 
@@ -135,7 +135,12 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
     <div ref={rootRef} className={`relative ${prominent ? 'shrink-0' : ''}`}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => {
+            if (!v) clearSpeechError();
+            return !v;
+          });
+        }}
         aria-expanded={open}
         aria-haspopup="dialog"
         title={`${taskMeta.buttonTitle} / Voice`}

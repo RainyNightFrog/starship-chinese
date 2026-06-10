@@ -16,6 +16,9 @@ export default function VoiceEngineSelect({
   centered = false,
 }) {
   const options = listAzureVoicesForLang(lang);
+  const safeValue = value === 'auto' || options.some((v) => v.id === value)
+    ? (value || 'auto')
+    : 'auto';
 
   if (!useAzure) return null;
 
@@ -28,7 +31,7 @@ export default function VoiceEngineSelect({
         className="font-bold shrink-0"
       />
       <select
-        value={value || 'auto'}
+        value={safeValue}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         className={`rounded-lg border-2 font-bold max-w-full text-center

@@ -124,7 +124,7 @@ export default function SpeechVoiceSettings({
         )}
       </div>
 
-      {speechError && (
+      {speechError && !/已改用/.test(speechError) && (
         <p className={`rounded-lg border-2 font-bold p-2 ${textSm}
           ${isNight ? 'border-rose-600 bg-rose-950/40 text-rose-200' : 'border-rose-300 bg-rose-50 text-rose-700'}`}>
           ⚠️ {speechError}
