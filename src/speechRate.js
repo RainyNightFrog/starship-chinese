@@ -17,17 +17,17 @@ function applyMaleSlowdown(rate, min = 0.5, extra = 0) {
   return Math.max(min, rate - 0.10 - extra);
 }
 
-/** 女聲基準語速（曉佳／曉曉等預設引擎）— 略快於以往，方便默書跟讀 */
+/** 女聲基準語速（曉佳／曉曉等）— 1.0 = Azure 正常語速；上限 1.2 */
 const FEMALE_AZURE_RATES = {
-  'zh-HK': { sen: 0.74, normal: 0.82 },
-  'zh-CN': { sen: 0.68, normal: 0.76 },
-  'en-US': { sen: 0.76, normal: 0.84 },
+  'zh-HK': { sen: 1.05, normal: 1.18 },
+  'zh-CN': { sen: 0.98, normal: 1.12 },
+  'en-US': { sen: 1.02, normal: 1.15 },
 };
 
 const FEMALE_BROWSER_RATES = {
-  'zh-HK': { sen: 0.56, normal: 0.64 },
-  'zh-CN': { sen: 0.52, normal: 0.58 },
-  'en-US': { sen: 0.60, normal: 0.68 },
+  'zh-HK': { sen: 0.92, normal: 1.0 },
+  'zh-CN': { sen: 0.88, normal: 0.96 },
+  'en-US': { sen: 0.94, normal: 1.02 },
 };
 
 function resolveLangKey(lang) {
