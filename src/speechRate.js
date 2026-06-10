@@ -19,11 +19,11 @@ const FEMALE_AZURE_RATES = {
   'en-US': { sen: 1.02, normal: 1.15 },
 };
 
-/** 男聲獨立語速（雲龍等）— 明顯慢於女聲，方便跟讀 */
+/** 男聲獨立語速（雲龍等）— 接近 Azure 下限 0.5，方便慢速跟讀 */
 const MALE_AZURE_RATES = {
-  'zh-HK': { sen: 0.66, normal: 0.72 },
-  'zh-CN': { sen: 0.64, normal: 0.70 },
-  'en-US': { sen: 0.70, normal: 0.76 },
+  'zh-HK': { sen: 0.54, normal: 0.58 },
+  'zh-CN': { sen: 0.52, normal: 0.56 },
+  'en-US': { sen: 0.56, normal: 0.60 },
 };
 
 const FEMALE_BROWSER_RATES = {
@@ -33,9 +33,9 @@ const FEMALE_BROWSER_RATES = {
 };
 
 const MALE_BROWSER_RATES = {
-  'zh-HK': { sen: 0.68, normal: 0.74 },
-  'zh-CN': { sen: 0.64, normal: 0.70 },
-  'en-US': { sen: 0.72, normal: 0.78 },
+  'zh-HK': { sen: 0.58, normal: 0.62 },
+  'zh-CN': { sen: 0.54, normal: 0.58 },
+  'en-US': { sen: 0.62, normal: 0.66 },
 };
 
 function resolveLangKey(lang) {
