@@ -8,7 +8,12 @@ import {
   playAudioBlob,
 } from './azureSpeech';
 import { warmSpeechCache } from './speechCache';
-import { getBrowserVoices, isMaleBrowserVoice, resolveVoice, waitForVoices } from './voicePicker';
+import {
+  getBrowserVoices,
+  pickVoiceForLang,
+  resolveVoice,
+  waitForVoices,
+} from './voicePicker';
 import { isMaleAzureVoice } from './azureVoices';
 import { getBrowserSpeechRate } from './speechRate';
 import { convertToSimplified, getDisplayText, isSimplifiedScript as checkSimplifiedScript } from './chineseScript';
@@ -203,7 +208,7 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
       return false;
     }
 
-    if (!azureHealthCheckedRef.current) {
+    if (!azureHealthCheckedRef.current || !useAzureRef.current) {
       const ok = await checkAzureSpeechHealth();
       azureHealthCheckedRef.current = true;
       useAzureRef.current = ok;
@@ -290,13 +295,12 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     const wantsMale = isMaleAzureVoice(engineKey);
 
     if (!matchedVoice && wantsMale && lang === 'zh-HK') {
-      processingRef.current = false;
-      setLoadingKind(null);
-      setSpeechError(
-        '已選雲龍男聲，但本機未安裝粵語男聲（Microsoft Danny）。請執行 npm run dev 使用 Azure 雲龍，或在 Windows「設定→時間與語言→語音」新增中文(香港)男聲。',
-      );
-      runNextInQueueRef.current?.();
-      return;
+      matchedVoice = pickVoiceForLang(lang, voicesRef.current);
+      if (matchedVoice) {
+        setSpeechError(
+          '雲龍男聲需 Azure 雲端。請執行 npm run live 開啟 http://127.0.0.1:5501；現以本機語音代替。',
+        );
+      }
     }
 
     if (!matchedVoice && (lang === 'zh-HK' || lang === 'zh-CN')) {
@@ -307,21 +311,15 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     }
 
     if (!matchedVoice) {
-      processingRef.current = false;
-      setLoadingKind(null);
       setSpeechError(
         lang === 'zh-HK'
-          ? '找不到粵語語音。請用 Safari 並在「設定→輔助使用→語音內容」下載中文語音，或本地 npm run dev 使用 Azure 神經語音。'
+          ? '找不到粵語語音。請執行 npm run live 使用 Azure 雲龍男聲，或安裝系統粵語語音包。'
           : `找不到本機${getSpeechLangLabel(lang)}語音，請在系統設定中下載語音包。`,
       );
-      runNextInQueueRef.current?.();
+      finishSegment(onEnd);
       return;
     }
 
-    const maleMismatch = wantsMale && !isMaleBrowserVoice(matchedVoice);
-    setSpeechError(maleMismatch
-      ? '雲端不可用，本機找不到男聲，暫用備援語音。請 npm run dev 啟用 Azure 雲龍。'
-      : null);
     setSpeechProvider('browser-fallback');
 
     const utter = new SpeechSynthesisUtterance(text);
@@ -396,7 +394,6 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
 
         azureWatchdog = window.setTimeout(() => {
           controller.abort();
-          useAzureRef.current = false;
         }, 12000);
 
         const { blob, fromCache } = await fetchAzureSpeechBlob({
@@ -440,15 +437,12 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
       } catch (err) {
         window.clearTimeout(azureWatchdog);
         if (err?.name === 'AbortError') {
-          processingRef.current = false;
-          setLoadingKind(null);
           if (mountedRef.current) {
             setSpeechError('雲端語音逾時，已改用瀏覽器語音');
           }
           await playWithBrowser(text, lang, kind, engineKey, onEnd);
           return;
         }
-        useAzureRef.current = false;
         if (mountedRef.current) {
           const msg = err.message?.includes('503') || err.message?.includes('429')
             ? '雲端語音額度或連線暫不可用，已改用瀏覽器語音'
