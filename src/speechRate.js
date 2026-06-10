@@ -1,7 +1,7 @@
 import { isMaleAzureVoice } from './azureVoices';
 
 /** 語速／快取結構版本 — 變更時自動作廢舊 IndexedDB 快取 */
-export const SPEECH_RATE_VERSION = 'v7';
+export const SPEECH_RATE_VERSION = 'v8';
 
 /** 本機瀏覽器男聲名稱特徵（Azure 以外降級路徑） */
 const MALE_BROWSER_VOICE_HINTS = [
@@ -15,12 +15,15 @@ export function isMaleSpeechVoice(voiceKey) {
   return MALE_BROWSER_VOICE_HINTS.some((h) => norm.includes(h));
 }
 
-/** 女聲基準語速（曉佳／曉曉等）— 1.0 = Azure 正常語速；上限 1.2 */
+/** 女聲基準語速（曉佳／曉曉等）— 1.0 = Azure 正常語速 */
 const FEMALE_AZURE_RATES = {
-  'zh-HK': { sen: 1.05, normal: 1.18 },
-  'zh-CN': { sen: 0.98, normal: 1.12 },
-  'en-US': { sen: 1.02, normal: 1.15 },
+  'zh-HK': { sen: 0.76, normal: 0.82 },
+  'zh-CN': { sen: 0.74, normal: 0.80 },
+  'en-US': { sen: 0.78, normal: 0.84 },
 };
+
+/** 女聲播放時略放慢（配合合成語速） */
+export const FEMALE_PLAYBACK_RATE = 0.90;
 
 /** 男聲獨立語速（雲龍等）— Azure 下限 0.5 */
 const MALE_AZURE_RATES = {
@@ -33,9 +36,9 @@ const MALE_AZURE_RATES = {
 export const MALE_PLAYBACK_RATE = 0.82;
 
 const FEMALE_BROWSER_RATES = {
-  'zh-HK': { sen: 0.92, normal: 1.0 },
-  'zh-CN': { sen: 0.88, normal: 0.96 },
-  'en-US': { sen: 0.94, normal: 1.02 },
+  'zh-HK': { sen: 0.80, normal: 0.86 },
+  'zh-CN': { sen: 0.76, normal: 0.82 },
+  'en-US': { sen: 0.82, normal: 0.88 },
 };
 
 const MALE_BROWSER_RATES = {
@@ -75,9 +78,14 @@ export function getSpeechRateTag(lang, isSEN = false, voiceKey = null) {
   return `${SPEECH_RATE_VERSION}-${lang}-${pct}${male}`;
 }
 
+/** 播放階段倍率（男／女聲） */
+export function getPlaybackRate(voiceKey = null) {
+  if (isMaleSpeechVoice(voiceKey)) return MALE_PLAYBACK_RATE;
+  return FEMALE_PLAYBACK_RATE;
+}
+
 /** 合成語速 + 播放倍率 → 使用者聽到的有效語速 */
 export function getEffectiveSpeechRate(lang, isSEN = false, voiceKey = null) {
   const synthesis = getAzureSpeechRate(lang, isSEN, voiceKey);
-  const playback = isMaleSpeechVoice(voiceKey) ? MALE_PLAYBACK_RATE : 1;
-  return synthesis * playback;
+  return synthesis * getPlaybackRate(voiceKey);
 }

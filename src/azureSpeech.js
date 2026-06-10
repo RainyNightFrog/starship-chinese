@@ -7,9 +7,8 @@ import {
 } from './speechCache';
 import {
   getAzureSpeechRate,
+  getPlaybackRate,
   getSpeechRateTag,
-  isMaleSpeechVoice,
-  MALE_PLAYBACK_RATE,
 } from './speechRate';
 
 /** 解析語音 API 根路徑 — 本機 live 一律走同域 /api/speech */
@@ -105,7 +104,7 @@ export async function fetchAzureSpeechBlob({
   const rateKey = engineKey && engineKey !== 'auto' ? engineKey : voiceName;
   const rate = getAzureSpeechRate(lang, isSEN, rateKey);
   const rateTag = getSpeechRateTag(lang, isSEN, rateKey);
-  const playbackRate = isMaleSpeechVoice(rateKey) ? MALE_PLAYBACK_RATE : 1;
+  const playbackRate = getPlaybackRate(rateKey);
   const cacheKey = buildCacheKey({ text: trimmedText, voice: voiceName, rateTag });
 
   // ── 步驟 1：本地快取命中 → 100% 阻截 Azure ──
