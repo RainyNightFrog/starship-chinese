@@ -1,7 +1,7 @@
 import { isMaleAzureVoice } from './azureVoices';
 
 /** 語速／快取結構版本 — 變更時自動作廢舊 IndexedDB 快取 */
-export const SPEECH_RATE_VERSION = 'v6';
+export const SPEECH_RATE_VERSION = 'v7';
 
 /** 本機瀏覽器男聲名稱特徵（Azure 以外降級路徑） */
 const MALE_BROWSER_VOICE_HINTS = [

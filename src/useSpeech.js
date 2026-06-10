@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { VoicePreferencesContext } from './VoicePreferencesContext';
-import { resolveAzureVoice } from './azureVoices';
+import { isMaleAzureVoice, normalizeEngineKey, resolveAzureVoice } from './azureVoices';
 import {
   checkAzureSpeechHealth,
   clearInflightSpeechRequests,
@@ -10,11 +10,10 @@ import {
 import { warmSpeechCache } from './speechCache';
 import {
   getBrowserVoices,
-  pickVoiceForLang,
+  isMaleBrowserVoice,
   resolveVoice,
   waitForVoices,
 } from './voicePicker';
-import { isMaleAzureVoice } from './azureVoices';
 import { getBrowserSpeechRate } from './speechRate';
 import { convertToSimplified, getDisplayText, isSimplifiedScript as checkSimplifiedScript } from './chineseScript';
 import { sanitizeDictationHint } from './dictationHintUtils';
@@ -54,11 +53,18 @@ export function saveVoiceLang(kind, lang) {
 }
 
 export function loadVoiceEngine(kind) {
-  try { return localStorage.getItem(ENGINE_STORAGE[kind]) || 'auto'; } catch { return 'auto'; }
+  try {
+    const raw = localStorage.getItem(ENGINE_STORAGE[kind]) || 'auto';
+    return normalizeEngineKey(raw);
+  } catch {
+    return 'auto';
+  }
 }
 
 export function saveVoiceEngine(kind, key) {
-  try { localStorage.setItem(ENGINE_STORAGE[kind], key || 'auto'); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(ENGINE_STORAGE[kind], normalizeEngineKey(key || 'auto'));
+  } catch { /* ignore */ }
 }
 
 export function isSimplifiedScript(language, studentType) {
@@ -291,16 +297,20 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
     }
     if (voices.length) voicesRef.current = voices;
 
-    let matchedVoice = resolveVoice(lang, voicesRef.current, engineKey);
-    const wantsMale = isMaleAzureVoice(engineKey);
+    const normalizedEngine = normalizeEngineKey(engineKey);
+    let matchedVoice = resolveVoice(lang, voicesRef.current, normalizedEngine);
+    const wantsMale = isMaleAzureVoice(normalizedEngine);
 
-    if (!matchedVoice && wantsMale && lang === 'zh-HK') {
-      matchedVoice = pickVoiceForLang(lang, voicesRef.current);
-      if (matchedVoice) {
-        setSpeechError(
-          '雲龍男聲需 Azure 雲端。請執行 npm run live 開啟 http://127.0.0.1:5501；現以本機語音代替。',
-        );
-      }
+    if (wantsMale && matchedVoice && !isMaleBrowserVoice(matchedVoice)) {
+      matchedVoice = null;
+    }
+
+    if (!matchedVoice && wantsMale) {
+      setSpeechError(
+        '已選雲龍男聲，瀏覽器找不到男聲。請用 npm run live 開啟 http://127.0.0.1:5501 使用 Azure 雲龍。',
+      );
+      finishSegment(onEnd);
+      return;
     }
 
     if (!matchedVoice && (lang === 'zh-HK' || lang === 'zh-CN')) {
@@ -378,12 +388,18 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
 
     processingRef.current = true;
     const { text, lang, kind, onEnd } = queueRef.current.shift();
-    const engineKey = getEngineKey(kind);
+    const engineKey = normalizeEngineKey(getEngineKey(kind));
+    const wantsMaleAzure = isMaleAzureVoice(engineKey);
 
     setLoadingKind(kind);
     setSpeechError(null);
 
     const azureOk = await ensureSpeechReady();
+
+    const failMaleWithoutAzure = (message) => {
+      setSpeechError(message);
+      finishSegment(onEnd);
+    };
 
     if (azureOk) {
       let azureWatchdog;
@@ -442,10 +458,16 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
       } catch (err) {
         window.clearTimeout(azureWatchdog);
         if (err?.name === 'AbortError') {
-          if (mountedRef.current) {
-            setSpeechError('雲端語音逾時，已改用瀏覽器語音');
+          if (wantsMaleAzure) {
+            failMaleWithoutAzure('雲龍男聲逾時。請確認 npm run live 已啟動並開啟 http://127.0.0.1:5501');
+            return;
           }
+          if (mountedRef.current) setSpeechError('雲端語音逾時，已改用瀏覽器語音');
           await playWithBrowser(text, lang, kind, engineKey, onEnd);
+          return;
+        }
+        if (wantsMaleAzure) {
+          failMaleWithoutAzure('雲龍男聲需 Azure 雲端。請執行 npm run live 開啟 http://127.0.0.1:5501');
           return;
         }
         if (mountedRef.current) {
@@ -456,6 +478,11 @@ export function useSpeech(studentType, isSEN, language = 'zh-HK') {
         }
         console.warn('[Speech] Azure 失敗，降級瀏覽器語音:', err.message);
       }
+    }
+
+    if (wantsMaleAzure) {
+      failMaleWithoutAzure('雲龍男聲需 Azure 雲端。請執行 npm run live 開啟 http://127.0.0.1:5501');
+      return;
     }
 
     await playWithBrowser(text, lang, kind, engineKey, onEnd);

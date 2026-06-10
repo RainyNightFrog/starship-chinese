@@ -1,5 +1,5 @@
 import React from 'react';
-import { listAzureVoicesForLang } from './azureVoices';
+import { listAzureVoicesForLang, normalizeEngineKey } from './azureVoices';
 import { BilingualLabel } from './BilingualLabel';
 
 /** Azure Neural 語音引擎手動選擇 */
@@ -16,8 +16,9 @@ export default function VoiceEngineSelect({
   centered = false,
 }) {
   const options = listAzureVoicesForLang(lang);
-  const safeValue = value === 'auto' || options.some((v) => v.id === value)
-    ? (value || 'auto')
+  const normalized = normalizeEngineKey(value);
+  const safeValue = normalized === 'auto' || options.some((v) => v.id === normalized)
+    ? normalized
     : 'auto';
 
   if (!useAzure) return null;

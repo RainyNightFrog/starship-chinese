@@ -88,7 +88,7 @@ export async function fetchAzureSpeechBlob({
     throw new Error('缺少合成文字');
   }
 
-  const voiceName = voice || resolveAzureVoice(lang, engineKey);
+  const voiceName = resolveAzureVoice(lang, engineKey);
   const rateKey = engineKey && engineKey !== 'auto' ? engineKey : voiceName;
   const rate = getAzureSpeechRate(lang, isSEN, rateKey);
   const rateTag = getSpeechRateTag(lang, isSEN, rateKey);

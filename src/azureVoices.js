@@ -21,10 +21,33 @@ export function listAzureVoicesForLang(lang) {
   return AZURE_VOICES[lang] ?? [];
 }
 
+/** 校正 localStorage 舊值／無效 id，避免默默退回女聲 */
+export function normalizeEngineKey(engineKey) {
+  if (!engineKey || engineKey === 'auto') return 'auto';
+  const key = String(engineKey).trim();
+
+  for (const list of Object.values(AZURE_VOICES)) {
+    const exact = list.find((v) => v.id === key);
+    if (exact) return exact.id;
+  }
+
+  const lower = key.toLowerCase();
+  if (/雲龍|wanlung|wan.?lung/.test(lower)) return 'zh-HK-WanLungNeural';
+  if (/曉佳|hiugaai|tracy/.test(lower)) return 'zh-HK-HiuGaaiNeural';
+  if (/曉曉|xiaoxiao/.test(lower)) return 'zh-CN-XiaoxiaoNeural';
+
+  return 'auto';
+}
+
+export function isValidAzureEngineId(engineKey) {
+  return normalizeEngineKey(engineKey) !== 'auto' || engineKey === 'auto';
+}
+
 export function resolveAzureVoice(lang, engineKey) {
   const list = listAzureVoicesForLang(lang);
-  if (engineKey && engineKey !== 'auto') {
-    const found = list.find((v) => v.id === engineKey);
+  const normalized = normalizeEngineKey(engineKey);
+  if (normalized !== 'auto') {
+    const found = list.find((v) => v.id === normalized);
     if (found) return found.id;
   }
   return getDefaultAzureVoice(lang);

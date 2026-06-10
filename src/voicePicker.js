@@ -128,9 +128,7 @@ function pickBrowserVoiceForAzureEngine(lang, voices, azureEngineKey) {
 
   const wantMale = isMaleAzureVoice(azureEngineKey);
   if (wantMale) {
-    const maleVoice = ranked.find((v) => isMaleBrowserVoice(v));
-    if (maleVoice) return maleVoice;
-    return ranked[0] ?? null;
+    return ranked.find((v) => isMaleBrowserVoice(v)) ?? null;
   }
 
   const femaleVoice = ranked.find((v) => isFemaleBrowserVoice(v));

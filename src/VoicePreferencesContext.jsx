@@ -7,6 +7,7 @@ import {
   saveVoiceEngine,
   saveVoiceLang,
 } from './useSpeech';
+import { isMaleAzureVoice, normalizeEngineKey } from './azureVoices';
 
 const VoicePreferencesContext = createContext(null);
 
@@ -33,13 +34,19 @@ export function VoicePreferencesProvider({ studentType, language, children }) {
   }, []);
 
   const setWordEngineKey = useCallback((key) => {
-    setWordEngineKeyState(key);
-    saveVoiceEngine('word', key);
+    const normalized = normalizeEngineKey(key);
+    setWordEngineKeyState(normalized);
+    saveVoiceEngine('word', normalized);
+    if (isMaleAzureVoice(normalized)) {
+      setMeaningEngineKeyState(normalized);
+      saveVoiceEngine('meaning', normalized);
+    }
   }, []);
 
   const setMeaningEngineKey = useCallback((key) => {
-    setMeaningEngineKeyState(key);
-    saveVoiceEngine('meaning', key);
+    const normalized = normalizeEngineKey(key);
+    setMeaningEngineKeyState(normalized);
+    saveVoiceEngine('meaning', normalized);
   }, []);
 
   const value = useMemo(
