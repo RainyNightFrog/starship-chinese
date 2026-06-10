@@ -67,6 +67,7 @@ import {
   PRIORITY_TEMPLATE_IDS,
 } from './readingAdvancedQuestionPool.js';
 import { buildTypeSafeOptions } from './readingTypeSafeOptions.js';
+import { getGlobalSharedMethods } from './mockDatabase.js';
 
 /** 將樣版實例化為標準 schema 題目（題型-選項強綁定） */
 function instantiateTemplate(template, ctx) {
@@ -465,6 +466,28 @@ export function generateDynamicQuestions(articleLines = [], options = {}) {
     return true;
   };
 
+  /** 從中央共享庫直接注入靜態寫作手法題（Shuffle Pool 對接 GLOBAL_SHARED_METHODS） */
+  const tryPickSharedMethod = (tpl) => {
+    if (!tpl?.questionText || usedStems.has(tpl.questionText)) return false;
+    const options = (tpl.options ?? []).slice(0, 4);
+    if (options.length < 4) return false;
+    usedIds.add(tpl.id ?? tpl.questionText);
+    usedStems.add(tpl.questionText);
+    picked.push({
+      id: tpl.id,
+      category: tpl.category ?? 'writing_technique',
+      questionText: tpl.questionText,
+      options,
+      correctAnswerIndex: Number(tpl.correctAnswerIndex ?? 0),
+      hint: tpl.hint,
+      isCommunityShared: tpl.isCommunityShared,
+      contributorLabel: tpl.contributorLabel,
+      sharedPoolId: tpl.sharedPoolId,
+      source: tpl.source ?? 'global_shared_methods',
+    });
+    return true;
+  };
+
   // 階段 1：高級優先池（四大黃金 + 修辭 + 心態）Fisher-Yates 洗牌注入
   const priorityPool = fisherYatesShuffle(
     PRIORITY_TEMPLATE_IDS.map((id) => templateById[id]).filter(Boolean),
@@ -477,6 +500,13 @@ export function generateDynamicQuestions(articleLines = [], options = {}) {
   for (const tpl of priorityPool) {
     if (picked.length >= priorityTarget) break;
     tryPick(tpl);
+  }
+
+  // 階段 1b：中央共享寫作手法池 — 全港家長 UGC 滾雪球題目
+  const sharedMethodPool = fisherYatesShuffle(getGlobalSharedMethods(), randInt);
+  for (const tpl of sharedMethodPool) {
+    if (picked.length >= priorityTarget + 1) break;
+    tryPickSharedMethod(tpl);
   }
 
   // 階段 2：每大類至少 1 題，確保維度多元
@@ -515,6 +545,10 @@ export function generateDynamicQuestions(articleLines = [], options = {}) {
     hint: q.hint,
     templateId: q.id,
     category: q.category,
+    isCommunityShared: q.isCommunityShared,
+    contributorLabel: q.contributorLabel,
+    sharedPoolId: q.sharedPoolId,
+    source: q.source,
   }));
 }
 

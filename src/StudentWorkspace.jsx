@@ -39,6 +39,8 @@ import {
   buildDictationListFromStudiedWords,
   PRESTUDY_IDIOM_COUNT,
 } from './prestudyDictationBridge';
+import ContributorHonorBadge from './ContributorHonorBadge';
+import { useContributorBadge } from './useContributorBadge';
 
 const QUIZ_TASKS = new Set(['quiz', 'sspa', 'sentence', 'reading']);
 
@@ -110,6 +112,7 @@ export default function StudentWorkspace({
     deck,
     setIndex: setQuestionIndex,
   } = questionEngine;
+  const contributorBadge = useContributorBadge(currentItem);
   const isSEN = studentType === 'sen';
   const useSimplified = isSimplifiedScript(language, studentType);
   const isNCS = studentType === 'ncs';
@@ -272,7 +275,7 @@ export default function StudentWorkspace({
 
   const vocabList = vocabDeck;
 
-  /** 課文預習 — 優先家長上載；否則從 IDIOM_EXAM_POOL 隨機 15 詞 */
+  /** 課文預習 — 優先家長上載；否則從中央共享 GLOBAL_SHARED_IDIOMS 隨機 15 詞 */
   const prestudyVocabList = useMemo(() => {
     const uploaded = assignedContent.vocabByTask?.prestudy;
     if (uploaded?.length) return uploaded;
@@ -613,6 +616,7 @@ export default function StudentWorkspace({
                 {quiz.hintEn && (
                   <p className={`text-sm mt-1 font-bold ${isNight ? 'text-purple-300' : 'text-purple-700'}`}>Eng: {quiz.hintEn}</p>
                 )}
+                <ContributorHonorBadge badge={contributorBadge} isSEN={isSEN} isNight={isNight} />
               </div>
               <HintSpeakButton
                 onClick={() => speakHint(quiz.hint, quiz.hintEn)}
@@ -705,6 +709,7 @@ export default function StudentWorkspace({
                     Eng: {sspa.hintEn}
                   </span>
                 )}
+                <ContributorHonorBadge badge={contributorBadge} isSEN={isSEN} isNight={isNight} />
               </div>
               <HintSpeakButton
                 onClick={() => speakHint(sspa.hint, sspa.hintEn)}

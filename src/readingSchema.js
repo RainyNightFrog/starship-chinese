@@ -247,6 +247,10 @@ export function schemaToQuestionPack({ articleTitle, articleLines, questions }, 
       correctIndex: item.correctAnswerIndex,
       explanation: item.hint || '請對照原文理解文意。',
       hint: item.hint || '',
+      isCommunityShared: item.isCommunityShared,
+      contributorLabel: item.contributorLabel,
+      sharedPoolId: item.sharedPoolId,
+      source: item.source,
     })),
   };
 }
@@ -282,6 +286,10 @@ export function mapToReadingBankEntry({
     /** 同一篇文章內的題號（1–3），供進度條「第 X/Y 題」顯示 */
     questionNumberInPassage: qi + 1,
     passageQuestionTotal,
+    isCommunityShared: question.isCommunityShared,
+    contributorLabel: question.contributorLabel,
+    sharedPoolId: question.sharedPoolId,
+    source: question.source,
   };
 
   return sanitizeReadingBankItem(entry);

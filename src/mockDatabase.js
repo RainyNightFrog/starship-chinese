@@ -11,6 +11,7 @@ import {
 } from './sspaReferenceTemplatePool.js';
 import { BUILTIN_READING_POOL } from './readingBuiltinPool.js';
 import { IDIOM_EXAM_POOL, idiomExamPoolToQuizPool } from './idiomExamPool.js';
+import { EXAM_METHOD_TEMPLATES } from './readingGoldenTechniquePool.js';
 
 export const DICTATION_VOCAB_POOL = [
   { id: 'dict-001', tc: '恍然大悟', sc: '恍然大悟', py: 'huǎng rán dà wù', jp: 'fong2 jin4 daai6 ng6', en: 'Suddenly understand', radical: '忄', body: '𡿺', hintTc: '突然之間徹底明白、豁然開竅', hintSc: '突然之间彻底明白、豁然开朗' },
@@ -48,7 +49,8 @@ export const PRESTUDY_VOCAB_POOL = [
   { id: 'pre-015', tc: '精益求精', sc: '精益求精', py: 'jīng yì qiú jīng', jp: 'zing1 jik6 kau4 zing1', en: 'Excellence', hintTc: '已經很好，還要求更好', hintSc: '已经很好，还要求更好' },
 ];
 
-export const QUIZ_POOL = [
+/** 單元測驗靜態核心題（不含 UGC 共享四字詞庫 — 該部分由 getQuizPoolWithGlobal 動態合併） */
+export const QUIZ_POOL_CORE = [
   { id: 'quiz-001', text: '這道科學題我想了很久都不懂，直到看見哥哥的提示，我才恍然大____，原來答案這麼簡單！', hint: '突然徹底明白了（注意形近字）', options: [{ key: 'A', word: '物', detail: '指物品。' }, { key: 'B', word: '語', detail: '形近錯字。' }, { key: 'C', word: '悟', detail: '答對了！明白、覺悟。' }, { key: 'D', word: '誤', detail: '指錯誤。' }], correctKey: 'C', explanation: '「恍然大悟」的「悟」指領悟，不可寫成「語」。' },
   { id: 'quiz-002', text: '下列哪一句運用了「擬人」修辭手法？', hint: '把事物當作人來寫', options: [{ key: 'A', word: '春風像母親的手', detail: '比喻。' }, { key: 'B', word: '風兒輕輕地梳理著柳樹的長髮', detail: '答對了！擬人。' }, { key: 'C', word: '他跑得像一陣風', detail: '比喻。' }, { key: 'D', word: '這座山高聳入雲', detail: '誇張。' }], correctKey: 'B', explanation: '「梳理長髮」把風和柳樹當作人來描寫，是擬人。' },
   { id: 'quiz-003', text: '「學而時習之，不亦說乎？」的「之」字是指：', hint: '文言虛詞', options: [{ key: 'A', word: '代詞：它（所學的）', detail: '答對了！' }, { key: 'B', word: '助詞：的', detail: '結構助詞。' }, { key: 'C', word: '動詞：去', detail: '' }, { key: 'D', word: '語氣詞', detail: '' }], correctKey: 'A', explanation: '此處「之」作代詞，指代所學的知識。' },
@@ -62,8 +64,10 @@ export const QUIZ_POOL = [
   { id: 'quiz-011', text: '「月亮像銀盤」運用了：', hint: '兩種不同事物相比', options: [{ key: 'A', word: '擬人', detail: '' }, { key: 'B', word: '比喻', detail: '答對了！' }, { key: 'C', word: '誇張', detail: '' }, { key: 'D', word: '設問', detail: '' }], correctKey: 'B', explanation: '用「銀盤」比「月亮」，是比喻。' },
   { id: 'quiz-012', text: '「乎」在「不亦樂乎」中表示：', hint: '文言語氣詞', options: [{ key: 'A', word: '疑問或感嘆語氣', detail: '答對了！' }, { key: 'B', word: '代詞', detail: '' }, { key: 'C', word: '介詞：於', detail: '' }, { key: 'D', word: '連詞', detail: '' }], correctKey: 'A', explanation: '「乎」在此表感嘆、疑問語氣。' },
   ...referenceTemplatesToQuizPool(),
-  ...idiomExamPoolToQuizPool(),
 ];
+
+/** @deprecated 請改用 getQuizPoolWithGlobal() — 保留相容 export */
+export const QUIZ_POOL = [...QUIZ_POOL_CORE, ...idiomExamPoolToQuizPool()];
 
 export const SSPA_POOL = [
   { id: 'sspa-001', text: '在對抗這次嚴重水災的過程中，消防員、武警部隊和志願者們________，沒日沒夜地搬運沙袋，終於保住了大堤。', hint: '肩膀靠著肩膀，團結一致共同戰鬥', hintEn: 'Shoulder to shoulder', options: ['並肩作戰', '不知不覺', '惟利是圖', '大方得體'], optionsPinyin: ['bìng jiān zuò zhàn', 'bù zhī bù jué', 'wéi lì shì tú', 'dà fāng dé tǐ'], correctIndex: 0, explanation: '並肩作戰：比喻團結合作、共同奮鬥。' },
@@ -111,12 +115,377 @@ export const READING_POOL = BUILTIN_READING_POOL;
 
 /** 四字詞語語意池 — 供外部直接 import / 管理員編輯器 */
 export { IDIOM_EXAM_POOL } from './idiomExamPool.js';
+export { EXAM_METHOD_TEMPLATES } from './readingGoldenTechniquePool.js';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🌐 中央共享雲端題庫（Global Shared DB Pool）— 模擬持久化 + UGC 滾雪球擴充
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LS_IDIOMS = 'global_shared_idioms';
+const LS_METHODS = 'global_shared_methods';
+const LS_STUDY_STATS = 'global_shared_study_stats';
+
+/** 本地 Fisher-Yates 洗牌（避免與出題引擎循環依賴） */
+function shuffleWithRandInt(array, randInt) {
+  const arr = [...array];
+  const ri = randInt ?? ((n) => Math.floor(Math.random() * n));
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = ri(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+/** 匿名貢獻者顯示名稱池（保護隱私，只顯示地區 + 某小學家長） */
+const CONTRIBUTOR_DISTRICTS = [
+  '九龍塘', '沙田', '屯門', '北角', '將軍澳', '大埔', '元朗', '荃灣',
+  '深水埗', '觀塘', '灣仔', '西貢', '葵涌', '上水', '馬鞍山',
+];
+
+function readJsonStorage(key, fallback) {
+  try {
+    if (typeof localStorage === 'undefined') return fallback;
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJsonStorage(key, value) {
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 依 seed 產生匿名貢獻者標籤 */
+export function generateContributorLabel(seed = Date.now()) {
+  const n = Math.abs(Number(seed) || Date.now());
+  const district = CONTRIBUTOR_DISTRICTS[n % CONTRIBUTOR_DISTRICTS.length];
+  return `${district}某小學家長`;
+}
+
+/** 中央共享四字詞語庫 — 初始化時從 LocalStorage 還原，否則以內建池為種子 */
+let GLOBAL_SHARED_IDIOMS = readJsonStorage(LS_IDIOMS, null) ?? [...IDIOM_EXAM_POOL];
+
+/** 中央共享寫作手法與結構題庫 — 同上 */
+let GLOBAL_SHARED_METHODS = readJsonStorage(LS_METHODS, null) ?? [...EXAM_METHOD_TEMPLATES];
+
+/** 讀取當前共享四字詞庫（淺拷貝，供洗牌抽題） */
+export function getGlobalSharedIdioms() {
+  return [...GLOBAL_SHARED_IDIOMS];
+}
+
+/** 讀取當前共享寫作手法題庫 */
+export function getGlobalSharedMethods() {
+  return [...GLOBAL_SHARED_METHODS];
+}
+
+/** 持久化四字詞庫至 LocalStorage（模擬雲端同步） */
+function persistGlobalIdioms() {
+  writeJsonStorage(LS_IDIOMS, GLOBAL_SHARED_IDIOMS);
+}
+
+/** 持久化寫作手法題庫 */
+function persistGlobalMethods() {
+  writeJsonStorage(LS_METHODS, GLOBAL_SHARED_METHODS);
+}
+
+/**
+ * 單筆四字詞匯入中央庫 — 以 word 欄位去重
+ * @returns {boolean} true = 全港首發成功共享；false = 已存在自動跳過
+ */
+export const saveToGlobalPool = (newWordObj) => {
+  const word = String(newWordObj?.word ?? '').trim();
+  if (!word) return false;
+
+  const exists = GLOBAL_SHARED_IDIOMS.some((item) => item.word === word);
+  if (exists) return false;
+
+  const entry = {
+    ...newWordObj,
+    word,
+    id: newWordObj.id ?? `ugc_idiom_${word}_${Date.now()}`,
+    isCommunityShared: true,
+    sharedAt: newWordObj.sharedAt ?? new Date().toISOString(),
+    contributorLabel: newWordObj.contributorLabel ?? generateContributorLabel(Date.now()),
+    sharedPoolId: newWordObj.sharedPoolId ?? `idiom:${word}`,
+  };
+
+  GLOBAL_SHARED_IDIOMS.push(entry);
+  persistGlobalIdioms();
+  return true;
+};
+
+/**
+ * 單筆寫作手法題匯入中央庫 — 以 questionText 去重
+ */
+export function saveMethodToGlobalPool(newMethodObj) {
+  const questionText = String(newMethodObj?.questionText ?? '').trim();
+  if (!questionText) return false;
+
+  const exists = GLOBAL_SHARED_METHODS.some((item) => item.questionText === questionText);
+  if (exists) return false;
+
+  const entry = {
+    ...newMethodObj,
+    questionText,
+    id: newMethodObj.id ?? `ugc_method_${Date.now()}`,
+    isCommunityShared: true,
+    sharedAt: newMethodObj.sharedAt ?? new Date().toISOString(),
+    contributorLabel: newMethodObj.contributorLabel ?? generateContributorLabel(Date.now() + 1),
+    sharedPoolId: newMethodObj.sharedPoolId ?? `method:${questionText.slice(0, 24)}`,
+  };
+
+  GLOBAL_SHARED_METHODS.push(entry);
+  persistGlobalMethods();
+  return true;
+}
+
+/**
+ * 智能去重批量匯入 — 家長 OCR 產生新題後呼叫
+ * @returns {{ idiomsAdded: number, methodsAdded: number, skipped: number }}
+ */
+export function ingestNewItemsToSharedPool(newIdioms = [], newMethods = [], meta = {}) {
+  const contributorLabel = meta.contributorLabel ?? generateContributorLabel(meta.seed ?? Date.now());
+  let idiomsAdded = 0;
+  let methodsAdded = 0;
+  let skipped = 0;
+
+  (Array.isArray(newIdioms) ? newIdioms : []).forEach((item) => {
+    const enriched = { ...item, contributorLabel, source: item.source ?? 'ugc_upload' };
+    if (saveToGlobalPool(enriched)) idiomsAdded += 1;
+    else skipped += 1;
+  });
+
+  (Array.isArray(newMethods) ? newMethods : []).forEach((item) => {
+    const enriched = { ...item, contributorLabel, source: item.source ?? 'ugc_upload' };
+    if (saveMethodToGlobalPool(enriched)) methodsAdded += 1;
+    else skipped += 1;
+  });
+
+  return { idiomsAdded, methodsAdded, skipped, totalIdioms: GLOBAL_SHARED_IDIOMS.length, totalMethods: GLOBAL_SHARED_METHODS.length };
+}
+
+/** 從 OCR 全文擷取四字詞語，自動包裝為可匯入的 idiom 物件 */
+export function extractIdiomsFromOcrText(ocrText = '', meta = {}) {
+  const contributorLabel = meta.contributorLabel ?? generateContributorLabel(meta.seed ?? Date.now());
+  const matches = String(ocrText).match(/[\u4e00-\u9fff]{4}/g) ?? [];
+  const seen = new Set();
+  const results = [];
+
+  matches.forEach((word) => {
+    if (seen.has(word)) return;
+    if (/錯別字|填空|成語|學校|試卷|姓名|班別/.test(word)) return;
+    seen.add(word);
+
+    results.push({
+      word,
+      questionText: `文中出現「${word}」，以下哪一項最符合這個詞語在文中的語意？`,
+      options: [
+        `與「${word}」相關的正確語意（請對照原文理解）`,
+        '望文生義，與本文語境完全相反',
+        '只按字面解釋，忽略上下文',
+        '與該詞在文中的實際用法無關',
+      ],
+      correctAnswerIndex: 0,
+      hint: `提示：「${word}」為家長上載試卷時辨識的高頻詞，請結合文章語境作答。`,
+      contributorLabel,
+      source: 'ocr_extract',
+    });
+  });
+
+  return results;
+}
+
+/** OCR 主入口：擷取 + 去重匯入 */
+export function ingestFromOcrText(ocrText = '', meta = {}) {
+  const extracted = extractIdiomsFromOcrText(ocrText, meta);
+  return ingestNewItemsToSharedPool(extracted, meta.newMethods ?? [], meta);
+}
+
+/** 將試卷生成器的成語模板轉為中央庫格式並匯入 */
+export function ingestFromExamPatterns(idiomPatterns = [], meta = {}) {
+  const contributorLabel = meta.contributorLabel ?? generateContributorLabel(meta.seed ?? Date.now());
+  const idioms = idiomPatterns.map((p) => ({
+    word: p.idiom ?? p.word,
+    questionText: `「${p.idiom ?? p.word}」在呈分試語境中最接近以下哪一項語意？`,
+    options: [
+      p.hint ? `正確語意：${p.hint.replace(/^提示：/, '')}` : `與「${p.idiom}」相符的語意`,
+      '與詞語本義完全相反',
+      '只描述字面，未能概括語境',
+      '與呈分試常考用法無關',
+    ],
+    correctAnswerIndex: 0,
+    hint: p.hint ?? `提示：呈分試高頻成語「${p.idiom}」。`,
+    contributorLabel,
+    source: 'exam_upload',
+  }));
+  return ingestNewItemsToSharedPool(idioms, [], meta);
+}
+
+/** 合併靜態測驗題 + 中央共享四字詞庫（隨機默書／單元測驗抽題範圍） */
+export function getQuizPoolWithGlobal() {
+  return [
+    ...QUIZ_POOL_CORE,
+    ...idiomExamPoolToQuizPool(getGlobalSharedIdioms()),
+  ];
+}
+
+/** 將共享 idiom 轉為閱讀／OCR 引擎可用的標準題目物件 */
+export function idiomPoolItemToQuestion(item, index = 0) {
+  return {
+    id: item.id ?? index + 1,
+    questionText: item.questionText,
+    options: [...(item.options ?? [])],
+    correctAnswerIndex: Number(item.correctAnswerIndex ?? 0),
+    hint: item.hint,
+    word: item.word,
+    category: 'vocab_inference',
+    templateId: item.id,
+    isCommunityShared: Boolean(item.isCommunityShared),
+    contributorLabel: item.contributorLabel,
+    sharedPoolId: item.sharedPoolId ?? `idiom:${item.word}`,
+    source: item.source ?? 'global_shared_idioms',
+  };
+}
+
+/** 將共享寫作手法模板轉為標準題目物件 */
+export function methodPoolItemToQuestion(tpl, index = 0) {
+  return {
+    id: tpl.id ?? `method_${index}`,
+    questionText: tpl.questionText,
+    options: [...(tpl.options ?? [])],
+    correctAnswerIndex: Number(tpl.correctAnswerIndex ?? 0),
+    hint: tpl.hint,
+    category: tpl.category ?? 'writing_technique',
+    methodType: tpl.type,
+    templateId: tpl.id,
+    isCommunityShared: Boolean(tpl.isCommunityShared),
+    contributorLabel: tpl.contributorLabel,
+    sharedPoolId: tpl.sharedPoolId ?? `method:${tpl.id}`,
+    source: tpl.source ?? 'global_shared_methods',
+  };
+}
+
+/**
+ * 從中央共享庫 Fisher-Yates 隨機抽取 N 道四字詞語題
+ * @param {number} count
+ * @param {number} [seed]
+ */
+export function pickRandomSharedIdiomQuestions(count = 1, seed) {
+  const pool = getGlobalSharedIdioms();
+  if (!pool.length) return [];
+
+  let randInt;
+  if (seed != null) {
+    let state = (Number(seed) >>> 0) || 1;
+    randInt = (n) => {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      return Math.floor(((state & 0x7fffffff) / 0x80000000) * n);
+    };
+  } else {
+    randInt = (n) => Math.floor(Math.random() * n);
+  }
+
+  return shuffleWithRandInt(pool, randInt)
+    .slice(0, Math.min(count, pool.length))
+    .map(idiomPoolItemToQuestion);
+}
+
+/**
+ * 從中央共享庫 Fisher-Yates 隨機抽取 N 道寫作手法題
+ */
+export function pickRandomSharedMethodQuestions(count = 1, seed) {
+  const pool = getGlobalSharedMethods();
+  if (!pool.length) return [];
+
+  let randInt;
+  if (seed != null) {
+    let state = (Number(seed) >>> 0) || 1;
+    randInt = (n) => {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      return Math.floor(((state & 0x7fffffff) / 0x80000000) * n);
+    };
+  } else {
+    randInt = (n) => Math.floor(Math.random() * n);
+  }
+
+  return shuffleWithRandInt(pool, randInt)
+    .slice(0, Math.min(count, pool.length))
+    .map(methodPoolItemToQuestion);
+}
+
+// ─── 貢獻者榮譽統計（模擬「已幫助 N 名同學」）────────────────────────────
+
+function readStudyStats() {
+  return readJsonStorage(LS_STUDY_STATS, {});
+}
+
+function writeStudyStats(stats) {
+  writeJsonStorage(LS_STUDY_STATS, stats);
+}
+
+/** 學生作答／瀏覽共享題時累計溫習人次 */
+export function recordSharedItemStudy(sharedPoolId) {
+  const id = String(sharedPoolId ?? '').trim();
+  if (!id) return 0;
+
+  const stats = readStudyStats();
+  const base = stats[id] ?? Math.floor(40 + Math.random() * 120);
+  stats[id] = base + 1;
+  writeStudyStats(stats);
+  return stats[id];
+}
+
+/** 讀取某共享題的累計溫習人次（不遞增） */
+export function getSharedItemStudyCount(sharedPoolId) {
+  const id = String(sharedPoolId ?? '').trim();
+  if (!id) return 0;
+  const stats = readStudyStats();
+  return stats[id] ?? 0;
+}
+
+/** 組裝 UI 用的貢獻者榮譽徽章資料 */
+export function getContributorBadgeForItem(item) {
+  if (!item) return null;
+  const isShared = item.isCommunityShared || item.contributorLabel || item.source?.includes('global_shared') || item.source === 'ugc_upload';
+  if (!isShared) return null;
+
+  const poolId = item.sharedPoolId ?? item.id;
+  return {
+    contributorLabel: item.contributorLabel ?? '星航社群家長',
+    helpedCount: getSharedItemStudyCount(poolId),
+    sharedPoolId: poolId,
+  };
+}
+
+/** 為 quiz 池項目附加共享標記（從中央庫反查 contributor） */
+export function enrichQuizItemWithContributor(quizItem) {
+  if (quizItem.contributorLabel) return quizItem;
+  const word = quizItem.word ?? quizItem.sourceIdiom;
+  if (!word) return quizItem;
+
+  const shared = GLOBAL_SHARED_IDIOMS.find((i) => i.word === word && i.isCommunityShared);
+  if (!shared) return quizItem;
+
+  return {
+    ...quizItem,
+    isCommunityShared: true,
+    contributorLabel: shared.contributorLabel,
+    sharedPoolId: shared.sharedPoolId ?? `idiom:${word}`,
+  };
+}
 
 export function getPoolByTaskId(taskId) {
   switch (taskId) {
     case 'dictation': return DICTATION_VOCAB_POOL;
     case 'prestudy': return PRESTUDY_VOCAB_POOL;
-    case 'quiz': return QUIZ_POOL;
+    case 'quiz': return getQuizPoolWithGlobal().map(enrichQuizItemWithContributor);
     case 'sspa': return SSPA_POOL;
     case 'sentence': return SENTENCE_POOL;
     case 'reading': return READING_POOL;
@@ -125,15 +494,18 @@ export function getPoolByTaskId(taskId) {
 }
 
 export function getQuestionBankStats() {
+  const quizPool = getQuizPoolWithGlobal();
   return {
     dictation: DICTATION_VOCAB_POOL.length,
     prestudy: PRESTUDY_VOCAB_POOL.length,
-    quiz: QUIZ_POOL.length,
+    quiz: quizPool.length,
     sspa: SSPA_POOL.length,
     sentence: SENTENCE_POOL.length,
     reading: READING_POOL.length,
     advancedReading: ADVANCED_QUESTION_POOL.length,
     referenceTemplates: SSPA_REFERENCE_TEMPLATES.length,
     idiomExam: IDIOM_EXAM_POOL.length,
+    globalSharedIdioms: GLOBAL_SHARED_IDIOMS.length,
+    globalSharedMethods: GLOBAL_SHARED_METHODS.length,
   };
 }

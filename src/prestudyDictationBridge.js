@@ -1,11 +1,11 @@
 /**
  * 課文預習 ↔ 默書特訓 — 跨板塊詞彙數據橋接
  * ─────────────────────────────────────────────
- * · 預習端：從 IDIOM_EXAM_POOL 隨機抽 15 詞，完成後寫入 localStorage
+ * · 預習端：從中央共享 GLOBAL_SHARED_IDIOMS 隨機抽 15 詞，完成後寫入 localStorage
  * · 默書端：讀取快取，100% 鎖定剛溫習詞語並隨機聽寫順序
  */
 
-import { IDIOM_EXAM_POOL } from './idiomExamPool.js';
+import { getGlobalSharedIdioms } from './mockDatabase.js';
 import { fisherYatesShuffle } from './questionEngineCore.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
 
@@ -38,7 +38,7 @@ export function idiomItemToVocabItem(item) {
   });
 }
 
-/** 從 IDIOM_EXAM_POOL 建立本次預習 15 詞（session 內固定） */
+/** 從中央共享 GLOBAL_SHARED_IDIOMS 建立本次預習 15 詞（session 內固定） */
 export function getPrestudyIdiomVocabList(count = PRESTUDY_IDIOM_COUNT) {
   try {
     const cached = sessionStorage.getItem(PRESTUDY_SESSION_KEY);
@@ -50,9 +50,10 @@ export function getPrestudyIdiomVocabList(count = PRESTUDY_IDIOM_COUNT) {
     /* 快取損壞 → 重建 */
   }
 
-  const picked = fisherYatesShuffle([...IDIOM_EXAM_POOL]).slice(
+  const pool = getGlobalSharedIdioms();
+  const picked = fisherYatesShuffle([...pool]).slice(
     0,
-    Math.min(count, IDIOM_EXAM_POOL.length),
+    Math.min(count, pool.length),
   );
   const vocabList = picked.map(idiomItemToVocabItem);
 
@@ -105,7 +106,7 @@ export function loadStudiedWords() {
 
 /** 由純文字陣列還原詞卡，並 Fisher-Yates 隨機聽寫順序 */
 export function buildDictationListFromStudiedWords(words) {
-  const byWord = new Map(IDIOM_EXAM_POOL.map((item) => [item.word, item]));
+  const byWord = new Map(getGlobalSharedIdioms().map((item) => [item.word, item]));
 
   const items = words.map((word, index) => {
     const idiom = byWord.get(word);

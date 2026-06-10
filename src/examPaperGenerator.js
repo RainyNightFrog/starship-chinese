@@ -5,6 +5,7 @@
  */
 
 import { getUploadImageCount, mergeUploadImagesIntoContent } from './uploadMetaUtils';
+import { ingestFromExamPatterns, generateContributorLabel } from './mockDatabase';
 
 /** AI 解析動畫步驟（約 3 秒，由 UI 定時播放） */
 export const EXAM_PARSE_STEPS = [
@@ -361,6 +362,12 @@ export function applyExamPaperUpload(currentConfig, uploadMeta = {}) {
   const aiAnalysis = buildExamAnalysisFromUpload(uploadMeta);
   const hint = aiAnalysis.scaffoldHint;
 
+  // UGC 共享：試卷 OCR 辨識的新成語／詞彙自動匯入中央題庫（智能去重）
+  const ugcIngest = ingestFromExamPatterns(IDIOM_PATTERNS, {
+    seed,
+    contributorLabel: generateContributorLabel(seed),
+  });
+
   const vocabByTask = {
     ...(currentConfig.assignedContent?.vocabByTask || {}),
     dictation: [
@@ -376,7 +383,7 @@ export function applyExamPaperUpload(currentConfig, uploadMeta = {}) {
     config: {
       ...currentConfig,
       activeTask: 'quiz',
-      aiAnalysis,
+      aiAnalysis: { ...aiAnalysis, ugcIngest },
       uploadLabel: `AI 試卷 · ${uploadMeta.fileName ?? '校本上載'}`,
       assignedContent: mergeUploadImagesIntoContent({
         ...currentConfig.assignedContent,

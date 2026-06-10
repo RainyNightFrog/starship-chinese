@@ -15,6 +15,8 @@ import { sanitizePassageForDisplay, sanitizeOptionsForDisplay } from '../reading
 import { stripOptionLetterPrefix } from '../readingOptionPrefixCleaner';
 import { getReadingLineClasses, getMutedTextClass } from '../readableStyles';
 import AnswerResultEffect, { useAnswerResultFx } from '../AnswerResultEffect';
+import ContributorHonorBadge from '../ContributorHonorBadge';
+import { useContributorBadge } from '../useContributorBadge';
 
 /** 答對後自動跳下一題的延遲（毫秒）— 留時間顯示金幣動畫 */
 const AUTO_ADVANCE_MS = 1400;
@@ -67,6 +69,7 @@ export default function ReadingComprehensionPanel({
     () => passageQuestions[currentQuestionIndex] ?? null,
     [passageQuestions, currentQuestionIndex],
   );
+  const contributorBadge = useContributorBadge(currentQuestion);
 
   /** 換題或換文章時重置作答狀態 */
   const resetAttemptState = useCallback(() => {
@@ -377,6 +380,11 @@ export default function ReadingComprehensionPanel({
         <p className={`text-center font-black leading-relaxed ${isNight ? 'text-stone-100' : 'text-slate-800'} ${isSEN ? 'text-lg' : 'text-base'}`}>
           {dt(currentQuestion.question)}
         </p>
+        {!showShield && (
+          <div className="flex justify-center">
+            <ContributorHonorBadge badge={contributorBadge} isSEN={isSEN} isNight={isNight} />
+          </div>
+        )}
         <ReadingChoiceOptions
           key={currentQuestion.id}
           options={rawOptions}

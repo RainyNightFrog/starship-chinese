@@ -30,6 +30,11 @@ import {
   extractCoreKeywords,
   isFragmentWorksheet,
 } from './readingDynamicQuestionEngine.js';
+import {
+  ingestFromOcrText,
+  pickRandomSharedIdiomQuestions,
+  pickRandomSharedMethodQuestions,
+} from './mockDatabase.js';
 
 const DEFAULT_QUESTION_COUNT = 5;
 
@@ -79,6 +84,10 @@ function normalizeQuestionObject(q, index) {
     options: options.slice(0, 4),
     correctAnswerIndex,
     hint: String(q.hint ?? q.explanation ?? '請對照原文理解文意。').trim(),
+    isCommunityShared: Boolean(q.isCommunityShared),
+    contributorLabel: q.contributorLabel,
+    sharedPoolId: q.sharedPoolId,
+    source: q.source,
   };
 }
 
@@ -94,6 +103,25 @@ function dedupeQuestions(questions = []) {
     list.push(normalized);
   });
   return list;
+}
+
+function mergeSharedPoolQuestions(questions = [], articleLines = [], seed, targetCount) {
+  const seen = new Set(questions.map((q) => q.questionText));
+  const merged = [...questions];
+
+  // 從中央共享庫注入寫作手法題 + 四字詞語題（前人載樹，後人乘涼）
+  const sharedMethods = pickRandomSharedMethodQuestions(2, seed + 17);
+  const sharedIdioms = pickRandomSharedIdiomQuestions(1, seed + 31);
+
+  [...sharedMethods, ...sharedIdioms].forEach((q) => {
+    if (merged.length >= targetCount) return;
+    if (!q?.questionText || seen.has(q.questionText)) return;
+    seen.add(q.questionText);
+    const normalized = normalizeQuestionObject(q, merged.length);
+    merged.push(normalized ? { ...q, ...normalized } : q);
+  });
+
+  return merged.slice(0, targetCount).map((q, i) => ({ ...q, id: i + 1 }));
 }
 
 function ensureQuestionCount(questions = [], articleLines = [], keywords = [], seed, targetCount = DEFAULT_QUESTION_COUNT) {
@@ -115,7 +143,8 @@ function ensureQuestionCount(questions = [], articleLines = [], keywords = [], s
     });
   }
 
-  return list.slice(0, targetCount).map((q, i) => ({ ...q, id: i + 1 }));
+  // 最後一步：對接中央共享庫，混入全港 UGC 題目
+  return mergeSharedPoolQuestions(list, articleLines, seed, targetCount);
 }
 
 function resolveArticleFromOcr(cleanedText, cleanArticleLines, coreKeywords) {
@@ -164,6 +193,13 @@ export function generateQuestionsFromOcr(ocrText = '', options = {}) {
 
   const cleanedText = denoiseOcrText(ocrText);
 
+  // ② UGC 自動匯入：OCR 辨識的新詞／新題寫入中央共享庫（智能去重）
+  const ingestMeta = {
+    seed: seed ?? Date.now(),
+    contributorLabel: options.contributorLabel,
+  };
+  const ingestResult = ingestFromOcrText(cleanedText, ingestMeta);
+
   // ① 前置結構隔離器 — 100% 剝除考卷試題／選項行
   const { cleanArticleLines, droppedCount, hitWorksheet } = advancedSanitizeOcrText(cleanedText);
   const coreKeywords = extractCoreKeywords(cleanArticleLines);
@@ -196,5 +232,6 @@ export function generateQuestionsFromOcr(ocrText = '', options = {}) {
     expandedBy,
     source: 'ocr-dynamic-engine',
     sanitizer: { droppedCount, hitWorksheet },
+    ugcIngest: ingestResult,
   };
 }

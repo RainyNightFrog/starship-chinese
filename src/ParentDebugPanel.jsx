@@ -378,6 +378,7 @@ export default function ParentDebugPanel({
                   <p><span className="text-slate-400">AI 詞表</span> 默{parentConfig.assignedContent.vocabByTask?.dictation?.length ?? 0} · 預{parentConfig.assignedContent.vocabByTask?.prestudy?.length ?? 0}</p>
                 )}
                 <p><span className="text-slate-400">本地題庫</span> 默{bankStats.dictation} · 預{bankStats.prestudy} · 測{bankStats.quiz} · 呈{bankStats.sspa} · 句{bankStats.sentence} · 閱{bankStats.reading}</p>
+                <p><span className="text-amber-400/90">🌐 中央共享 UGC</span> 四字詞 {bankStats.globalSharedIdioms ?? 0} · 寫作手法 {bankStats.globalSharedMethods ?? 0}</p>
                 <p><span className="text-slate-400">詞表方案</span> {parentConfig.uploadLabel ?? '—'}</p>
                 <p><span className="text-slate-400">常錯字</span> {wrongWordReminders?.length ?? 0} 個</p>
                 {(parentRedemptions?.length ?? 0) > 0 && (
