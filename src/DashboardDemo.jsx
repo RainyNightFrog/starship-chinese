@@ -249,6 +249,7 @@ export default function DashboardDemo() {
               isSEN={isSEN}
               isNight={isNight}
               onClaim={handleStreakClaim}
+              compact
             />
             <CoinCounter
               coins={coins}
@@ -258,6 +259,7 @@ export default function DashboardDemo() {
               isNight={isNight}
               ownedCount={ownedRewards.length}
               onClick={() => setShowCoinPanel((v) => !v)}
+              compact
             />
           </div>
         </div>
@@ -429,7 +431,7 @@ export default function DashboardDemo() {
       <div
         className={`flex flex-col lg:flex-row min-w-0 transition-colors duration-500
           ${parentPanelOpen
-            ? 'pb-[calc(min(340px,40vh)+3.5rem+env(safe-area-inset-bottom,0px))] lg:pb-[min(520px,52vh)]'
+            ? 'pb-[calc(min(680px,72vh)+3.5rem+env(safe-area-inset-bottom,0px))] lg:pb-[min(520px,52vh)]'
             : 'pb-[calc(4.5rem+env(safe-area-inset-bottom,0px)+0.75rem)] lg:pb-16'}`}
       >
         <aside

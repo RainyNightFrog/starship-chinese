@@ -14,6 +14,7 @@ export default function CoinCounter({
   onClick,
   ownedCount,
   isDeducting,
+  compact = false,
 }) {
   const [pulse, setPulse] = useState(false);
   const displayCoins = useAnimatedNumber(coins, isSEN ? 700 : 550);
@@ -39,28 +40,30 @@ export default function CoinCounter({
       type="button"
       onClick={onClick}
       title="查看金幣用途與兌換獎勵"
-      className={`relative flex items-center gap-2 rounded-xl border-2 transition-all duration-300 cursor-pointer
+      className={`relative flex items-center rounded-xl border-2 transition-all duration-300 cursor-pointer
+        ${compact ? 'gap-1 px-2 py-1' : `gap-2 ${isSEN ? 'px-4 py-2' : 'px-3 py-1.5'}`}
         ${isNight ? 'bg-amber-900/40 text-amber-100 border-amber-600' : 'bg-yellow-50 text-yellow-800 border-yellow-400'}
-        ${isSEN ? 'px-4 py-2' : 'px-3 py-1.5'}
         ${pulse ? 'scale-105 shadow-lg shadow-amber-300/50' : 'hover:scale-105'}`}
       aria-live="polite"
       aria-label={`金幣總數 ${displayCoins}，點擊兌換獎勵`}
     >
       <CoinIcon
-        size={isSEN ? 'lg' : 'md'}
+        size={compact ? 'sm' : (isSEN ? 'lg' : 'md')}
         glow={pulse}
         spin={Boolean(floatingDelta)}
       />
       <span
         className={`font-black tabular-nums transition-colors duration-300
           ${isDeducting ? 'text-rose-500' : ''}
-          ${isSEN ? 'text-base' : 'text-sm'}`}
+          ${compact ? 'text-xs' : (isSEN ? 'text-base' : 'text-sm')}`}
       >
         {displayCoins}
       </span>
-      <span className={`font-bold ${isSEN ? 'text-xs' : 'text-[10px]'}`}>
-        <BilingualLabel zh={`金幣${ownedCount > 0 ? ` · ${ownedCount}獎` : ''}`} en={`Coins${ownedCount > 0 ? ` · ${ownedCount} rewards` : ''}`} size="sm" center />
-      </span>
+      {!compact && (
+        <span className={`font-bold ${isSEN ? 'text-xs' : 'text-[10px]'}`}>
+          <BilingualLabel zh={`金幣${ownedCount > 0 ? ` · ${ownedCount}獎` : ''}`} en={`Coins${ownedCount > 0 ? ` · ${ownedCount} rewards` : ''}`} size="sm" center />
+        </span>
+      )}
 
       {floatingDelta && (
         <span

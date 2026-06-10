@@ -20,6 +20,7 @@ export default function StreakWidget({
   isSEN,
   isNight,
   onClaim,
+  compact = false,
 }) {
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -268,8 +269,8 @@ export default function StreakWidget({
         onClick={handleClick}
         aria-expanded={showCalendar}
         aria-label={streakClaimed ? `連擊 ${streakCount} 天，查看打卡日曆` : `點擊領取今日連擊`}
-        className={`flex items-center gap-2 rounded-xl transition-all duration-300 select-none
-          ${isSEN ? 'px-4 py-2' : 'px-3 py-1.5'}
+        className={`flex items-center rounded-xl transition-all duration-300 select-none
+          ${compact ? 'gap-1 px-2 py-1' : `gap-2 ${isSEN ? 'px-4 py-2' : 'px-3 py-1.5'}`}
           ${streakClaimed
             ? (isNight
               ? 'bg-emerald-900/50 text-emerald-300 border-2 border-emerald-600 hover:bg-emerald-900/70'
@@ -278,13 +279,17 @@ export default function StreakWidget({
               ? 'bg-orange-900/40 text-orange-300 border-2 border-orange-600 animate-[gentlePulse_2s_ease-in-out_infinite]'
               : 'bg-orange-100 text-orange-700 border-2 border-orange-400 animate-[gentlePulse_2s_ease-in-out_infinite]')}`}
       >
-        <span className={isSEN ? 'text-xl' : 'text-lg'} aria-hidden>🔥</span>
-        <span className={`font-bold ${isSEN ? 'text-base' : 'text-sm'}`}>
-          <BilingualLabel zh={`連擊 ${streakCount} 天`} en={`${streakCount}-day streak`} size="sm" center />
+        <span className={compact ? 'text-sm' : (isSEN ? 'text-xl' : 'text-lg')} aria-hidden>🔥</span>
+        <span className={`font-bold ${compact ? 'text-xs whitespace-nowrap' : (isSEN ? 'text-base' : 'text-sm')}`}>
+          {compact ? (
+            <span>{streakCount}天</span>
+          ) : (
+            <BilingualLabel zh={`連擊 ${streakCount} 天`} en={`${streakCount}-day streak`} size="sm" center />
+          )}
         </span>
         <span
           className={`flex items-center gap-0.5 rounded-full font-black border
-            ${isSEN ? 'text-xs px-2 py-0.5' : 'text-[10px] px-1.5 py-0.5'}
+            ${compact ? 'text-[9px] px-1 py-0' : (isSEN ? 'text-xs px-2 py-0.5' : 'text-[10px] px-1.5 py-0.5')}
             ${isNight ? 'bg-sky-900/60 text-sky-200 border-sky-600' : 'bg-sky-100 text-sky-800 border-sky-300'}`}
           title="漏登一天時自動消耗，保護連擊不中斷"
         >

@@ -132,28 +132,28 @@ export default function SpeechVoiceHeaderMenu({ isSEN, isNight, theme, task = 'd
   );
 
   return (
-    <div ref={rootRef} className={`relative ${prominent ? 'flex-1 flex justify-center min-w-0 max-w-[8rem]' : ''}`}>
+    <div ref={rootRef} className={`relative ${prominent ? 'shrink-0' : ''}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="dialog"
         title={`${taskMeta.buttonTitle} / Voice`}
-        className={`flex items-center justify-center gap-1 rounded-xl border-2 font-black transition-all duration-300
+        className={`flex items-center justify-center gap-1 rounded-lg border font-black transition-all duration-300
           ${prominent
-            ? 'w-full flex-col py-2 px-3 min-h-[2.75rem] ring-2 ring-amber-400/50'
-            : 'gap-1.5'}
+            ? 'flex-row px-2 py-1 min-h-0'
+            : 'gap-1.5 rounded-xl'}
           ${isNight
-            ? 'bg-amber-500/25 border-amber-500 text-amber-100 hover:bg-amber-500/35'
+            ? 'bg-amber-500/20 border-amber-600/70 text-amber-100 hover:bg-amber-500/30'
             : 'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-200'}
-          ${open ? 'ring-2 ring-amber-400 scale-[1.02]' : ''}
+          ${open ? 'ring-1 ring-amber-400/60' : ''}
           ${speechError ? 'border-rose-400' : ''}
           ${isSEN ? 'text-sm' : 'text-xs'}`}
       >
-        <span className={prominent ? 'text-xl' : 'text-base'} aria-hidden>🔊</span>
-        <span className="flex flex-col leading-tight text-center">
-          <span className={prominent ? 'text-xs font-black' : ''}>語音</span>
-          <span className={`font-normal opacity-70 ${prominent ? 'text-[9px]' : 'text-[9px] hidden sm:block'}`}>Voice</span>
+        <span className="text-sm leading-none" aria-hidden>🔊</span>
+        <span className="flex flex-col leading-none text-center">
+          <span className="text-[10px] font-black">語音</span>
+          {!prominent && <span className="text-[9px] font-normal opacity-70 hidden sm:block">Voice</span>}
         </span>
         {!prominent && (
           <span className="opacity-60 hidden md:inline max-w-[5rem] truncate">{summary}</span>

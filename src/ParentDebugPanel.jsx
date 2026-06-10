@@ -196,7 +196,7 @@ export default function ParentDebugPanel({
         <div
           className={`overflow-y-auto xh-scroll xh-scroll--dark transition-all duration-300 ease-in-out bg-slate-900 text-slate-100
             ${isOpen
-              ? 'max-h-[min(340px,40vh)] lg:max-h-[min(560px,58vh)] opacity-100'
+              ? 'max-h-[min(680px,72vh)] lg:max-h-[min(560px,58vh)] opacity-100'
               : 'max-h-0 opacity-0 overflow-hidden pointer-events-none'}`}
         >
           <p className="text-center py-2 px-4 bg-slate-800/80 border-b border-slate-700 text-xs">
