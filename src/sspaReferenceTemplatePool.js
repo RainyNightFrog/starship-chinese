@@ -390,14 +390,49 @@ export function referenceTemplatesToQuizPool(templates = SSPA_REFERENCE_TEMPLATE
   }));
 }
 
-/** 合併預設進階題庫：寫作手法 + 參考樣版 */
-export function buildDefaultAdvancedQuestionPool(examMethodPool = []) {
+/** 清理題幹／選項 — 移除 JSON 殘留與非字串物件 */
+export function sanitizeAdvancedPoolItem(item = {}) {
+  const cleanText = (raw) => {
+    if (raw == null) return '';
+    if (typeof raw === 'object') {
+      return cleanText(raw.questionText ?? raw.text ?? raw.word ?? raw.label ?? '');
+    }
+    let s = String(raw).trim();
+    s = s.replace(/\bop\s*\/\s*path\b/gi, '');
+    if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) return cleanText(parsed[0]);
+        return cleanText(parsed);
+      } catch {
+        s = s.replace(/^\[|\]$/g, '').replace(/^\{|\}$/g, '');
+      }
+    }
+    return s;
+  };
+
+  const options = Array.isArray(item.options) ? item.options : [];
+  const cleanedOptions = options.slice(0, 4).map(cleanText);
+  while (cleanedOptions.length < 4) cleanedOptions.push('');
+
+  return {
+    ...item,
+    id: String(item.id ?? `pool_${Date.now()}`),
+    questionText: cleanText(item.questionText ?? item.text ?? ''),
+    options: cleanedOptions,
+    correctAnswerIndex: Math.min(3, Math.max(0, Number(item.correctAnswerIndex) || 0)),
+    hint: cleanText(item.hint ?? ''),
+  };
+}
+
+/** 合併預設進階題庫：寫作手法 + 30 題核心詞彙 + 參考樣版 */
+export function buildDefaultAdvancedQuestionPool(examMethodPool = [], idiomPool = []) {
   const seen = new Set();
   const merged = [];
-  [...examMethodPool, ...referenceTemplatesToMockPool()].forEach((item) => {
+  [...examMethodPool, ...idiomPool, ...referenceTemplatesToMockPool()].forEach((item) => {
     if (!item?.id || seen.has(item.id)) return;
     seen.add(item.id);
-    merged.push(item);
+    merged.push(sanitizeAdvancedPoolItem(item));
   });
   return merged;
 }

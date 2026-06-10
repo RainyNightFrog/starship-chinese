@@ -40,13 +40,13 @@ const SAMPLE_OCR = `一、閱讀理解 (30%)
 A.收到望遠鏡
 B.閱讀下面的文字,然後回答問題。`;
 
-/** 初始化題庫：localStorage → mockDatabase.ADVANCED_QUESTION_POOL → 引擎內建樣版 */
+/** 初始化題庫：mockDatabase（標準源）→ localStorage → 引擎內建樣版 */
 function loadInitialTemplates() {
-  const fromStorage = loadTemplatesFromStorage();
-  if (fromStorage?.length) return fromStorage;
-
   const fromMock = templatesFromMockPool(ADVANCED_QUESTION_POOL);
   if (fromMock?.length) return fromMock;
+
+  const fromStorage = loadTemplatesFromStorage();
+  if (fromStorage?.length) return fromStorage;
 
   return resolveInitialTemplates([]);
 }
@@ -71,6 +71,45 @@ function Toast({ message, tone = 'success', onClose }) {
       >
         關閉
       </button>
+    </div>
+  );
+}
+
+/** 學生端預覽 — 嚴格以 questionText + options 渲染四個按鈕 */
+function TemplateLivePreview({ template }) {
+  const t = normalizeTemplate(template);
+  if (!t.questionText) return null;
+
+  return (
+    <div className="rounded-2xl border border-sky-700/50 bg-sky-950/25 p-5 space-y-4">
+      <h3 className="text-sm font-black text-sky-300">👁 學生端預覽（questionText + options）</h3>
+      <p className="text-base font-bold leading-relaxed text-stone-100 whitespace-pre-wrap">
+        {t.questionText}
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {t.options.map((opt, idx) => {
+          const letter = String.fromCharCode(65 + idx);
+          const isCorrect = idx === t.correctAnswerIndex;
+          return (
+            <button
+              key={letter}
+              type="button"
+              disabled
+              className={`rounded-xl border-2 px-4 py-3 text-left text-sm font-bold leading-relaxed
+                ${isCorrect
+                  ? 'border-emerald-500/70 bg-emerald-950/40 text-emerald-100'
+                  : 'border-stone-600 bg-stone-900/60 text-stone-200'
+                }`}
+            >
+              <span className="text-xs font-mono opacity-60 block mb-1">{letter}</span>
+              {opt || `（選項 ${letter} 空白）`}
+            </button>
+          );
+        })}
+      </div>
+      {t.hint && (
+        <p className="text-xs text-amber-200/80 font-bold">💡 {t.hint}</p>
+      )}
     </div>
   );
 }
@@ -444,8 +483,8 @@ export default function AdminQuizEditor() {
                             }`}
                         >
                           <span className="font-mono text-xs text-stone-500 block mb-0.5">{t.id}</span>
-                          <span className="line-clamp-2 leading-snug">
-                            {t.questionText || '（尚未填寫題幹）'}
+                          <span className="line-clamp-2 leading-snug whitespace-pre-wrap">
+                            {normalizeTemplate(t).questionText || '（尚未填寫題幹）'}
                           </span>
                         </button>
                       </li>
@@ -457,12 +496,15 @@ export default function AdminQuizEditor() {
           </div>
 
           {selected ? (
-            <TemplateEditorForm
-              template={selected}
-              onChange={updateSelected}
-              onDelete={handleDelete}
-              onDuplicate={handleDuplicate}
-            />
+            <>
+              <TemplateLivePreview template={selected} />
+              <TemplateEditorForm
+                template={selected}
+                onChange={updateSelected}
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
+              />
+            </>
           ) : (
             <p className="text-stone-500 text-center py-12">請從左側列表選取或新增題型</p>
           )}

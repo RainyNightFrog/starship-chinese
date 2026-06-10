@@ -89,30 +89,30 @@ export const IDIOM_EXAM_POOL = [
 
   // === 【B組：處事態度與意志力（呈分試必考正向詞彙）】 ===
   {
-    id: 'voc_007',
+    id: 'idiom_001',
     word: '廢寢忘食',
-    questionText: '以下哪一個選項最適合用來解釋「廢寢忘食」的意思？',
+    questionText: '「廢寢忘食」可以用來形容以下哪一種處事態度？',
     options: [
-      '形容人生活貧困，連吃飯和睡覺的地方都沒有',
+      '形容人生活貧困，連吃飯、睡覺的地方都沒有',
       '形容人非常專心努力，顧不得睡覺，忘記了吃飯',
-      '形容人身體虛弱，因為生病而無法正常飲食和休息',
-      '形容人做事缺乏計劃，常常黑白顛倒、飲食不定時',
+      '形容人身體虛弱，因為生病而無法飲食、休息',
+      '形容人做事缺乏計劃，黑白顛倒、飲食不定時',
     ],
     correctAnswerIndex: 1,
     hint: '提示：通常用來讚美學生或主角為了達到目標而極度刻苦、專注的態度。',
   },
   {
-    id: 'voc_008',
+    id: 'idiom_002',
     word: '鍥而不捨',
-    questionText: '文中提到主角抱著「鍥而不捨」的精神，這代表他當時的處事態度是：',
+    questionText: '文中提到主角抱著「鍥而不捨」的精神，這代表他的態度是：',
     options: [
       '做事不夠果斷，常常半途而廢',
-      '比喻有恆心、有毅力，堅持到底而不放棄',
-      '形容人思想頑固，不願意接受別人的勸告',
-      '指在工藝雕刻上技術精湛，不願意放下工具',
+      '有恆心、有毅力，堅持到底而不放棄',
+      '思想頑固，不願意接受別人的勸告',
+      '做事不講求方法，盲目地硬拼',
     ],
     correctAnswerIndex: 1,
-    hint: '提示：荀子《勸學》：「鍥而舍之，朽木不折；鍥而不捨，金石可鏤。」',
+    hint: '提示：形容堅持不懈的精神。',
   },
   {
     id: 'voc_009',
@@ -275,43 +275,43 @@ export const IDIOM_EXAM_POOL = [
     hint: '提示：寫景抒情文的標配高頻詞，用來引出主角愉悅的心境。',
   },
   {
-    id: 'voc_021',
+    id: 'idiom_003',
     word: '名落孫山',
-    questionText: '若考卷中出現「名落孫山」一詞，它在文學上正確的語意解釋應該是：',
+    questionText: '若考卷中出現「名落孫山」一詞，它最準確的意思是：',
     options: [
-      '到著名的孫山去遊覽，卻不小心迷失了方向',
-      '比喻名字寫錯了地方，需要重新修改登記',
-      '指考試或選拔沒有被錄取，榜上無名',
-      '形容人名聲敗壞，受到了大眾的譴責',
+      '到著名風景區遊覽，卻不小心迷失了方向',
+      '名字寫錯了地方，需要重新修改登記',
+      '考試或選拔沒有被錄取，榜上無名',
+      '人名聲敗壞，受到了大眾的譴責',
     ],
     correctAnswerIndex: 2,
-    hint: '提示：呈分試中常用來描寫主角在學業或升學上面臨挫折時的情境。',
+    hint: '提示：常用來描寫考試或比賽面臨挫折時的情境。',
   },
   {
-    id: 'voc_022',
+    id: 'idiom_004',
     word: '不可或缺',
     questionText: '句子中若使用「不可或缺」，其代表的核心語意是什麼？',
     options: [
       '事情非常多，多到完全無法應付',
-      '表示非常重要，絕對不能缺少',
-      '形容物件有嚴重的瑕疵，不夠完美',
-      '比喻機會非常難得，一旦錯過就不再回來',
+      '非常重要，絕對不能缺少',
+      '物件有嚴重的瑕疵，不夠完美',
+      '機會非常難得，一旦錯過就不再回來',
     ],
     correctAnswerIndex: 1,
-    hint: '提示：強調某種品德或工具的核心重要性。',
+    hint: '提示：表示絕對必要、必不可少的存在。',
   },
   {
-    id: 'voc_023',
+    id: 'idiom_005',
     word: '出類拔萃',
     questionText: '以下哪一項最符合「出類拔萃」的詞義解釋？',
     options: [
-      '形容人的品格高尚，喜歡親近大自然',
-      '形容人的才華或能力遠遠超出同類，表現極為優秀',
-      '比喻做事喜歡走捷徑，不循規蹈矩',
-      '指一個人性格孤僻，無法融入群體生活',
+      '人品格高尚，喜歡親近大自然',
+      '人才華或能力遠超同類，表現極優秀',
+      '做事喜歡走捷徑，不循規蹈矩',
+      '人性格孤僻，無法融入群體生活',
     ],
     correctAnswerIndex: 1,
-    hint: '提示：常用於稱讚同學、榜樣或名校學生的傑出表現。',
+    hint: '提示：形容超出同類之上，非常傑出。',
   },
   {
     id: 'voc_024',
@@ -453,6 +453,22 @@ export function idiomExamPoolToQuizPool(pool = IDIOM_EXAM_POOL) {
       ...buildIdiomPoolMeta(item),
     };
   });
+}
+
+/** 轉為 ADVANCED_QUESTION_POOL / Admin 編輯器標準格式 */
+export function idiomExamPoolToAdvancedPool(pool = IDIOM_EXAM_POOL) {
+  return pool.map((item) => ({
+    id: item.id,
+    category: 'vocab_inference',
+    subType: '核心詞彙語意',
+    questionText: item.questionText,
+    options: [...(item.options ?? [])],
+    correctAnswerIndex: Number(item.correctAnswerIndex ?? 0),
+    hint: item.hint ?? '',
+    trapProfile: 'vocab',
+    word: item.word,
+    source: 'idiom_exam_pool',
+  }));
 }
 
 /** 轉為呈分試模擬（sspa）引擎格式 */

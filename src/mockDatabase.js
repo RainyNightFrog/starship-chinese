@@ -10,7 +10,11 @@ import {
   SSPA_REFERENCE_TEMPLATES,
 } from './sspaReferenceTemplatePool.js';
 import { BUILTIN_READING_POOL } from './readingBuiltinPool.js';
-import { IDIOM_EXAM_POOL, idiomExamPoolToQuizPool } from './idiomExamPool.js';
+import {
+  IDIOM_EXAM_POOL,
+  idiomExamPoolToQuizPool,
+  idiomExamPoolToAdvancedPool,
+} from './idiomExamPool.js';
 import { EXAM_METHOD_TEMPLATES } from './readingGoldenTechniquePool.js';
 import {
   buildQuizPoolWithGlobal,
@@ -120,6 +124,7 @@ export const SENTENCE_POOL = [
  */
 export const ADVANCED_QUESTION_POOL = buildDefaultAdvancedQuestionPool(
   examMethodTemplatesToMockPool(),
+  idiomExamPoolToAdvancedPool(IDIOM_EXAM_POOL),
 );
 
 /** 呈分試參考樣版（標點／語文知識／固定閱讀）— 供外部直接 import */

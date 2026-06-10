@@ -8,7 +8,7 @@ import {
   QUESTION_CATEGORIES,
 } from './readingAdvancedQuestionPool.js';
 
-export const STORAGE_KEY = 'xh-admin-quiz-pool-v1';
+export const STORAGE_KEY = 'xh-admin-quiz-pool-v2';
 
 /** 題型分類中文標籤 */
 export const CATEGORY_LABELS = {
@@ -54,7 +54,7 @@ export function buildSeedFromEngineTemplates() {
       built = null;
     }
 
-    const correct = built?.correct ?? '（請填寫正確答案）';
+    const correct = resolveBuiltCorrect(built) || '（請填寫正確答案）';
     const hasStructured = built?.structuredOptions?.length === 4;
     const hasFixed = built?.fixedOptions?.length === 4;
     const distractors = [
@@ -63,11 +63,12 @@ export function buildSeedFromEngineTemplates() {
       '與文章基調相反，故意曲解作者',
     ];
 
-    const options = hasStructured
+    const rawOptions = hasStructured
       ? [...built.structuredOptions]
       : hasFixed
         ? [...built.fixedOptions]
         : [correct, ...distractors].slice(0, 4);
+    const options = rawOptions.map(sanitizeOptionField);
     while (options.length < 4) options.push(`干擾項 ${String.fromCharCode(65 + options.length)}`);
 
     const correctIdx = hasStructured
@@ -79,7 +80,7 @@ export function buildSeedFromEngineTemplates() {
     return {
       id: tpl.id,
       category: tpl.category,
-      questionText: built?.questionText ?? tpl.id,
+      questionText: sanitizeQuestionField(built?.questionText ?? tpl.id),
       options,
       correctAnswerIndex: correctIdx,
       hint: built?.hint ?? '請對照原文理解文意。',
@@ -87,6 +88,43 @@ export function buildSeedFromEngineTemplates() {
       source: 'engine',
     };
   });
+}
+
+/** 清理題幹／選項文字 — 防止 JSON 符號或物件殘留渲染到畫面 */
+export function sanitizeQuestionField(raw) {
+  if (raw == null) return '';
+  if (typeof raw === 'object') {
+    return sanitizeQuestionField(raw.questionText ?? raw.text ?? raw.word ?? raw.label ?? '');
+  }
+  let s = String(raw).trim();
+  s = s.replace(/\bop\s*\/\s*path\b/gi, '');
+  if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return sanitizeQuestionField(parsed[0]);
+      return sanitizeQuestionField(parsed);
+    } catch {
+      s = s.replace(/^\[|\]$/g, '').replace(/^\{|\}$/g, '');
+    }
+  }
+  return s;
+}
+
+export function sanitizeOptionField(raw) {
+  if (raw == null) return '';
+  if (typeof raw === 'object') {
+    return sanitizeQuestionField(raw.word ?? raw.text ?? raw.label ?? raw.detail ?? '');
+  }
+  return sanitizeQuestionField(raw);
+}
+
+function resolveBuiltCorrect(built) {
+  const c = built?.correct;
+  if (typeof c === 'string') return c;
+  if (c && typeof c === 'object') {
+    return String(c.text ?? c.word ?? c.label ?? '').trim();
+  }
+  return '';
 }
 
 export function createEmptyTemplate(index = 0) {
@@ -125,10 +163,10 @@ export function normalizeTemplate(raw = {}) {
   return {
     id: String(raw.id ?? `custom_${Date.now()}`),
     category: raw.category ?? QUESTION_CATEGORIES.MAIN_THEME,
-    questionText: String(raw.questionText ?? ''),
-    options: options.slice(0, 4).map((o) => String(o ?? '')),
+    questionText: sanitizeQuestionField(raw.questionText ?? raw.text ?? ''),
+    options: options.slice(0, 4).map((o) => sanitizeOptionField(o)),
     correctAnswerIndex: Math.min(3, Math.max(0, Number(raw.correctAnswerIndex) || 0)),
-    hint: String(raw.hint ?? ''),
+    hint: sanitizeQuestionField(raw.hint ?? ''),
     trapProfile: String(raw.trapProfile ?? 'theme'),
     source: raw.source ?? 'custom',
   };
@@ -237,7 +275,7 @@ export function parseImportedPoolCode(rawText = '') {
 /** 將 mockDatabase ADVANCED_QUESTION_POOL 轉為編輯器格式 */
 export function templatesFromMockPool(pool = []) {
   if (!Array.isArray(pool) || pool.length === 0) return null;
-  return pool.map(normalizeTemplate);
+  return pool.map((item) => normalizeTemplate(item)).filter((t) => t.questionText);
 }
 
 /** 複製到剪貼簿（含 fallback） */
