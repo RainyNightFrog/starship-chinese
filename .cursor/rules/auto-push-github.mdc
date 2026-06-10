@@ -1,0 +1,22 @@
+---
+description: 每次完成程式修改後自動推送到 GitHub
+alwaysApply: true
+---
+
+# 自動推送到 GitHub
+
+完成本專案的任何程式修改後，**在結束回合前**必須執行：
+
+```powershell
+cd "c:\Users\Chung Wai Kin\Desktop\星級中文"
+git add .
+git commit -m "簡短說明這次改了什麼"
+git push
+```
+
+- 有實質功能改動時，commit 訊息用 `fix:` / `feat:` / `style:` 等並寫清楚內容。
+- 若無變更則略過。
+- **絕不**提交 `.env` 或含機密的檔案（已由 `.gitignore` 排除）。
+- push 失敗時告知用戶並保留本地 commit，不要 force push。
+
+專案已設定 Cursor `stop` hook（`.cursor/hooks/auto-push.ps1`）作為備援自動推送。
