@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useColorMode } from './colorMode';
 import { getTheme } from './studentThemes';
 import { useQuestionEngine } from './useQuestionEngine';
-import { shuffleSentencePool, getCompletedIds, shuffleQuestionOptions } from './questionEngineCore';
+import { shuffleSentencePool, getCompletedIds, shuffleQuestionOptions, unmarkQuestionComplete } from './questionEngineCore';
 import { COIN_REWARD } from './aiEngine';
 import { ShieldFeedback, CorrectCelebration, ProgressBar } from './PracticeFeedback';
 import AnswerResultEffect, { useAnswerResultFx } from './AnswerResultEffect';
@@ -37,6 +37,7 @@ import {
   saveStudiedWords,
   loadStudiedWords,
   buildDictationListFromStudiedWords,
+  swapPrestudyVocab,
   PRESTUDY_IDIOM_COUNT,
 } from './prestudyDictationBridge';
 import ContributorHonorBadge from './ContributorHonorBadge';
@@ -276,11 +277,29 @@ export default function StudentWorkspace({
   const vocabList = vocabDeck;
 
   /** 課文預習 — 優先家長上載；否則從中央共享 GLOBAL_SHARED_IDIOMS 隨機 15 詞 */
-  const prestudyVocabList = useMemo(() => {
+  const basePrestudyVocabList = useMemo(() => {
     const uploaded = assignedContent.vocabByTask?.prestudy;
     if (uploaded?.length) return uploaded;
     return getPrestudyIdiomVocabList(PRESTUDY_IDIOM_COUNT);
   }, [assignedContent.vocabByTask?.prestudy]);
+
+  const basePrestudyListKey = basePrestudyVocabList.map((v) => v.id).join('|');
+  const [prestudyListOverride, setPrestudyListOverride] = useState(null);
+  const prestudyVocabList = prestudyListOverride ?? basePrestudyVocabList;
+  const prestudyUsesSessionPool = !assignedContent.vocabByTask?.prestudy?.length;
+
+  useEffect(() => {
+    setPrestudyListOverride(null);
+  }, [basePrestudyListKey]);
+
+  const handleSwapPrestudyVocab = useCallback((vocab) => {
+    const result = swapPrestudyVocab(vocab.id, prestudyVocabList, {
+      persistSession: prestudyUsesSessionPool,
+    });
+    if (!result.swapped) return;
+    if (result.oldId) unmarkQuestionComplete('prestudy', result.oldId);
+    setPrestudyListOverride(result.list);
+  }, [prestudyVocabList, prestudyUsesSessionPool]);
 
   /** 默書特訓 — 優先讀取預習完成快取，100% 鎖定剛溫習詞語 */
   const linkedStudiedWords = useMemo(
@@ -554,6 +573,7 @@ export default function StudentWorkspace({
           studentType={studentType}
           language={language}
           onMarkRead={markComplete}
+          onSwapVocab={handleSwapPrestudyVocab}
           onSessionComplete={handlePrestudyComplete}
           onGoToDictation={onSwitchTask ? () => onSwitchTask('dictation') : undefined}
         />
@@ -1059,6 +1079,7 @@ function VocabCards({
   language = 'zh-HK',
   isNight = false,
   onMarkRead,
+  onSwapVocab,
   onSessionComplete,
   onGoToDictation,
 }) {
@@ -1066,6 +1087,8 @@ function VocabCards({
   const { speak, speakingKind, loadingKind, speechBusy } = useSpeechContext();
   const vocabListKey = vocabList.map((v) => v.id).join('|');
   const [readIds, setReadIds] = useState(() => new Set());
+  const [sessionSaved, setSessionSaved] = useState(false);
+  const [swapBusyId, setSwapBusyId] = useState(null);
 
   useEffect(() => {
     if (!onMarkRead) {
@@ -1074,6 +1097,10 @@ function VocabCards({
     }
     setReadIds(new Set(getCompletedIds('prestudy').map(String)));
   }, [vocabListKey, onMarkRead]);
+
+  useEffect(() => {
+    setSessionSaved(false);
+  }, [vocabListKey]);
 
   const playWord = (vocab) => {
     speak(getWordSpeakText(vocab, wordVoiceLang), { lang: wordVoiceLang, kind: 'word' });
@@ -1094,7 +1121,18 @@ function VocabCards({
   const readCount = readIds.size;
   const totalCount = vocabList.length;
   const allRead = totalCount > 0 && readCount >= totalCount;
-  const [sessionSaved, setSessionSaved] = useState(false);
+
+  const handleSwapVocab = (vocab) => {
+    if (!onSwapVocab || swapBusyId) return;
+    setSwapBusyId(String(vocab.id));
+    onSwapVocab(vocab);
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      next.delete(String(vocab.id));
+      return next;
+    });
+    setSwapBusyId(null);
+  };
 
   const handleFinishPrestudy = () => {
     if (!allRead || sessionSaved) return;
@@ -1224,6 +1262,28 @@ function VocabCards({
               isSEN={isSEN}
               className="rounded-full"
             />
+            {onSwapVocab && (
+              <button
+                type="button"
+                disabled={swapBusyId === String(vocab.id)}
+                onClick={() => handleSwapVocab(vocab)}
+                title={getDisplayText('太難或已讀過？換一個新詞', { language, studentType })}
+                className={`font-black transition-all duration-300 active:scale-[0.98] rounded-full border-2
+                  ${isNight
+                    ? 'bg-stone-700 hover:bg-stone-600 border-stone-500 text-amber-100'
+                    : 'bg-stone-100 hover:bg-stone-200 border-stone-300 text-stone-800'}
+                  ${isSEN ? 'text-base px-4 py-2' : 'text-sm px-3 py-1.5'}
+                  ${swapBusyId === String(vocab.id) ? 'opacity-60' : ''}`}
+              >
+                <BilingualLabel
+                  zh={getDisplayText('🔄 轉詞語', { language, studentType })}
+                  en="Swap Word"
+                  size={isSEN ? 'md' : 'sm'}
+                  center
+                  className={isNight ? '[&_span:last-child]:!text-amber-200/80' : '[&_span:last-child]:!text-stone-500'}
+                />
+              </button>
+            )}
           </div>
         </div>
         );

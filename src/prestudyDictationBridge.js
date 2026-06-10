@@ -78,6 +78,57 @@ export function resetPrestudyIdiomSession() {
   }
 }
 
+function vocabItemWordKey(item) {
+  return String(item?.idiomWord || item?.tc || item?.word || '').trim();
+}
+
+function persistPrestudySession(list) {
+  try {
+    sessionStorage.setItem(PRESTUDY_SESSION_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * 轉換單一預習詞語 — 太難或已讀過時換成池中另一詞
+ * @returns {{ swapped: boolean, list: object[], oldId?: string, newItem?: object, reason?: string }}
+ */
+export function swapPrestudyVocab(vocabId, currentList, { persistSession = true } = {}) {
+  if (!Array.isArray(currentList) || !currentList.length) {
+    return { swapped: false, list: currentList ?? [], reason: 'empty' };
+  }
+
+  const index = currentList.findIndex((v) => String(v.id) === String(vocabId));
+  if (index < 0) return { swapped: false, list: currentList, reason: 'not_found' };
+
+  const usedWords = new Set(
+    currentList.map(vocabItemWordKey).filter(Boolean),
+  );
+
+  const pool = shuffleGlobalIdiomPool(Date.now());
+  const replacement = pool.find((item) => item?.word && !usedWords.has(item.word));
+  if (!replacement) {
+    return { swapped: false, list: currentList, reason: 'no_replacement' };
+  }
+
+  const oldItem = currentList[index];
+  const newItem = idiomItemToVocabItem(replacement);
+  const newList = [...currentList];
+  newList[index] = newItem;
+
+  if (persistSession) {
+    persistPrestudySession(newList);
+  }
+
+  return {
+    swapped: true,
+    list: newList,
+    oldId: String(oldItem.id),
+    newItem,
+  };
+}
+
 /** 預習完成 — 存入剛溫習的詞語純文字陣列 */
 export function saveStudiedWords(vocabItems) {
   const studiedWords = (vocabItems ?? [])

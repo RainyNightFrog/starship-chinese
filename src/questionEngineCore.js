@@ -148,6 +148,17 @@ export function markQuestionComplete(taskId, questionId) {
   return store.completed[taskId];
 }
 
+/** 取消標記（例如預習轉詞語時移除舊詞的已讀紀錄） */
+export function unmarkQuestionComplete(taskId, questionId) {
+  if (!questionId) return getCompletedIds(taskId);
+  const store = loadStore();
+  const set = new Set(store.completed[taskId] ?? []);
+  set.delete(String(questionId));
+  store.completed[taskId] = [...set];
+  saveStore(store);
+  return store.completed[taskId];
+}
+
 /** 清空某科目今日歷史（題庫耗盡時自動呼叫） */
 export function clearTaskHistory(taskId) {
   const store = loadStore();
