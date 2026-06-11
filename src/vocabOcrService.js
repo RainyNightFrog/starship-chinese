@@ -6,6 +6,7 @@
 import { recognizeVocabImageText } from './readingVisionClient.js';
 import {
   parseVocabFromOcrText,
+  isVocabWorksheetContent,
   resolveMinWordsForUpload,
   assessVocabExtractionQuality,
   diagnoseVocabOcrFailure,
