@@ -417,6 +417,165 @@ function recoverOrderedWorksheetWords(plainHan = '') {
   return hits;
 }
 
+/** 僅在鎖定頁內依順序模糊找回 — 禁止跨頁誤配 */
+function recoverOrderedWordsForPage(plainHan = '', page = null) {
+  if (!page?.words?.length) return [];
+
+  const hits = [];
+  const seen = new Set();
+  let cursor = 0;
+
+  page.words.forEach((word) => {
+    if (!isKnownWord(word) || seen.has(word)) return;
+    const pos = fuzzyFindWord(plainHan, word, cursor);
+    if (pos >= 0) {
+      seen.add(word);
+      hits.push({ word, pos });
+      cursor = pos + word.length;
+    }
+  });
+
+  return hits;
+}
+
+function getWorksheetPageForWord(word = '') {
+  return WORKSHEET_PAGES.find((p) => p.words.includes(word)) ?? null;
+}
+
+/**
+ * 上載最低詞數 — 校本字詞表要求高於一般內容，避免 3 個亂配詞就通過
+ */
+export function resolveMinWordsForUpload(imageCount = 1, rawText = '') {
+  if (imageCount >= 2) return 5;
+  if (!isVocabWorksheetContent(rawText)) return 3;
+
+  const plainFull = toPlainHan(rawText);
+  const page = detectWorksheetPage(plainFull, rawText);
+  const pinyinHits = page
+    ? matchPinyinWordsForPage(collectLatinPinyinTokens(rawText), page).length
+    : 0;
+
+  if (page && isIdiomWorksheetPage(page)) {
+    return Math.min(6, page.words.length);
+  }
+  if (page && pinyinHits >= 8) {
+    return Math.min(12, Math.max(8, pinyinHits - 2));
+  }
+  if (page) {
+    return Math.min(12, Math.max(8, Math.floor(page.words.length * 0.35)));
+  }
+
+  const hanCount = (plainFull.match(/[\u4e00-\u9fff]/g) || []).length;
+  const latinCount = (String(rawText).match(/[a-zA-Z]/g) || []).length;
+  if (hanCount >= 36 || latinCount >= 24) return 8;
+  return 6;
+}
+
+/**
+ * 檢查 OCR 提取結果是否可信 — 拒絕跨頁亂配、詞數過少
+ */
+export function assessVocabExtractionQuality(words = [], rawText = '') {
+  const list = dedupeVocabWords(words.filter((w) => isKnownWord(w)));
+  if (!list.length) {
+    return { ok: false, reason: 'empty', message: '未能辨識出任何詞語。' };
+  }
+
+  const pageIds = new Set();
+  let offWorksheet = 0;
+  list.forEach((w) => {
+    const page = getWorksheetPageForWord(w);
+    if (page) pageIds.add(page.id);
+    else offWorksheet += 1;
+  });
+
+  if (pageIds.size > 1) {
+    return {
+      ok: false,
+      reason: 'cross_page',
+      message: `只辨識到 ${list.length} 個詞，且來自多張不同詞表（如「${list.slice(0, 3).join('、')}」），並非你上載那一頁。請清空重選後重新上載，或直接貼上詞表文字（每行一詞）。`,
+    };
+  }
+
+  if (pageIds.size === 1 && offWorksheet > 0) {
+    return {
+      ok: false,
+      reason: 'mixed_sources',
+      message: `辨識結果混入了詞庫其他頁的詞（如「${list.join('、')}」），與上載圖片不符。建議直接貼上詞表文字。`,
+    };
+  }
+
+  const minExpected = resolveMinWordsForUpload(1, rawText);
+  if (isVocabWorksheetContent(rawText) && list.length < minExpected) {
+    return {
+      ok: false,
+      reason: 'too_few',
+      message: `只辨識到 ${list.length} 個詞（此類詞表至少需要 ${minExpected} 個才會採用）。辨識到的「${list.join('、')}」可能並非圖中詞語。請重新拍照或貼上詞表文字（每行一詞）。`,
+    };
+  }
+
+  const plainFull = toPlainHan(rawText);
+  const page = detectWorksheetPage(plainFull, rawText);
+  if (page) {
+    const onPage = list.filter((w) => page.words.includes(w)).length;
+    if (onPage < list.length) {
+      return {
+        ok: false,
+        reason: 'off_page',
+        message: `辨識結果含非本頁詞彙。請清空重選後重新上載，或直接貼上詞表文字。`,
+      };
+    }
+  }
+
+  return { ok: true, wordCount: list.length };
+}
+
+/** 上載失敗時 — 診斷為何只抓到少量錯詞（供錯誤訊息顯示） */
+export function diagnoseVocabOcrFailure(rawText = '') {
+  const plainFull = toPlainHan(rawText);
+  const page = detectWorksheetPage(plainFull, rawText);
+  const minWords = resolveMinWordsForUpload(1, rawText);
+
+  if (!isVocabWorksheetContent(rawText)) {
+    return {
+      ok: false,
+      message: '未能從圖片中提取詞語，請確認上載的是默書單或詞表，並確保文字清晰。',
+    };
+  }
+
+  if (!page) {
+    return {
+      ok: false,
+      message: `無法鎖定是哪一頁校本詞表（至少需要辨識到 ${minWords} 個同頁詞語）。請直接貼上詞表文字（每行一詞），或重新拍照。`,
+    };
+  }
+
+  const loose = mergeWordHits(
+    recoverOrderedWordsForPage(plainFull, page),
+    extractDetectedPageWords(plainFull, rawText),
+    extractPinyinLinePairs(rawText, page),
+  );
+  const words = dedupeVocabWords(loose.filter((w) => isValidExtractedWord(w) && isKnownWord(w)));
+
+  if (!words.length) {
+    return {
+      ok: false,
+      message: `圖片太模糊，無法從「${page.id}」詞表辨識詞語。請開燈重拍，或直接貼上詞表文字（每行一詞）。`,
+    };
+  }
+
+  const quality = assessVocabExtractionQuality(words, rawText);
+  if (!quality.ok && quality.message) return quality;
+
+  if (words.length < minWords) {
+    return {
+      ok: false,
+      message: `只辨識到 ${words.length} 個詞（「${words.join('、')}」），此頁至少需要 ${minWords} 個才會採用。建議直接貼上詞表文字。`,
+    };
+  }
+
+  return { ok: false, message: '辨識結果不完整，請重新上載或貼上詞表文字。' };
+}
+
 /** 滑窗掃描 2/4 字 — 僅保留詞庫命中（容忍 OCR 字間插入雜字） */
 function slidingWindowLexiconScan(plainHan = '') {
   const hits = [];
@@ -788,19 +947,23 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
       .sort((a, b) => a.pos - b.pos)
       .map((h) => h.word);
   } else if (isWorksheetUpload(rawText)) {
-    /** 字詞表 OCR 失敗時 — 僅用詞表順序掃描與拼音，禁止滑窗盲抽舊庫詞 */
-    candidates = mergeWordHits(
-      recoverOrderedWorksheetWords(plainFull),
-      extractDetectedPageWords(plainFull, rawText),
-      scanWorksheetLexiconPresence(plainFull),
-      extractPinyinLinePairs(rawText, detectWorksheetPage(plainFull, rawText)),
-    );
+    /** 字詞表 OCR 失敗時 — 僅在鎖定頁內用順序掃描 + 拼音，禁止全庫跨頁盲配 */
+    const page = detectWorksheetPage(plainFull, rawText);
+    candidates = page
+      ? mergeWordHits(
+        recoverOrderedWordsForPage(plainFull, page),
+        extractDetectedPageWords(plainFull, rawText),
+        extractPinyinLinePairs(rawText, page),
+      )
+      : [];
   } else {
     candidates = extractWorksheetWordsHybrid(rawText);
   }
 
-  /** 格子字表 — 僅詞庫命中（禁止盲切未知雙字） */
-  if (candidates.length < minWords) {
+  const worksheetUpload = isWorksheetUpload(rawText);
+
+  /** 非校本字詞表 — 才允許格子字流等兜底；字詞表禁止跨頁盲抽 */
+  if (candidates.length < minWords && !worksheetUpload) {
     candidates = mergeWordHits(
       candidates.map((word, pos) => ({ word, pos })),
       extractPipeDelimitedPairs(rawText),
@@ -809,26 +972,18 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
     );
   }
 
-  /** 偵測校本字詞表但 OCR 極差 — 依順序模糊對齊 */
-  if (candidates.length < minWords && isWorksheetUpload(rawText)) {
-    const pageHitsRetry = extractDetectedPageWords(plainFull, rawText);
-    candidates = pageHitsRetry.length >= minWords
-      ? mergeWordHits(pageHitsRetry)
-      : mergeWordHits(
-        candidates.map((word, pos) => ({ word, pos })),
-        pageHitsRetry,
-        recoverOrderedWorksheetWords(plainFull),
-        extractGridHeadChars(rawText),
-        extractPipeDelimitedPairs(rawText),
-        extractGenericGridWords(rawText),
-      );
-  }
-
   candidates = candidates.filter((w) => isValidExtractedWord(w) && isKnownWord(w));
   candidates = dedupeVocabWords(candidates);
 
   if (candidates.length < minWords) {
     return [];
+  }
+
+  if (worksheetUpload) {
+    const quality = assessVocabExtractionQuality(candidates, rawText);
+    if (!quality.ok) {
+      return [];
+    }
   }
 
   const { matchedQuestions } = resolveCustomVocabFromInput(candidates.slice(0, maxWords), {

@@ -4,7 +4,12 @@
  */
 
 import { recognizeVocabImageText } from './readingVisionClient.js';
-import { parseVocabFromOcrText, isVocabWorksheetContent } from './vocabOcrParser.js';
+import {
+  parseVocabFromOcrText,
+  resolveMinWordsForUpload,
+  assessVocabExtractionQuality,
+  diagnoseVocabOcrFailure,
+} from './vocabOcrParser.js';
 import { PRESTUDY_IDIOM_COUNT } from './prestudyDictationBridge.js';
 
 /** 詞表 OCR 去噪 — 不剝除「小學」等標題用字（閱讀理解 SCHOOL_NOISE 會誤傷詞表） */
@@ -31,13 +36,17 @@ function resolveMaxWords(imageCount = 1, rawText = '') {
   return Math.min(base, 48);
 }
 
-function assertMinVocabWords(matchedQuestions, imageCount = 1) {
-  const min = imageCount >= 2 ? 5 : 3;
+function assertMinVocabWords(matchedQuestions, imageCount = 1, rawText = '') {
+  const min = resolveMinWordsForUpload(imageCount, rawText);
   if (matchedQuestions.length < min) {
-    throw new Error(
-      `只辨識到 ${matchedQuestions.length} 個詞語（至少需要 ${min} 個）。`
-      + '建議直接貼上詞表文字（每行一詞），或重新拍照確保標題與詞語清晰。',
+    const quality = assessVocabExtractionQuality(
+      matchedQuestions.map((q) => q.word),
+      rawText,
     );
+    const detail = quality.ok === false && quality.message
+      ? quality.message
+      : `只辨識到 ${matchedQuestions.length} 個詞語（至少需要 ${min} 個）。建議直接貼上詞表文字（每行一詞），或重新拍照確保標題與詞語清晰。`;
+    throw new Error(detail);
   }
 }
 
@@ -131,17 +140,19 @@ export async function parseVocabUploadItems(uploadItems = [], {
   }
 
   onProgress?.(0.92, steps.length ? steps.length - 2 : 0);
+  const minWords = resolveMinWordsForUpload(imageItems.length, rawText);
   const matchedQuestions = parseVocabFromOcrText(rawText, {
     maxWords: resolveMaxWords(imageItems.length, rawText),
     imageCount: imageItems.length,
-    minWords: imageItems.length >= 2 ? 5 : 3,
+    minWords,
   });
 
   if (!matchedQuestions.length) {
-    throw new Error('未能從圖片中提取詞語，請確認上載的是默書單或詞表，並確保文字清晰。');
+    const diagnosis = diagnoseVocabOcrFailure(rawText);
+    throw new Error(diagnosis.message ?? '未能從圖片中提取詞語，請確認上載的是默書單或詞表，並確保文字清晰。');
   }
 
-  assertMinVocabWords(matchedQuestions, imageItems.length);
+  assertMinVocabWords(matchedQuestions, imageItems.length, rawText);
 
   onProgress?.(1, Math.max(0, steps.length - 1));
   return packVocabOcrResult(matchedQuestions, {
