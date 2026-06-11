@@ -3,6 +3,8 @@
  * 二字詞顯示兩個字；四字成語顯示四個字
  */
 
+import { WORKSHEET_CHAR_DECOMPOSITION } from './worksheetCharDecomposition.js';
+
 /** 單字拆解表 @type {Record<string, { radical: string, body: string }>} */
 export const CHAR_DECOMPOSITION = {
   安: { radical: '宀', body: '女' },
@@ -243,19 +245,23 @@ export const CHAR_DECOMPOSITION = {
   廣: { radical: '广', body: '黃' },
 };
 
-/** 查單字拆解 */
+/** 查單字拆解（手動表 → 校本字詞表 CCD → 兜底） */
 export function lookupCharDecomposition(char) {
   const key = String(char ?? '').trim();
   if (!key) return null;
-  if (CHAR_DECOMPOSITION[key]) {
-    return { radical: CHAR_DECOMPOSITION[key].radical, body: CHAR_DECOMPOSITION[key].body };
+
+  const manual = CHAR_DECOMPOSITION[key];
+  if (manual) {
+    return { radical: manual.radical, body: manual.body };
   }
-  /** 未知字：以首部件 + 餘下筆劃示意 */
-  const parts = [...key];
-  if (parts.length <= 1) {
-    return { radical: key, body: '—' };
+
+  const worksheet = WORKSHEET_CHAR_DECOMPOSITION[key];
+  if (worksheet) {
+    return { radical: worksheet.radical, body: worksheet.body };
   }
-  return { radical: parts[0], body: parts.slice(1).join('') };
+
+  /** 未知字：獨體字標示 — */
+  return { radical: key, body: '—' };
 }
 
 /** 逐字拆解整個詞語 @returns {{ chars: Array<{ char: string, radical: string, body: string }> } | null} */
