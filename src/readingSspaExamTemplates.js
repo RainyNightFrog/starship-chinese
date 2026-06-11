@@ -7,7 +7,9 @@ import { OPTION_MODES } from './readingTypeSafeOptions.js';
 import {
   inferArticleProfile,
   buildParagraphIdeaOptions,
+  inferParagraphIdeaAtIndex,
   paragraphLabelOptions,
+  lineToParagraphIndex,
 } from './readingArticleProfiler.js';
 
 function pickAnchor(ctx, offset = 0) {
@@ -66,17 +68,17 @@ export const SSPA_EXAM_TEMPLATES = [
       const anchor = pickAnchor(ctx);
       const p = inferArticleProfile(ctx);
       const paraNum = anchor.lineIndex + 1;
-      const ideaIdx = anchor.lineIndex % (p.paraIdeas?.length ?? 1);
-      const correct = p.paraIdeas?.[ideaIdx] ?? `敘述第${paraNum}段的主要內容`;
-      const opts = buildParagraphIdeaOptions(p, correct, ctx);
+      const ideaIdx = lineToParagraphIndex(anchor.lineIndex, p.lineCount);
+      const correct = inferParagraphIdeaAtIndex(p, ctx, ideaIdx);
+      const opts = buildParagraphIdeaOptions(p, correct, ctx, ideaIdx);
       const fixedCorrectIndex = opts.indexOf(correct);
       return {
         questionText: `文中第${paraNum}段主要是？`,
         correct,
-        structuredOptions: opts,
+        structuredOptions: opts.slice(0, 4),
         fixedCorrectIndex: fixedCorrectIndex >= 0 ? fixedCorrectIndex : 0,
         optionMode: OPTION_MODES.STRUCTURED_CHOICE,
-        hint: `先概括第${paraNum}段的大意，再排除只寫細節的選項。`,
+        hint: `先概括第${paraNum}段的大意，再排除看似合理但屬於其他段落的選項。`,
         trapProfile: 'summary',
       };
     },
@@ -219,18 +221,17 @@ export const SSPA_EXAM_TEMPLATES = [
     category: 'paragraph_logic',
     build(ctx) {
       const p = inferArticleProfile(ctx);
-      const correct = p.paraIdeas?.[0] ?? '交代背景，引出下文';
-      const built = structured(correct, [
-        '總結全文，給出建議',
-        '描寫與主線無關的插曲',
-        '只介紹人物的外貌',
-        '重複後文已出現的內容',
-      ]);
+      const correct = inferParagraphIdeaAtIndex(p, ctx, 0);
+      const opts = buildParagraphIdeaOptions(p, correct, ctx, 0);
+      const fixedCorrectIndex = opts.indexOf(correct);
       return {
         questionText: '文中第一段主要是？',
-        ...built,
-        hint: '開首段通常交代背景、引出人物或提出問題。',
-        trapProfile: 'structure',
+        correct,
+        structuredOptions: opts.slice(0, 4),
+        fixedCorrectIndex: fixedCorrectIndex >= 0 ? fixedCorrectIndex : 0,
+        optionMode: OPTION_MODES.STRUCTURED_CHOICE,
+        hint: '開首段通常交代背景、引出人物；注意勿與後文論述細節或總結段混淆。',
+        trapProfile: 'summary',
       };
     },
   },

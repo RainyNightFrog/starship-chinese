@@ -209,37 +209,159 @@ export function inferArticleProfile(ctx = {}) {
 
   const k1 = pickKeyword(kw, 0, '成長');
   const k2 = pickKeyword(kw, 1, '堅持');
+  const inferredParaIdeas = lines.map((line, i) => inferLineParaIdea(line, i, { subject: k1 }, lines));
   return {
     genre: 'narrative',
     subject: k1,
     lineCount,
     articleFocus: `全文圍繞與「${k1}」相關的經歷，帶出${k2}的道理`,
     focusDistractors: [
-      '只記錄一件無關緊要的插曲',
-      '著重描寫優美的自然風景',
-      '介紹與本文無關的科學知識',
-      '鼓勵讀者購買相關商品',
+      `詳述與「${k1}」無直接關係的次要情節`,
+      `著重描寫環境，但未能帶出${k2}的啟示`,
+      `只記錄表面活動，缺乏對人物內心的刻劃`,
+      `把結尾的感悟誤當成開首段的內容`,
     ],
     authorPurpose: `透過敘述與「${k1}」相關的經歷，帶出${k2}的啟示`,
-    purposeDistractors: NOSTALGIA_DISTRACTORS,
+    purposeDistractors: [
+      `介紹與本文無關的科普知識`,
+      `記錄一次與「${k1}」無關的日常見聞`,
+      `呼籲讀者購買相關商品或服務`,
+      `批評社會現象，但文中並未提及`,
+    ],
     difficultyAspect: `與「${k1}」相關的主要困難`,
     difficultyPara: Math.min(2, lineCount),
     emotions: ['感到溫暖而有所體會', '受到啟發而充滿希望'],
     emotionDistractors: ['感到無聊而厭煩', '對事件感到憤怒'],
     quotePurpose: `說明人物面對「${k1}」時的態度與想法`,
-    paraIdeas: lines.map((_, i) => `交代第${i + 1}段的主要內容`),
+    paraIdeas: inferredParaIdeas,
   };
 }
 
-/** 段意選項（高仿干擾） */
-export function buildParagraphIdeaOptions(profile, correct, ctx) {
-  const ideas = profile.paraIdeas ?? [];
-  const pool = [...new Set([correct, ...ideas, ...profile.focusDistractors ?? []])];
-  const shuffled = pool.filter((x) => x && x !== correct);
-  while (shuffled.length < 3) {
-    shuffled.push(`只描述表面細節，未能概括段意（干擾${shuffled.length}）`);
+/** 段意選項（高仿干擾 — 優先同文其他段大意，呈分試陷阱感） */
+export function buildParagraphIdeaOptions(profile, correct, ctx, paraIndex = null) {
+  const randInt = ctx?.randInt ?? ((n) => Math.floor(Math.random() * n));
+  const ideas = (profile.paraIdeas ?? []).filter(Boolean);
+  const lines = ctx?.lines ?? [];
+
+  let otherIdeas = ideas.filter((idea) => idea !== correct);
+
+  if (paraIndex != null) {
+    const adjacency = [
+      ideas[paraIndex + 1],
+      ideas[paraIndex + 2],
+      ideas[paraIndex - 1],
+      ...otherIdeas,
+    ].filter((idea) => idea && idea !== correct);
+    otherIdeas = [...new Set(adjacency)];
   }
-  return [correct, ...shuffled.slice(0, 3)];
+
+  if (otherIdeas.length < 3 && lines.length) {
+    lines.forEach((line, i) => {
+      if (paraIndex != null && i === paraIndex) return;
+      const inferred = inferLineParaIdea(line, i, profile, lines);
+      if (inferred && inferred !== correct) otherIdeas.push(inferred);
+    });
+    otherIdeas = [...new Set(otherIdeas.filter((idea) => idea !== correct))];
+  }
+
+  const thematic = [
+    ...(profile.focusDistractors ?? []),
+    ...(profile.purposeDistractors ?? []),
+    profile.articleFocus,
+    profile.authorPurpose,
+  ].filter((d) => d && d !== correct);
+
+  const combined = fisherYatesShuffle([...otherIdeas, ...thematic], randInt);
+
+  const distractors = [];
+  const seen = new Set([correct]);
+
+  fisherYatesShuffle(otherIdeas, randInt).forEach((item) => {
+    if (distractors.length >= 3) return;
+    if (!item || seen.has(item)) return;
+    distractors.push(item);
+    seen.add(item);
+  });
+
+  if (distractors.length < 3) {
+    combined.forEach((item) => {
+      if (distractors.length >= 3) return;
+      if (!item || seen.has(item)) return;
+      distractors.push(item);
+      seen.add(item);
+    });
+  }
+
+  const structureTraps = [
+    '概括全文主旨，總結作者的中心思想',
+    '詳述人物後期的成就與深遠影響',
+    '以具體事例論證觀點，層層深化論述',
+    '描寫環境氣氛，為後文情節發展作鋪墊',
+  ].filter((t) => t !== correct && !seen.has(t));
+
+  fisherYatesShuffle(structureTraps, randInt).forEach((item) => {
+    if (distractors.length >= 3) return;
+    if (seen.has(item)) return;
+    distractors.push(item);
+    seen.add(item);
+  });
+
+  return [correct, ...distractors.slice(0, 3)];
+}
+
+function fisherYatesShuffle(array, randInt) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = randInt(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** 依段序取得段意（種子 profile 或正文推斷） */
+export function inferParagraphIdeaAtIndex(profile, ctx, paraIndex = 0) {
+  const lines = ctx?.lines ?? [];
+  const ideas = profile.paraIdeas ?? [];
+  if (ideas[paraIndex]) return ideas[paraIndex];
+  return inferLineParaIdea(lines[paraIndex] ?? lines[0] ?? '', paraIndex, profile, lines);
+}
+
+function inferLineParaIdea(line, index, profile, allLines) {
+  const text = String(line ?? '').trim();
+  const subject = profile?.subject ?? '主人公';
+  const fullText = (allLines ?? []).join('');
+
+  if (index === 0) {
+    if (/誕辰|紀念|節日|每年.*舉行|這一天/.test(text)) {
+      const who = /孔子/.test(fullText) ? '孔子' : subject;
+      return `交代${who}紀念活動或節日的背景，引出人物`;
+    }
+    if (/相傳|據說|從前|有一天|某年/.test(text)) return '以時間或情境開場，交代背景並引出後文';
+    if (/是.*(代表|創始|創立|被譽|被稱)|是一位|身為/.test(text)) {
+      return `介紹${subject}的身份、地位或整體概況`;
+    }
+    if (/我.*(回到|重返|來到)|再次/.test(text)) return '交代重返某地的緣由，奠定全篇基調';
+  }
+
+  if (/思想|學說|理念|「仁」|「禮」|教育/.test(text)) {
+    return `闡述${subject}的思想主張或教育理念`;
+  }
+  if (/貢獻|影響|地位|創立|整理|編訂|六經|儒家/.test(text)) {
+    return `說明${subject}的成就與對後世的貢獻`;
+  }
+  if (/雖然|但是|然而|卻|而/.test(text)) {
+    return `透過轉折，呈現${subject}處境或心態的變化`;
+  }
+  if (/感到|十分|非常|懷念|思念|敬佩|讚賞/.test(text)) {
+    return '抒發人物或作者的情感與感受';
+  }
+  if (/因此|所以|由此|可見|總之|總括/.test(text)) {
+    return '歸納前文，帶出道理或啟示';
+  }
+
+  const snippet = text.replace(/[，。！？；、]/g, '').slice(0, 12);
+  if (snippet.length >= 6) return `敘述與「${snippet}」相關的內容`;
+  return `概括第${index + 1}段的主要內容`;
 }
 
 /** 段落標籤選項 */
