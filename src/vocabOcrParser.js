@@ -32,6 +32,72 @@ const KNOWN_WORDS_SORTED = [...new Set([
 
 const KNOWN_WORD_SET = new Set(KNOWN_WORDS_SORTED);
 
+/** 繁簡／OCR 常見混淆字 */
+const CHAR_EQUIV = new Map([
+  ['了', '瞭'], ['瞭', '了'], ['了', '了'],
+  ['沈', '沉'], ['沉', '沈'],
+  ['彷', '仿'], ['仿', '彷'],
+  ['複', '复'], ['复', '複'],
+  ['與', '与'], ['与', '與'],
+  ['後', '后'], ['后', '後'],
+  ['發', '发'], ['发', '發'],
+  ['獎', '奖'], ['奖', '獎'],
+  ['製', '制'], ['制', '製'],
+  ['頒', '颁'], ['颁', '頒'],
+  ['屢', '屡'], ['屡', '屢'],
+  ['傳', '传'], ['传', '傳'],
+  ['創', '创'], ['创', '創'],
+  ['義', '义'], ['义', '義'],
+  ['嚴', '严'], ['严', '嚴'],
+  ['務', '务'], ['务', '務'],
+  ['愛', '爱'], ['爱', '愛'],
+  ['載', '载'], ['载', '載'],
+  ['藍', '蓝'], ['蓝', '藍'],
+  ['陰', '阴'], ['阴', '陰'],
+  ['輕', '轻'], ['轻', '輕'],
+  ['籠', '笼'], ['笼', '籠'],
+  ['規', '规'], ['规', '規'],
+  ['雜', '杂'], ['杂', '雜'],
+  ['氣', '气'], ['气', '氣'],
+  ['脅', '胁'], ['胁', '脅'],
+  ['賴', '赖'], ['赖', '賴'],
+  ['資', '资'], ['资', '資'],
+  ['產', '产'], ['产', '產'],
+  ['鰥', '鳏'], ['鳏', '鰥'],
+  ['禮', '礼'], ['礼', '禮'],
+  ['眾', '众'], ['众', '眾'],
+  ['棄', '弃'], ['弃', '棄'],
+  ['撓', '挠'], ['挠', '撓'],
+  ['浹', '浃'], ['浃', '浹'],
+]);
+
+function charsEquivalent(a, b) {
+  if (a === b) return true;
+  return CHAR_EQUIV.get(a) === b || CHAR_EQUIV.get(b) === a;
+}
+
+function fuzzyMatchAt(plain, start, word) {
+  if (start + word.length > plain.length) return false;
+  let mismatches = 0;
+  const maxMismatch = word.length <= 2 ? 1 : 2;
+  for (let i = 0; i < word.length; i += 1) {
+    if (!charsEquivalent(plain[start + i], word[i])) {
+      mismatches += 1;
+      if (mismatches > maxMismatch) return false;
+    }
+  }
+  return true;
+}
+
+function fuzzyFindWord(plain, word, startPos = 0) {
+  const exact = plain.indexOf(word, startPos);
+  if (exact >= 0) return exact;
+  for (let i = startPos; i + word.length <= plain.length; i += 1) {
+    if (fuzzyMatchAt(plain, i, word)) return i;
+  }
+  return -1;
+}
+
 function isKnownWord(word) {
   return KNOWN_WORD_SET.has(word) && !TITLE_FRAGMENT.has(word);
 }
@@ -83,6 +149,92 @@ function mineLexiconWordsFromPlain(plainHan = '') {
       i += 1;
     }
   }
+
+  return hits;
+}
+
+/** 模糊詞庫掃描 — 容忍 OCR 1–2 字偏差 */
+function fuzzyLexiconScan(plainHan = '') {
+  const hits = [];
+  const seen = new Set();
+
+  KNOWN_WORDS_SORTED.forEach((word) => {
+    if (!isKnownWord(word) || seen.has(word)) return;
+    if (fuzzyFindWord(plainHan, word, 0) >= 0) {
+      seen.add(word);
+      hits.push({ word, pos: fuzzyFindWord(plainHan, word, 0) });
+    }
+  });
+
+  return hits;
+}
+
+/**
+ * 字詞表格子 OCR — 每格取行首主字，再 2/4 字配對
+ * 例：廉\nlián\n讠兼 → 廉
+ */
+function extractGridHeadChars(rawText = '') {
+  const hits = [];
+  const seen = new Set();
+  const charStream = [];
+
+  String(rawText).split(/\n+/).forEach((rawLine) => {
+    if (NOISE_LINE.test(rawLine)) return;
+    const line = rawLine.trim();
+    if (!line) return;
+
+    const leading = line.match(/^[\s\d.·\-*•]*([\u4e00-\u9fff])/);
+    if (leading) {
+      charStream.push(leading[1]);
+      return;
+    }
+
+    const hanOnly = line.replace(/[^\u4e00-\u9fff]/g, '');
+    if (hanOnly.length === 1) {
+      charStream.push(hanOnly);
+    } else if (hanOnly.length === 2 && isKnownWord(hanOnly)) {
+      if (!seen.has(hanOnly)) {
+        seen.add(hanOnly);
+        hits.push({ word: hanOnly, pos: charStream.length });
+      }
+      charStream.push(hanOnly[0], hanOnly[1]);
+    } else if (hanOnly.length === 4 && isKnownWord(hanOnly)) {
+      if (!seen.has(hanOnly)) {
+        seen.add(hanOnly);
+        hits.push({ word: hanOnly, pos: charStream.length });
+      }
+    }
+  });
+
+  if (charStream.length >= 4) {
+    const isIdiomStream = /成語|汗流|恍然|百折不/.test(rawText);
+    const chunk = isIdiomStream ? 4 : 2;
+    for (let i = 0; i + chunk <= charStream.length; i += chunk) {
+      const word = charStream.slice(i, i + chunk).join('');
+      if (!isKnownWord(word) || seen.has(word)) continue;
+      seen.add(word);
+      hits.push({ word, pos: i });
+    }
+  }
+
+  return hits;
+}
+
+/** 依校本詞表順序，在 OCR 字流中模糊找回詞語 */
+function recoverOrderedWorksheetWords(plainHan = '') {
+  const hits = [];
+  const seen = new Set();
+  let cursor = 0;
+
+  WORKSHEET_ORDERED_WORDS.forEach((word) => {
+    if (!isKnownWord(word) || seen.has(word)) return;
+    const pos = fuzzyFindWord(plainHan, word, cursor);
+    if (pos >= 0) {
+      seen.add(word);
+      hits.push({ word, pos });
+      cursor = pos + word.length;
+    }
+  });
 
   return hits;
 }
@@ -147,14 +299,14 @@ function extractSingleCharLinePairs(rawText = '') {
   return hits;
 }
 
-/** 在校本詞表固定順序中，掃描 OCR 全文是否含該詞（子串存在即可） */
+/** 在校本詞表固定順序中，掃描 OCR 全文是否含該詞（含模糊匹配） */
 function scanWorksheetLexiconPresence(plainHan = '') {
   const hits = [];
   const seen = new Set();
 
   WORKSHEET_ORDERED_WORDS.forEach((word) => {
     if (!isKnownWord(word) || seen.has(word)) return;
-    const pos = plainHan.indexOf(word);
+    const pos = fuzzyFindWord(plainHan, word, 0);
     if (pos >= 0) {
       seen.add(word);
       hits.push({ word, pos });
@@ -191,14 +343,19 @@ function extractWorksheetWordsHybrid(rawText = '') {
   const perPageHits = pagePlains.flatMap((plain) => [
     ...mineLexiconWordsFromPlain(plain),
     ...slidingWindowLexiconScan(plain),
+    ...fuzzyLexiconScan(plain),
   ]);
 
   return mergeWordHits(
     perPageHits,
     mineLexiconWordsFromPlain(plainBody),
     slidingWindowLexiconScan(plainBody),
+    fuzzyLexiconScan(plainBody),
+    fuzzyLexiconScan(plainFull),
     extractSingleCharLinePairs(rawText),
+    extractGridHeadChars(rawText),
     scanWorksheetLexiconPresence(plainFull),
+    recoverOrderedWorksheetWords(plainFull),
   );
 }
 
@@ -253,6 +410,15 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
     candidates = extractLineTokens(rawText, { lexiconOnly: true });
   }
 
+  /** 偵測校本字詞表但 OCR 極差 — 依順序模糊對齊 */
+  if (candidates.length < 3 && isWorksheetUpload(rawText)) {
+    const plainFull = toPlainHan(rawText);
+    candidates = mergeWordHits(
+      recoverOrderedWorksheetWords(plainFull),
+      extractGridHeadChars(rawText),
+    );
+  }
+
   candidates = candidates.filter(isKnownWord);
 
   if (!candidates.length) {
@@ -262,6 +428,7 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
   const { matchedQuestions } = resolveCustomVocabFromInput(candidates.slice(0, maxWords), {
     source: 'ocr_vocab_parser',
     seed,
+    maxWords,
   });
 
   return matchedQuestions.filter((q) => isKnownWord(q.word)).slice(0, maxWords);

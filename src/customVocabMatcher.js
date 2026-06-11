@@ -22,7 +22,8 @@ const POOL_BY_WORD = new Map(
  * 從 OCR 結果 / 貼上文字 / 混合格式輸入中，提取「純中文詞語」陣列
  * 保留家長輸入順序，去重但不洗牌
  */
-export function normalizeCustomWordList(input = []) {
+export function normalizeCustomWordList(input = [], options = {}) {
+  const cap = options.maxWords ?? CUSTOM_WORD_CAP;
   const seen = new Set();
   const words = [];
 
@@ -31,7 +32,7 @@ export function normalizeCustomWordList(input = []) {
     if (!word || !/^[\u4e00-\u9fff]{2,8}$/.test(word)) return;
     /** 拒絕 OCR 長串亂碼與標題 */
     if (/字詞表|词表|年級|年级|高年級|默書|封面|目錄/.test(word)) return;
-    if (!POOL_BY_WORD.has(word) && word.length > 4) return;
+    if (!POOL_BY_WORD.has(word) && !VOCAB_HINTS[word] && word.length > 4) return;
     if (seen.has(word)) return;
     seen.add(word);
     words.push(word);
@@ -39,7 +40,7 @@ export function normalizeCustomWordList(input = []) {
 
   if (typeof input === 'string') {
     input.split(/\n+/).forEach((line) => pushWord(line));
-    return words.slice(0, CUSTOM_WORD_CAP);
+    return words.slice(0, cap);
   }
 
   if (!Array.isArray(input)) return [];
@@ -54,7 +55,7 @@ export function normalizeCustomWordList(input = []) {
     }
   });
 
-  return words.slice(0, CUSTOM_WORD_CAP);
+  return words.slice(0, cap);
 }
 
 /**
@@ -86,8 +87,8 @@ export function buildFallbackIdiomEntry(userWord, index = 0) {
  * @param {string[]|object[]|string} customWordsInput
  * @returns {Array<{ id, word, questionText, options, correctAnswerIndex, hint, ... }>}
  */
-export function matchCustomWordsStrict(customWordsInput = []) {
-  const words = normalizeCustomWordList(customWordsInput);
+export function matchCustomWordsStrict(customWordsInput = [], options = {}) {
+  const words = normalizeCustomWordList(customWordsInput, options);
   if (!words.length) return [];
 
   return words.map((userWord, index) => {
@@ -107,8 +108,8 @@ export function matchCustomWordsStrict(customWordsInput = []) {
  * 上載管道主入口 — OCR / 貼上 / 家長自訂欄位 → 精準配對結果
  */
 export function resolveCustomVocabFromInput(customWordsInput = [], options = {}) {
-  const customWords = normalizeCustomWordList(customWordsInput);
-  const matchedQuestions = matchCustomWordsStrict(customWords);
+  const customWords = normalizeCustomWordList(customWordsInput, options);
+  const matchedQuestions = matchCustomWordsStrict(customWords, options);
 
   return {
     customWordsInput: customWords,

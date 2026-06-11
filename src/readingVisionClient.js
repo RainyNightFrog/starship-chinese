@@ -109,17 +109,30 @@ function throwOcrError(data, status) {
   throw err;
 }
 
-async function parseOcrResponse(res) {
+async function parseOcrResponse(res, { allowPartial = false } = {}) {
   const data = await res.json().catch(() => ({}));
+  const rawText = String(data.rawText ?? data.articleLines?.join('\n') ?? '').trim();
 
   if (!res.ok) {
     if (res.status === 502 || res.status === 503 || res.status === 504) {
       throwBackendUnavailable(new Error(`HTTP ${res.status}`));
     }
+    if (allowPartial && rawText.length >= 2 && data.code !== READING_BLUR_ERROR_CODE) {
+      return { ...data, rawText, ok: true, vocabOcrBypass: true };
+    }
     throwOcrError(data, res.status);
   }
 
-  if (data.code === READING_BLUR_ERROR_CODE || data.ok === false) {
+  if (data.code === READING_BLUR_ERROR_CODE) {
+    throwOcrError(data, 422);
+  }
+
+  /** 詞表 OCR：閱讀理解品質未達標仍可能有 rawText */
+  if (allowPartial && data.ok === false && rawText.length >= 2) {
+    return { ...data, rawText, vocabOcrBypass: true };
+  }
+
+  if (data.ok === false) {
     throwOcrError(data, 422);
   }
 
@@ -152,6 +165,22 @@ export async function analyzeReadingImageWithVision({ imageDataUrl, fileName, on
   const data = await parseOcrResponse(res);
   onProgress?.(1);
   return data;
+}
+
+/** 詞表上載 — 接受閱讀品質未達標但含 OCR 原文的回應 */
+export async function recognizeVocabImageText({ imageDataUrl, fileName, onProgress }) {
+  onProgress?.(0.15);
+
+  const res = await fetchOcrApi('/api/reading/vision', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageDataUrl, fileName }),
+  });
+
+  onProgress?.(0.85);
+  const data = await parseOcrResponse(res, { allowPartial: true });
+  onProgress?.(1);
+  return String(data.rawText ?? data.articleLines?.join('\n') ?? '').trim();
 }
 
 /** 多張圖片 — 後端 OCR 合併 */
