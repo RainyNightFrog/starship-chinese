@@ -6,9 +6,15 @@
  * · 庫中無對應詞 → 自動組裝 fallback 物件（不卡死）
  */
 
-import { IDIOM_EXAM_POOL } from './idiomExamPool.js';
 import { VOCAB_HINTS } from './vocabHints.js';
+import { IDIOM_EXAM_POOL } from './idiomExamPool.js';
 import { extractPreviewWord } from './previewWordFormat.js';
+import {
+  toTraditionalVocabWord,
+  dedupeVocabWords,
+  dedupeVocabMatchItems,
+  normalizeVocabMatchItem,
+} from './vocabWordNormalize.js';
 
 /** 課文預習固定 15 詞（與 prestudyDictationBridge 對齊，避免循環引用） */
 const CUSTOM_WORD_CAP = 15;
@@ -28,7 +34,8 @@ export function normalizeCustomWordList(input = [], options = {}) {
   const words = [];
 
   const pushWord = (raw) => {
-    const word = extractPreviewWord(raw) || String(raw ?? '').trim().replace(/\s/g, '');
+    const extracted = extractPreviewWord(raw) || String(raw ?? '').trim().replace(/\s/g, '');
+    const word = toTraditionalVocabWord(extracted);
     if (!word || !/^[\u4e00-\u9fff]{2,8}$/.test(word)) return;
     /** 拒絕 OCR 長串亂碼與標題 */
     if (/字詞表|词表|年級|年级|高年級|默書|封面|目錄/.test(word)) return;
@@ -62,13 +69,14 @@ export function normalizeCustomWordList(input = [], options = {}) {
  * 庫中無對應詞時 — 組裝臨時乾淨物件（全港首發自訂詞）
  */
 export function buildFallbackIdiomEntry(userWord, index = 0) {
-  const hintEntry = VOCAB_HINTS[userWord];
+  const word = toTraditionalVocabWord(userWord);
+  const hintEntry = VOCAB_HINTS[word] ?? VOCAB_HINTS[userWord];
   const correctMeaning = hintEntry?.tc
-    ?? `（家長自訂詞彙「${userWord}」— 請向老師請教準確字義）`;
+    ?? `（家長自訂詞彙「${word}」— 請向老師請教準確字義）`;
 
   return {
     id: `custom_${Date.now()}_${index}`,
-    word: userWord,
+    word,
     questionText: `以下哪一個選項最適合用來解釋「${userWord}」的意思？`,
     options: [
       correctMeaning,
@@ -77,7 +85,7 @@ export function buildFallbackIdiomEntry(userWord, index = 0) {
       '文中並未提及的相反意思',
     ],
     correctAnswerIndex: 0,
-    hint: `提示：這是家長新增的自訂溫習詞彙「${userWord}」。`,
+    hint: `提示：這是家長新增的自訂溫習詞彙「${word}」。`,
     source: 'custom_vocab_upload',
   };
 }
@@ -92,15 +100,16 @@ export function matchCustomWordsStrict(customWordsInput = [], options = {}) {
   if (!words.length) return [];
 
   return words.map((userWord, index) => {
-    const matched = POOL_BY_WORD.get(userWord);
+    const canon = toTraditionalVocabWord(userWord);
+    const matched = POOL_BY_WORD.get(canon) ?? POOL_BY_WORD.get(userWord);
     if (matched) {
-      return {
+      return normalizeVocabMatchItem({
         ...matched,
         source: matched.source ?? 'idiom_exam_pool',
         matchedFromUpload: true,
-      };
+      }, index);
     }
-    return buildFallbackIdiomEntry(userWord, index);
+    return buildFallbackIdiomEntry(canon, index);
   });
 }
 
@@ -108,8 +117,8 @@ export function matchCustomWordsStrict(customWordsInput = [], options = {}) {
  * 上載管道主入口 — OCR / 貼上 / 家長自訂欄位 → 精準配對結果
  */
 export function resolveCustomVocabFromInput(customWordsInput = [], options = {}) {
-  const customWords = normalizeCustomWordList(customWordsInput, options);
-  const matchedQuestions = matchCustomWordsStrict(customWords, options);
+  const customWords = dedupeVocabWords(normalizeCustomWordList(customWordsInput, options));
+  const matchedQuestions = dedupeVocabMatchItems(matchCustomWordsStrict(customWords, options));
 
   return {
     customWordsInput: customWords,

@@ -10,6 +10,7 @@ import { fisherYatesShuffle } from './questionEngineCore.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
 import { withHints, getVocabHintEn, enrichVocabList } from './vocabHints.js';
 import { resolveCustomVocabFromInput } from './customVocabMatcher.js';
+import { dedupeVocabMatchItems } from './vocabWordNormalize.js';
 import {
   extractPreviewWord,
   extractPreviewMeaning,
@@ -105,9 +106,11 @@ export function saveUploadedPreviewWords(vocabItems = []) {
   if (!Array.isArray(vocabItems) || !vocabItems.length) return false;
 
   /** 若已是 IDIOM 配對物件（含 options），直接寫入；否則先精準配對 */
-  const matchedQuestions = vocabItems[0]?.options?.length
-    ? vocabItems
-    : resolveCustomVocabFromInput(vocabItems).matchedQuestions;
+  const matchedQuestions = dedupeVocabMatchItems(
+    vocabItems[0]?.options?.length
+      ? vocabItems
+      : resolveCustomVocabFromInput(vocabItems).matchedQuestions,
+  );
 
   if (!matchedQuestions.length) return false;
 

@@ -13,6 +13,21 @@ export function isSimplifiedScript(language, studentType) {
   return studentType === 'mainland' || language === 'zh-CN';
 }
 
+/** 將簡體字串轉為香港繁體（OpenCC） */
+export function convertToTraditional(text) {
+  if (!text || typeof text !== 'string') return text;
+  return getCnToHkConverter()(text);
+}
+
+let cnToHk = null;
+
+function getCnToHkConverter() {
+  if (!cnToHk) {
+    cnToHk = OpenCC.Converter({ from: 'cn', to: 'hk' });
+  }
+  return cnToHk;
+}
+
 /** 將繁體字串轉為簡體（OpenCC） */
 export function convertToSimplified(text) {
   if (!text || typeof text !== 'string') return text;

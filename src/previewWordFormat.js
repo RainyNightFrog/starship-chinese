@@ -3,6 +3,8 @@
  * 禁止將 JSON 物件或 `[{"id"...` 原始字串渲染到字卡
  */
 
+import { toTraditionalVocabWord } from './vocabWordNormalize.js';
+
 const JSON_BLOB_PATTERN = /^\s*[\[{]/;
 const JSON_KEY_LEAK = /"id"\s*:|"options"\s*:|"correctAnswerIndex"/;
 
@@ -60,7 +62,7 @@ export function extractPreviewWord(item) {
 
   if (typeof item === 'string') {
     const text = sanitizeDisplayText(item, 8).replace(/\s/g, '');
-    return /^[\u4e00-\u9fff]{2,8}$/.test(text) ? text : '';
+    return /^[\u4e00-\u9fff]{2,8}$/.test(text) ? toTraditionalVocabWord(text) : '';
   }
 
   if (typeof item !== 'object') return '';
@@ -70,7 +72,7 @@ export function extractPreviewWord(item) {
   for (const c of candidates) {
     const text = sanitizeDisplayText(c, 8).replace(/\s/g, '');
     if (/^[\u4e00-\u9fff]{2,8}$/.test(text) && !looksLikeJsonLeak(text)) {
-      return text;
+      return toTraditionalVocabWord(text);
     }
   }
 

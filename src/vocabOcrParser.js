@@ -9,6 +9,7 @@ import { IDIOM_EXAM_POOL } from './idiomExamPool.js';
 import { VOCAB_HINTS } from './vocabHints.js';
 import { PRESTUDY_IDIOM_COUNT } from './prestudyDictationBridge.js';
 import { resolveCustomVocabFromInput } from './customVocabMatcher.js';
+import { dedupeVocabWords, toTraditionalVocabWord } from './vocabWordNormalize.js';
 import {
   WORKSHEET_TITLE_PATTERN,
   ALL_WORKSHEET_WORDS,
@@ -141,14 +142,24 @@ function buildCharStream(rawText = '') {
   return charStream;
 }
 
-/** 繁簡成對 — 合併時只保留一個 */
-const TRAD_PREF = new Map([
-  ['星羅棋布', '星羅棋佈'],
-  ['了解', '瞭解'],
-  ['仿佛', '彷彿'],
-]);
+/** 合併多種提取結果，按 OCR 位置排序去重（繁體 canonical） */
+function mergeWordHits(...hitLists) {
+  const byWord = new Map();
 
-/** 字流 2/4 字切分 — 自動選較佳配對（成語頁 vs 雙字詞頁） */
+  hitLists.flat().forEach(({ word, pos }) => {
+    const out = toTraditionalVocabWord(word);
+    if (!isValidExtractedWord(out) && !isKnownWord(out)) return;
+    if (!isValidExtractedWord(out)) return;
+    if (!byWord.has(out) || pos < byWord.get(out)) {
+      byWord.set(out, pos);
+    }
+  });
+
+  return [...byWord.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(([word]) => word);
+}
+
 function extractGenericGridWords(rawText = '') {
   const charStream = buildCharStream(rawText);
   if (charStream.length < 4) return [];
@@ -389,25 +400,6 @@ function scanWorksheetLexiconPresence(plainHan = '') {
   return hits;
 }
 
-/** 合併多種提取結果，按 OCR 位置排序去重 */
-function mergeWordHits(...hitLists) {
-  const byWord = new Map();
-
-  hitLists.flat().forEach(({ word, pos }) => {
-    const canonical = TRAD_PREF.get(word) ?? word;
-    if (!isValidExtractedWord(canonical) && !isKnownWord(word)) return;
-    const out = isValidExtractedWord(canonical) ? canonical : word;
-    if (!isValidExtractedWord(out)) return;
-    if (!byWord.has(out) || pos < byWord.get(out)) {
-      byWord.set(out, pos);
-    }
-  });
-
-  return [...byWord.entries()]
-    .sort((a, b) => a[1] - b[1])
-    .map(([word]) => word);
-}
-
 /** 多層校本詞表提取 */
 function extractWorksheetWordsHybrid(rawText = '') {
   const plainFull = toPlainHan(rawText);
@@ -526,6 +518,7 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
   }
 
   candidates = candidates.filter(isValidExtractedWord);
+  candidates = dedupeVocabWords(candidates);
 
   if (candidates.length < minWords) {
     return [];
