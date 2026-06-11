@@ -119,24 +119,34 @@ function buildCharStream(rawText = '') {
     const line = rawLine.trim();
     if (!line) return;
 
-    const leading = line.match(/^[\s\d.·\-*•]*([\u4e00-\u9fff])/);
-    if (leading) {
-      charStream.push(leading[1]);
-      return;
-    }
-
-    const hanOnly = line.replace(/[^\u4e00-\u9fff]/g, '');
-    if (hanOnly.length === 1) {
-      charStream.push(hanOnly);
-    } else if (hanOnly.length === 2) {
-      charStream.push(hanOnly[0], hanOnly[1]);
-    } else if (hanOnly.length <= 4) {
-      hanOnly.split('').forEach((ch) => charStream.push(ch));
-    }
+    /** OCR 常輸出「風 | 吹 | 雨 | 打」— 先拆 | 再取主字 */
+    line.split(/\|/).forEach((segment) => {
+      const seg = segment.trim();
+      if (!seg) return;
+      const leading = seg.match(/^[\s\d.·\-*•]*([\u4e00-\u9fff])/);
+      if (leading) {
+        charStream.push(leading[1]);
+        return;
+      }
+      const hanOnly = seg.replace(/[^\u4e00-\u9fff]/g, '');
+      if (hanOnly.length === 1) charStream.push(hanOnly);
+      else if (hanOnly.length === 2) {
+        charStream.push(hanOnly[0], hanOnly[1]);
+      } else if (hanOnly.length <= 4) {
+        hanOnly.split('').forEach((ch) => charStream.push(ch));
+      }
+    });
   });
 
   return charStream;
 }
+
+/** 繁簡成對 — 合併時只保留一個 */
+const TRAD_PREF = new Map([
+  ['星羅棋布', '星羅棋佈'],
+  ['了解', '瞭解'],
+  ['仿佛', '彷彿'],
+]);
 
 /** 字流 2/4 字切分 — 自動選較佳配對（成語頁 vs 雙字詞頁） */
 function extractGenericGridWords(rawText = '') {
@@ -384,9 +394,12 @@ function mergeWordHits(...hitLists) {
   const byWord = new Map();
 
   hitLists.flat().forEach(({ word, pos }) => {
-    if (!isKnownWord(word)) return;
-    if (!byWord.has(word) || pos < byWord.get(word)) {
-      byWord.set(word, pos);
+    const canonical = TRAD_PREF.get(word) ?? word;
+    if (!isValidExtractedWord(canonical) && !isKnownWord(word)) return;
+    const out = isValidExtractedWord(canonical) ? canonical : word;
+    if (!isValidExtractedWord(out)) return;
+    if (!byWord.has(out) || pos < byWord.get(out)) {
+      byWord.set(out, pos);
     }
   });
 

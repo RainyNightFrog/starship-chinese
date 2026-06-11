@@ -167,20 +167,32 @@ export async function analyzeReadingImageWithVision({ imageDataUrl, fileName, on
   return data;
 }
 
-/** 詞表上載 — 接受閱讀品質未達標但含 OCR 原文的回應 */
+/** 詞表上載 — 專用 OCR（前處理 + sparse text，不走閱讀理解品質檢查） */
 export async function recognizeVocabImageText({ imageDataUrl, fileName, onProgress }) {
   onProgress?.(0.15);
 
-  const res = await fetchOcrApi('/api/reading/vision', {
+  const res = await fetchOcrApi('/api/reading/vocab-vision', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ imageDataUrl, fileName }),
   });
 
   onProgress?.(0.85);
-  const data = await parseOcrResponse(res, { allowPartial: true });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throwBackendUnavailable(new Error(`HTTP ${res.status}`));
+    }
+    if (data.rawText?.trim()) {
+      onProgress?.(1);
+      return String(data.rawText).trim();
+    }
+    throwOcrError(data, res.status);
+  }
+
   onProgress?.(1);
-  return String(data.rawText ?? data.articleLines?.join('\n') ?? '').trim();
+  return String(data.rawText ?? '').trim();
 }
 
 /** 多張圖片 — 後端 OCR 合併 */

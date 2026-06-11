@@ -10,6 +10,7 @@ import {
   readingOcrStitchHandler,
   logReadingOcrStatus,
 } from './readingOcr.js';
+import { readingVocabOcrHandler } from './vocabOcr.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -34,6 +35,7 @@ app.post('/api/speech/synthesize', synthesizeHandler);
 app.get('/api/reading/health', readingOcrHealthHandler);
 app.post('/api/reading/vision', readingOcrSingleHandler);
 app.post('/api/reading/vision-stitch', readingOcrStitchHandler);
+app.post('/api/reading/vocab-vision', readingVocabOcrHandler);
 
 const server = app.listen(PORT, () => {
   console.log(`[Speech API] http://localhost:${PORT}`);
