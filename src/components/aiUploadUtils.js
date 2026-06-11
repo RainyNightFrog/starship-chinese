@@ -4,8 +4,8 @@ export function stopMediaStream(stream) {
 }
 
 /** 手機拍照常 >4MB — 壓縮後再送 OCR API，避免 413 / 500 */
-const MAX_OCR_EDGE = 1800;
-const JPEG_QUALITY = 0.82;
+const MAX_OCR_EDGE = 2200;
+const JPEG_QUALITY = 0.9;
 
 export async function compressImageDataUrl(dataUrl, maxEdge = MAX_OCR_EDGE, quality = JPEG_QUALITY) {
   if (typeof document === 'undefined' || !String(dataUrl ?? '').startsWith('data:image/')) {

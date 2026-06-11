@@ -4,6 +4,7 @@
  */
 
 import { trimAtPhraseBoundary, isValidOptionCandidate } from './readingTextQuality.js';
+import { isOptionOnTopic } from './readingSchema.js';
 
 function fisherYatesShuffle(array, randInt) {
   const arr = [...array];
@@ -249,17 +250,20 @@ function buildMindsetShiftOptions(built, ctx) {
 /** 主旨／意圖題：正確項 + 高仿主題干擾句 */
 function buildAbstractThemeOptions(built, ctx) {
   const correct = built.correct;
-  const topicDistractors = THEME_DISTRACTOR_POOL.filter((d) => d !== correct);
-  const profilePool = TRAP_POOL_BY_PROFILE[built.trapProfile] ?? UNIVERSAL_TRAPS;
+  const articleLines = ctx.lines ?? [];
+  const onTopic = (d) => isOptionOnTopic(d, articleLines);
+  const topicDistractors = THEME_DISTRACTOR_POOL.filter((d) => d !== correct && onTopic(d));
+  const profilePool = (TRAP_POOL_BY_PROFILE[built.trapProfile] ?? []).filter(onTopic);
+  const universalTraps = UNIVERSAL_TRAPS.filter(onTopic);
   const combined = fisherYatesShuffle(
-    [...topicDistractors, ...profilePool, ...UNIVERSAL_TRAPS],
+    [...topicDistractors, ...profilePool, ...universalTraps],
     ctx.randInt,
   );
   const distractors = [];
   const seen = new Set([correct]);
   combined.forEach((item) => {
     if (distractors.length >= 3) return;
-    if (!item || seen.has(item)) return;
+    if (!item || seen.has(item) || !onTopic(item)) return;
     distractors.push(item);
     seen.add(item);
   });

@@ -236,6 +236,19 @@ const READING_TOPIC_SIGNATURES = [
   },
 ];
 
+export function isOptionOnTopic(option = '', articleLines = []) {
+  const plainArticle = articleLines
+    .map((line) => cleanReadingLine(line).replace(/^第[一二三四五六七八九十\d]+行[：:]?/, ''))
+    .join('');
+
+  for (const sig of READING_TOPIC_SIGNATURES) {
+    if (sig.optionTerms.test(String(option ?? '')) && !sig.articleTerms.test(plainArticle)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function validateOptionsTopicMatch(options = [], articleLines = []) {
   const plainArticle = articleLines
     .map((line) => cleanReadingLine(line).replace(/^第[一二三四五六七八九十\d]+行[：:]?/, ''))
@@ -243,7 +256,7 @@ export function validateOptionsTopicMatch(options = [], articleLines = []) {
 
   for (const sig of READING_TOPIC_SIGNATURES) {
     const optionHits = options.filter((opt) => sig.optionTerms.test(String(opt ?? ''))).length;
-    if (optionHits >= 2 && !sig.articleTerms.test(plainArticle)) {
+    if (optionHits >= 1 && !sig.articleTerms.test(plainArticle)) {
       return { ok: false, reason: `選項涉及「${sig.label}」但正文無相關內容` };
     }
   }

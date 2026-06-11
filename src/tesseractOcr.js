@@ -66,20 +66,51 @@ export async function preloadTesseractEngine() {
  * @param {string} previewUrl — data URL 或 blob URL
  * @returns {Promise<string>}
  */
+/** 簡易銳化 — 提升細線條（繁體筆劃）辨識率 */
+function sharpenImageData(imageData) {
+  const { data, width, height } = imageData;
+  const copy = new Uint8ClampedArray(data);
+  const idx = (x, y) => (y * width + x) * 4;
+
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const i = idx(x, y);
+      for (let c = 0; c < 3; c += 1) {
+        const sharpened = (
+          5 * copy[i + c]
+          - copy[idx(x - 1, y) + c]
+          - copy[idx(x + 1, y) + c]
+          - copy[idx(x, y - 1) + c]
+          - copy[idx(x, y + 1) + c]
+        );
+        data[i + c] = Math.max(0, Math.min(255, sharpened));
+      }
+    }
+  }
+  return imageData;
+}
+
 export async function preprocessImageForOcr(previewUrl) {
   if (!previewUrl || typeof document === 'undefined') return previewUrl;
 
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const scale = Math.min(3, Math.max(2, 1800 / Math.max(img.width, img.height)));
+      const longEdge = Math.max(img.width, img.height, 1);
+      const scale = Math.min(4, Math.max(2.5, 2400 / longEdge));
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext('2d');
-      ctx.filter = 'contrast(1.4) brightness(1.1) grayscale(1)';
+      ctx.filter = 'contrast(1.55) brightness(1.08) grayscale(1)';
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.95));
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        ctx.putImageData(sharpenImageData(imageData), 0, 0);
+      } catch {
+        // canvas tainted — skip sharpen
+      }
+      resolve(canvas.toDataURL('image/jpeg', 0.96));
     };
     img.onerror = () => resolve(previewUrl);
     img.src = previewUrl;
@@ -177,6 +208,8 @@ export async function recognizeImageToText(previewUrl, onProgress) {
     const result = await tesseractRecognize(enhancedUrl, OCR_LANG, {
       workerPath: WORKER_PATH,
       langPath: LANG_PATH,
+      tessedit_pageseg_mode: '6',
+      preserve_interword_spaces: '1',
       logger: (message) => {
         if (message.status === 'recognizing text' && typeof onProgress === 'function') {
           onProgress(message.progress ?? 0);
