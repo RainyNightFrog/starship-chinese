@@ -184,6 +184,11 @@ export const PRIORITY_TEMPLATE_IDS = [
   'ws_duanwu_tai_o_origin',
   'ws_duanwu_negative_parade_fact',
   'ws_duanwu_main_theme',
+  'ws_zhengping_sunday_unhappy',
+  'ws_zhengping_reluctant_farewell',
+  'ws_zhengping_email_not_reason',
+  'ws_zhengping_happiest_day',
+  'ws_zhengping_narrative_purpose',
 ];
 
 /** 依文體判斷寫作手法題是否適用（說明文不宜出借物抒情） */

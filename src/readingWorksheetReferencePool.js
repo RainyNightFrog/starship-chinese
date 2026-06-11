@@ -17,6 +17,9 @@ export const WORKSHEET_TECHNIQUE_TAGS = {
   CUSTOM_ORIGIN: 'custom_origin',
   NEGATIVE_FACT: 'negative_fact',
   MAIN_THEME: 'main_theme',
+  NARRATOR_FEELING: 'narrator_feeling',
+  EMAIL_PURPOSE: 'email_purpose',
+  EXPRESS_FEELINGS: 'express_feelings',
 };
 
 /** 參考文章《米》— 對標 beasmartc9 小五閱讀理解(43) 上文 */
@@ -412,18 +415,253 @@ export const WORKSHEET_DUANWU_TEMPLATE_IDS = [
   ...WORKSHEET_DUANWU_DYNAMIC_TEMPLATES.map((t) => t.id),
 ];
 
+/** 參考文章《叔叔嬸嬸來港》— beasmartc9 敘事閱讀真題上文（正平） */
+export const ZHENGPING_NARRATIVE_PASSAGE = [
+  '星期天太清早，媽媽在我的耳邊大喊：「快起床呀！已經八點了。」我睡意正濃，趴在床上不肯起來。媽媽說：「叔叔和嬸嬸今天來香港，你的房間要騰出給他們住幾天呢！你趕快起來，我得收拾一下。」原本打算星期天可以睡到自然醒，但因為叔叔和嬸嬸藉着「五一黃金周」來「自由行」，我當時真有點不高興呢，但奶奶卻顯得非常興奮。',
+  '五月一日是勞動節。前一天晚上我們一家人陪叔叔和嬸嬸夜遊太平山。很晚才睡，所以這天大家都遲了起床。爸爸提議到香港迪士尼樂園遊玩，這當然最合我心意了。叔叔嬸嬸好像有用不完的精力，一直陪我玩各種機動遊戲，大家都玩得不亦樂乎！',
+  '星期二那天，媽媽費了很大勁，才把我弄醒。因為前兩天實在太疲累。我吃過早餐後，便拖着疲乏的身軀上學去。可是上課時，精神總是無法集中，昏頭腦脹地過了一天。',
+  '星期三晚飯時，叔叔嬸嬸告訴我，他倆明天會搭中午的航班回內地。這時候，我真有點捨不得他們呢！叔叔嬸嬸又勉勵我要努力讀書，還叮囑我暑假到北京去探望他們，我都一一答應了。',
+  '星期四放學回家，媽媽已把我的房間恢復了整潔的面貌。當我看到叔叔和嬸嬸送給我的禮物時，不禁想起這幾天跟他們玩樂的情景。',
+  '星期五晚飯後，我開啟電腦，看見電腦正顯示有新的郵件。我立即打開電子郵箱，原來是叔叔給我的郵件：正平：在香港幾天的旅程，我和你嬸嬸都玩得十分高興。我們很感謝你們一家的熱情接待。暑假時，請你們務必到北京來，我來當「東道主」帶你們去玩！——叔叔',
+  '我立即把郵件的內容告訴奶奶和爸爸媽媽，然後給叔叔回覆電郵。這個星期雖然休息得不怎麼好，但我的心情卻十分愉快。',
+];
+
+/** 固定參考選擇題（附 read-21 文章）— 對標真題 Q3–Q5、Q7 */
+export const WORKSHEET_ZHENGPING_READING_FIXED_TEMPLATES = [
+  {
+    id: 'read_fixed_zhengping_sunday_unhappy',
+    passageId: 'read-21',
+    technique: WORKSHEET_TECHNIQUE_TAGS.NARRATOR_FEELING,
+    questionText: '【叔叔嬸嬸來港】為甚麼「我」在星期天大清早有點不高興？',
+    options: [
+      '因為「我」不可以遲一點起床。',
+      '因為「五一黃金周」已到來。',
+      '因為國內的叔叔嬸嬸來了香港。',
+      '因為媽媽要「我」收拾房間。',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：首段寫原本打算睡到自然醒，卻被媽媽早早叫醒騰出房間。',
+    trapProfile: 'cause',
+    source: 'worksheet_ref_zhengping',
+  },
+  {
+    id: 'read_fixed_zhengping_reluctant',
+    passageId: 'read-21',
+    technique: WORKSHEET_TECHNIQUE_TAGS.NARRATOR_FEELING,
+    questionText: '【叔叔嬸嬸來港】為甚麼「我」有點捨不得叔叔嬸嬸？',
+    options: [
+      '因為叔叔嬸嬸送給「我」一份禮物。',
+      '因為叔叔嬸嬸勉勵「我」要努力讀書。',
+      '因為「我」想起這幾天跟叔叔嬸嬸玩樂的情景。',
+      '因為叔叔嬸嬸讓「我」暑假到北京去探望他們。',
+    ],
+    correctAnswerIndex: 2,
+    hint: '提示：捨不得與前幾天一起遊玩、建立感情的記憶有關。',
+    trapProfile: 'feeling',
+    source: 'worksheet_ref_zhengping',
+  },
+  {
+    id: 'read_fixed_zhengping_email_not',
+    passageId: 'read-21',
+    technique: WORKSHEET_TECHNIQUE_TAGS.EMAIL_PURPOSE,
+    questionText: '【叔叔嬸嬸來港】下列哪一項不是叔叔給正平發電郵的原因？',
+    options: [
+      '答謝正平借出房間。',
+      '感謝正平一家的接待。',
+      '告訴正平旅程十分愉快。',
+      '邀請正平一家暑假到北京遊玩。',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：對照郵件內容，找出文中未提及的答謝理由。',
+    trapProfile: 'vocab',
+    source: 'worksheet_ref_zhengping',
+  },
+  {
+    id: 'read_fixed_zhengping_happiest_day',
+    passageId: 'read-21',
+    technique: WORKSHEET_TECHNIQUE_TAGS.PARAGRAPH_DETAIL,
+    questionText: '【叔叔嬸嬸來港】叔叔嬸嬸來港這幾天裏，哪一天是作者最快樂的？',
+    options: [
+      '五月一日（勞動節），因為到迪士尼樂園玩機動遊戲。',
+      '星期天，因為可以睡到自然醒。',
+      '星期二，因為精神飽滿地上學。',
+      '星期四，因為房間恢復整潔。',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：留意「最合我心意」「玩得不亦樂乎」等用語所在的段落。',
+    trapProfile: 'cause',
+    source: 'worksheet_ref_zhengping',
+  },
+  {
+    id: 'read_fixed_zhengping_main_purpose',
+    passageId: 'read-21',
+    technique: WORKSHEET_TECHNIQUE_TAGS.EXPRESS_FEELINGS,
+    questionText: '【叔叔嬸嬸來港】作者寫這篇文章的主要目的是甚麼？',
+    options: [
+      '記述自己要早起床的原因。',
+      '說明叔叔嬸嬸從北京來港度假。',
+      '描寫叔叔嬸嬸遊覽香港的情況。',
+      '抒發自己對叔叔嬸嬸來港遊玩的感受。',
+    ],
+    correctAnswerIndex: 3,
+    hint: '提示：全文以「我」的經歷與心情變化為主，不止記錄行程。',
+    trapProfile: 'intent',
+    source: 'worksheet_ref_zhengping',
+  },
+];
+
+/** 動態 OCR 樣版 — 敘事／來港探親類文章 */
+export const WORKSHEET_ZHENGPING_DYNAMIC_TEMPLATES = [
+  {
+    id: 'ws_zhengping_sunday_unhappy',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.NARRATOR_FEELING,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/叔叔|嬸嬸/.test(text) || !/不高興|不開心/.test(text)) return null;
+      if (!/睡到自然醒|八點|起床/.test(text)) return null;
+      const built = structured(
+        '因為「我」不可以遲一點起床。',
+        [
+          '因為「五一黃金周」已到來。',
+          '因為國內的叔叔嬸嬸來了香港。',
+          '因為媽媽要「我」收拾房間。',
+        ],
+        0,
+      );
+      return {
+        questionText: '為甚麼「我」在星期天大清早有點不高興？',
+        ...built,
+        hint: '提示：找出首段中「我」原本期望與實際處境的落差。',
+        trapProfile: 'cause',
+        worksheetRef: 'worksheet_ref_zhengping',
+      };
+    },
+  },
+  {
+    id: 'ws_zhengping_reluctant_farewell',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.NARRATOR_FEELING,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/捨不得/.test(text) || !/叔叔|嬸嬸/.test(text)) return null;
+      const built = structured(
+        '因為「我」想起這幾天跟叔叔嬸嬸玩樂的情景。',
+        [
+          '因為叔叔嬸嬸送給「我」一份禮物。',
+          '因為叔叔嬸嬸勉勵「我」要努力讀書。',
+          '因為叔叔嬸嬸讓「我」暑假到北京去探望他們。',
+        ],
+        0,
+      );
+      return {
+        questionText: '為甚麼「我」有點捨不得叔叔嬸嬸？',
+        ...built,
+        hint: '提示：聯繫前幾天一起遊玩、相處的描寫，理解情感來源。',
+        trapProfile: 'feeling',
+        worksheetRef: 'worksheet_ref_zhengping',
+      };
+    },
+  },
+  {
+    id: 'ws_zhengping_email_not_reason',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.EMAIL_PURPOSE,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/電郵|郵件|電子郵箱/.test(text) || !/叔叔/.test(text)) return null;
+      const built = structured(
+        '答謝正平借出房間。',
+        [
+          '感謝正平一家的接待。',
+          '告訴正平旅程十分愉快。',
+          '邀請正平一家暑假到北京遊玩。',
+        ],
+        0,
+      );
+      return {
+        questionText: '下列哪一項不是叔叔給正平發電郵的原因？',
+        ...built,
+        hint: '提示：逐項對照郵件原文，找出未提及的內容。',
+        trapProfile: 'vocab',
+        worksheetRef: 'worksheet_ref_zhengping',
+      };
+    },
+  },
+  {
+    id: 'ws_zhengping_happiest_day',
+    category: 'paragraph_logic',
+    technique: WORKSHEET_TECHNIQUE_TAGS.PARAGRAPH_DETAIL,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/迪士尼|迪士尼樂園/.test(text) || !/叔叔|嬸嬸/.test(text)) return null;
+      const built = structured(
+        '五月一日（勞動節），因為到迪士尼樂園玩機動遊戲。',
+        [
+          '星期天，因為可以睡到自然醒。',
+          '星期二，因為精神飽滿地上學。',
+          '星期四，因為房間恢復整潔。',
+        ],
+      );
+      return {
+        questionText: '叔叔嬸嬸來港這幾天裏，哪一天是作者最快樂的？',
+        ...built,
+        hint: '提示：找出文中明確寫出「最合心意」「玩得不亦樂乎」的段落。',
+        trapProfile: 'cause',
+        worksheetRef: 'worksheet_ref_zhengping',
+      };
+    },
+  },
+  {
+    id: 'ws_zhengping_narrative_purpose',
+    category: 'main_theme',
+    technique: WORKSHEET_TECHNIQUE_TAGS.EXPRESS_FEELINGS,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/叔叔|嬸嬸/.test(text) || !/香港/.test(text)) return null;
+      if (!/我|正平/.test(text) && !/「我」/.test(text)) return null;
+      const p = inferArticleProfile(ctx);
+      if (p.genre === 'expository') return null;
+      const built = structured(
+        '抒發自己對叔叔嬸嬸來港遊玩的感受。',
+        [
+          '記述自己要早起床的原因。',
+          '說明叔叔嬸嬸從北京來港度假。',
+          '描寫叔叔嬸嬸遊覽香港的情況。',
+        ],
+        0,
+      );
+      return {
+        questionText: '作者寫這篇文章的主要目的是甚麼？',
+        ...built,
+        hint: '提示：敘事文若以第一人稱寫親友來訪，常重在抒發個人感受與心情轉變。',
+        trapProfile: 'intent',
+        worksheetRef: 'worksheet_ref_zhengping',
+      };
+    },
+  },
+];
+
+export const WORKSHEET_ZHENGPING_TEMPLATE_IDS = [
+  ...WORKSHEET_ZHENGPING_READING_FIXED_TEMPLATES.map((t) => t.id),
+  ...WORKSHEET_ZHENGPING_DYNAMIC_TEMPLATES.map((t) => t.id),
+];
+
 /** 全部試卷參考樣版（固定附文 + 動態 OCR） */
 export const WORKSHEET_READING_FIXED_TEMPLATES = [
   ...WORKSHEET43_READING_FIXED_TEMPLATES,
   ...WORKSHEET_DUANWU_READING_FIXED_TEMPLATES,
+  ...WORKSHEET_ZHENGPING_READING_FIXED_TEMPLATES,
 ];
 
 export const WORKSHEET_DYNAMIC_TEMPLATES = [
   ...WORKSHEET43_DYNAMIC_TEMPLATES,
   ...WORKSHEET_DUANWU_DYNAMIC_TEMPLATES,
+  ...WORKSHEET_ZHENGPING_DYNAMIC_TEMPLATES,
 ];
 
 export const WORKSHEET_TEMPLATE_IDS = [
   ...WORKSHEET43_TEMPLATE_IDS,
   ...WORKSHEET_DUANWU_TEMPLATE_IDS,
+  ...WORKSHEET_ZHENGPING_TEMPLATE_IDS,
 ];

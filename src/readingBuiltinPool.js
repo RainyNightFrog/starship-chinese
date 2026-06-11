@@ -3,7 +3,7 @@
  * 由 mockDatabase READING_POOL 匯入使用
  */
 
-import { RICE_EXPOSITORY_PASSAGE, DUANWU_EXPOSITORY_PASSAGE } from './readingWorksheetReferencePool.js';
+import { RICE_EXPOSITORY_PASSAGE, DUANWU_EXPOSITORY_PASSAGE, ZHENGPING_NARRATIVE_PASSAGE } from './readingWorksheetReferencePool.js';
 
 /** @typedef {{ question: string, options: string[], correctIndex: number, explanation: string }} ReadingQuestionDef */
 
@@ -671,6 +671,58 @@ export const READING_PASSAGE_PACKS = [
       },
     ],
   },
+  {
+    passageId: 'read-21',
+    passageTitle: '記敘文：叔叔嬸嬸來港',
+    genre: '記敘文',
+    passage: [...ZHENGPING_NARRATIVE_PASSAGE],
+    questions: [
+      {
+        question: 'Q1. 為甚麼「我」在星期天大清早有點不高興？',
+        options: [
+          '因為「我」不可以遲一點起床。',
+          '因為「五一黃金周」已到來。',
+          '因為國內的叔叔嬸嬸來了香港。',
+          '因為媽媽要「我」收拾房間。',
+        ],
+        correctIndex: 0,
+        explanation: '首段寫原本打算睡到自然醒，卻被早早叫醒騰出房間。',
+      },
+      {
+        question: 'Q2. 為甚麼「我」有點捨不得叔叔嬸嬸？',
+        options: [
+          '因為叔叔嬸嬸送給「我」一份禮物。',
+          '因為叔叔嬸嬸勉勵「我」要努力讀書。',
+          '因為「我」想起這幾天跟叔叔嬸嬸玩樂的情景。',
+          '因為叔叔嬸嬸讓「我」暑假到北京去探望他們。',
+        ],
+        correctIndex: 2,
+        explanation: '捨不得與前幾天一起遊玩、相處的記憶有關。',
+      },
+      {
+        question: 'Q3. 下列哪一項不是叔叔給正平發電郵的原因？',
+        options: [
+          '答謝正平借出房間。',
+          '感謝正平一家的接待。',
+          '告訴正平旅程十分愉快。',
+          '邀請正平一家暑假到北京遊玩。',
+        ],
+        correctIndex: 0,
+        explanation: '郵件感謝接待、述說愉快及邀請去北京，未提及答謝借出房間。',
+      },
+      {
+        question: 'Q4. 作者寫這篇文章的主要目的是甚麼？',
+        options: [
+          '記述自己要早起床的原因。',
+          '說明叔叔嬸嬸從北京來港度假。',
+          '描寫叔叔嬸嬸遊覽香港的情況。',
+          '抒發自己對叔叔嬸嬸來港遊玩的感受。',
+        ],
+        correctIndex: 3,
+        explanation: '全文以「我」一週的經歷與心情變化為主，重在抒發感受。',
+      },
+    ],
+  },
 ];
 
 /**
@@ -699,5 +751,5 @@ export function buildReadingPoolFromPacks(packs = READING_PASSAGE_PACKS) {
   return items;
 }
 
-/** 內建閱讀理解完整題池（20 篇 × 3–4 題） */
+/** 內建閱讀理解完整題池（21 篇 × 3–5 題） */
 export const BUILTIN_READING_POOL = buildReadingPoolFromPacks();
