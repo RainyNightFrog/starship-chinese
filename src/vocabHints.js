@@ -3,6 +3,30 @@
  */
 import { applyVocabDecomposition } from './vocabDecomposition.js';
 import { WORKSHEET_VOCAB_HINTS } from './worksheetVocabLexicon.js';
+import { resolveIdiomCardMeaning, resolveIdiomCardWord } from './previewWordFormat.js';
+
+/** 是否為佔位字義（無真實解釋 — 不顯示、不朗讀、不呼叫 Azure） */
+export function isPlaceholderMeaning(text = '') {
+  const s = String(text ?? '').trim();
+  if (!s) return true;
+  return /請向老師請教|家長自訂詞彙|家長新增的自訂|與原文語境完全無關|只符合字面字形|文中並未提及|請根據語境想想|請在後台自訂|請熟讀字形與讀音/.test(s);
+}
+
+/** 詞彙是否有可顯示／可朗讀的真實字義 */
+export function hasRealVocabMeaning(vocab) {
+  if (!vocab) return false;
+
+  const word = resolveIdiomCardWord(vocab) || vocab.word || vocab.tc || vocab.idiomWord;
+  if (word && VOCAB_HINTS[word]) return true;
+
+  const meaning = resolveIdiomCardMeaning(vocab);
+  if (meaning && !isPlaceholderMeaning(meaning)) return true;
+
+  const hintEn = vocab.hintEn || getVocabHintEn(vocab);
+  if (hintEn && !isPlaceholderMeaning(hintEn)) return true;
+
+  return false;
+}
 
 export const VOCAB_HINTS = {
   ...WORKSHEET_VOCAB_HINTS,

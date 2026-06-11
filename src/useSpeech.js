@@ -18,7 +18,7 @@ import {
 import { getBrowserSpeechRate } from './speechRate';
 import { convertToSimplified, getDisplayText, isSimplifiedScript as checkSimplifiedScript } from './chineseScript';
 import { sanitizeDictationHint } from './dictationHintUtils';
-import { getVocabHintEn } from './vocabHints';
+import { getVocabHintEn, hasRealVocabMeaning } from './vocabHints';
 import { sanitizeDisplayText, looksLikeJsonLeak, resolveIdiomCardWord } from './previewWordFormat.js';
 
 export { getDisplayText, makeDisplayText } from './chineseScript';
@@ -101,6 +101,8 @@ export function getSpeakText(vocab, isMainland) {
 }
 
 export function getVocabMeaning(vocab, { voiceLang, studentType, language = 'zh-HK', forDictation = false } = {}) {
+  if (!hasRealVocabMeaning(vocab)) return null;
+
   const lang = voiceLang ?? getMeaningSpeechLang({ studentType });
   const displaySc = isSimplifiedScript(language, studentType);
 

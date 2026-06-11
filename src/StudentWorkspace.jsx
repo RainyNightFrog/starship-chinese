@@ -32,6 +32,7 @@ import { stripOptionLetterPrefix } from './readingOptionPrefixCleaner';
 import { useLearningAnalytics } from './context/LearningAnalyticsContext';
 import { TASK_HEADERS } from './studentI18n';
 import { getVocabDecomposition } from './vocabDecomposition';
+import { hasRealVocabMeaning } from './vocabHints';
 import {
   getPrestudyIdiomVocabList,
   saveStudiedWords,
@@ -1172,7 +1173,9 @@ function VocabCards({
   };
 
   const playMeaning = (vocab) => {
+    if (!hasRealVocabMeaning(vocab)) return;
     const m = getVocabMeaning(vocab, { voiceLang: meaningVoiceLang, studentType, language });
+    if (!m?.text) return;
     speak(m.text, { lang: m.lang, kind: 'meaning' });
   };
 
@@ -1212,8 +1215,9 @@ function VocabCards({
     return getVocabChar({ ...item, word, tc: word }, { language, studentType });
   };
 
-  /** 字卡解釋 — 固定綁定 options[correctAnswerIndex] 或 meaning */
+  /** 字卡解釋 — 僅在有真實字義時顯示 */
   const renderCardMeaning = (item) => {
+    if (!hasRealVocabMeaning(item)) return null;
     if (Array.isArray(item?.options) && item.options.length) {
       const idx = Math.min(
         item.options.length - 1,
@@ -1222,8 +1226,7 @@ function VocabCards({
       const fromOpt = String(item.options[idx] ?? '').trim();
       if (fromOpt && !fromOpt.includes('"id"')) return fromOpt.replace(/^提示：/, '');
     }
-    const meaning = resolveIdiomCardMeaning(item);
-    return meaning || `校本詞語「${resolveIdiomCardWord(item) || '—'}」— 請熟讀字形與讀音`;
+    return resolveIdiomCardMeaning(item);
   };
 
   return (
@@ -1239,7 +1242,9 @@ function VocabCards({
       {cardSourceList.map((vocab) => {
         const displayWord = renderCardWord(vocab);
         const displayMeaning = renderCardMeaning(vocab);
-        const meaning = getVocabMeaning(vocab, { voiceLang: meaningVoiceLang, studentType, language });
+        const meaning = hasRealVocabMeaning(vocab)
+          ? getVocabMeaning(vocab, { voiceLang: meaningVoiceLang, studentType, language })
+          : null;
         const decomp = getVocabDecomposition(vocab);
         const isRead = readIds.has(String(vocab.id));
         return (
@@ -1283,10 +1288,12 @@ function VocabCards({
                 {getVocabRomanization(vocab, { language, studentType })}
               </rt>
             </ruby>
+            {displayMeaning && (
             <p className={`mt-1.5 font-bold leading-relaxed ${isSEN ? 'text-base' : 'text-sm'} ${isNight ? 'text-stone-200' : 'text-slate-700'}`}>
               {displayMeaning}
             </p>
-            {(meaning.hintEn || vocab.hintEn) && (
+            )}
+            {meaning && (meaning.hintEn || vocab.hintEn) && (
               <span className={`text-sm block mt-1.5 font-bold leading-relaxed ${isNight ? 'text-purple-300' : 'text-purple-700'}`}>
                 Eng: {meaning.hintEn || vocab.hintEn}
               </span>
@@ -1337,6 +1344,7 @@ function VocabCards({
               isSEN={isSEN}
               className={`text-white border-2 ${theme.btn}`}
             />
+            {hasRealVocabMeaning(vocab) && (
             <SpeechPlayButton
               label="🔊 聽字義"
               labelEn="Hear Meaning"
@@ -1350,6 +1358,7 @@ function VocabCards({
               isSEN={isSEN}
               className="rounded-full"
             />
+            )}
             {onSwapVocab && (
               <button
                 type="button"

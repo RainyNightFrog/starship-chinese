@@ -16,6 +16,7 @@ import { getMutedTextClass } from './readableStyles';
 import { useColorMode } from './colorMode';
 import { STUDIED_WORDS_STORAGE_KEY } from './prestudyDictationBridge';
 import { parseStudiedWordsJson } from './previewWordFormat';
+import { hasRealVocabMeaning } from './vocabHints';
 
 /**
  * 默書特訓 — 語音讀詞 + 字義提示 + 紙上默寫
@@ -84,12 +85,18 @@ export default function DictationMode({
   const playWordAndMeaning = useCallback(() => {
     if (!current) return;
     const wordText = dictationWords[currentIndex] || getWordSpeakText(current, wordVoiceLang);
-    const m = getVocabMeaning(current, { voiceLang: meaningVoiceLang, studentType, language, forDictation: true });
+    const sequence = [{ text: wordText, lang: wordVoiceLang, kind: 'word' }];
 
-    speakSequence([
-      { text: wordText, lang: wordVoiceLang, kind: 'word' },
-      { text: m.text, lang: m.lang, kind: 'meaning' },
-    ]);
+    if (hasRealVocabMeaning(current)) {
+      const m = getVocabMeaning(current, {
+        voiceLang: meaningVoiceLang, studentType, language, forDictation: true,
+      });
+      if (m?.text) {
+        sequence.push({ text: m.text, lang: m.lang, kind: 'meaning' });
+      }
+    }
+
+    speakSequence(sequence);
   }, [current, currentIndex, dictationWords, speakSequence, studentType, language, wordVoiceLang, meaningVoiceLang]);
 
   const playWordOnly = useCallback(() => {
@@ -99,7 +106,7 @@ export default function DictationMode({
   }, [current, currentIndex, dictationWords, speak, wordVoiceLang]);
 
   const playMeaningOnly = useCallback(() => {
-    if (!current || !meaning) return;
+    if (!current || !hasRealVocabMeaning(current) || !meaning?.text) return;
     speak(meaning.text, { lang: meaning.lang, kind: 'meaning' });
   }, [current, meaning, speak]);
 
@@ -284,14 +291,14 @@ export default function DictationMode({
         />
 
         <SpeechPlayButton
-          label="🔊 詞語 + 字義"
-          labelEn="Word + Meaning"
+          label={hasRealVocabMeaning(current) ? '🔊 詞語 + 字義' : '🔊 聽詞語'}
+          labelEn={hasRealVocabMeaning(current) ? 'Word + Meaning' : 'Hear Word'}
           loadingLabel="⏳ 讀取中…"
           playingLabel="🔊 播放中…"
-          isLoading={loadingKind === 'word' || loadingKind === 'meaning'}
+          isLoading={loadingKind === 'word' || (hasRealVocabMeaning(current) && loadingKind === 'meaning')}
           isPlaying={Boolean(speakingKind)}
           disabled={speechBusy}
-          onClick={playWordAndMeaning}
+          onClick={hasRealVocabMeaning(current) ? playWordAndMeaning : playWordOnly}
           variant="indigo"
           isSEN={isSEN}
           fullWidth
