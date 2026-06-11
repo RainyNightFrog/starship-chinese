@@ -15,6 +15,7 @@ import {
   sanitizeArticleLines,
 } from './readingTextQuality.js';
 import { sanitizeReadingBankItem } from './readingDisplayGuard.js';
+import { READING_MAX_QUESTIONS } from './readingConstants.js';
 
 export const READING_AI_JSON_EXAMPLE = {
   articleTitle: '文章標題（由AI根據內容擬定）',
@@ -78,7 +79,7 @@ export function normalizeReadingPayload(raw = {}) {
     || '校本閱讀';
 
   const questions = (raw.questions ?? [])
-    .slice(0, 5)
+    .slice(0, READING_MAX_QUESTIONS)
     .map((item, index) => normalizeQuestion(item, index))
     .filter((item) => item.questionText.length >= 6 && item.options.length >= 4);
 
