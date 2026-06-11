@@ -62,7 +62,7 @@ export let GLOBAL_SHARED_IDIOMS = loadPoolWithMigration(
   IDIOM_EXAM_POOL,
 );
 
-/** 中央共享寫作手法題庫 — 初始化優先讀 localStorage，否則四大黃金手法 */
+/** 中央共享寫作手法題庫 — 初始化優先讀 localStorage，否則十大呈分試手法種子矩陣 */
 export let GLOBAL_SHARED_METHODS = loadPoolWithMigration(
   LS_GLOBAL_METHODS,
   LEGACY_LS_METHODS,
@@ -109,7 +109,43 @@ function persistGlobalMethods() {
 export function reloadGlobalSharedPools() {
   GLOBAL_SHARED_IDIOMS = loadPoolWithMigration(LS_GLOBAL_IDIOMS, LEGACY_LS_IDIOMS, IDIOM_EXAM_POOL);
   GLOBAL_SHARED_METHODS = loadPoolWithMigration(LS_GLOBAL_METHODS, LEGACY_LS_METHODS, EXAM_METHOD_TEMPLATES);
+  ensureSeedMethodsInPool();
   return { idioms: GLOBAL_SHARED_IDIOMS.length, methods: GLOBAL_SHARED_METHODS.length };
+}
+
+/**
+ * 將 EXAM_METHOD_TEMPLATES 種子併入既有 localStorage 池（舊版僅 4 題時補齊 6 類新題型）
+ */
+export function ensureSeedMethodsInPool() {
+  let changed = false;
+
+  EXAM_METHOD_TEMPLATES.forEach((seed) => {
+    const idx = GLOBAL_SHARED_METHODS.findIndex(
+      (m) => m.id === seed.id || m.sharedPoolId === `method:${seed.id}`,
+    );
+
+    if (idx < 0) {
+      GLOBAL_SHARED_METHODS.push({
+        ...seed,
+        source: seed.source ?? 'exam_method_seed',
+        sharedPoolId: seed.sharedPoolId ?? `method:${seed.id}`,
+      });
+      changed = true;
+      return;
+    }
+
+    if (!GLOBAL_SHARED_METHODS[idx].isCommunityShared) {
+      GLOBAL_SHARED_METHODS[idx] = {
+        ...GLOBAL_SHARED_METHODS[idx],
+        ...seed,
+        source: GLOBAL_SHARED_METHODS[idx].source ?? 'exam_method_seed',
+        sharedPoolId: GLOBAL_SHARED_METHODS[idx].sharedPoolId ?? `method:${seed.id}`,
+      };
+      changed = true;
+    }
+  });
+
+  if (changed) persistGlobalMethods();
 }
 
 export function getGlobalSharedIdioms() {
@@ -117,7 +153,16 @@ export function getGlobalSharedIdioms() {
 }
 
 export function getGlobalSharedMethods() {
+  ensureSeedMethodsInPool();
   return [...GLOBAL_SHARED_METHODS];
+}
+
+function createSeededRandInt(seed) {
+  let state = (Number(seed) >>> 0) || 1;
+  return (n) => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return Math.floor(((state & 0x7fffffff) / 0x80000000) * n);
+  };
 }
 
 /** 標準題目包裝 — 選項／提示絕不洩漏正確答案文字 */
@@ -379,21 +424,52 @@ export function pickRandomSharedIdiomQuestions(count = 1, seed) {
 }
 
 export function pickRandomSharedMethodQuestions(count = 1, seed) {
+  return pickDistinctSharedMethodQuestions(count, seed, { requireDistinctType: false });
+}
+
+/**
+ * Dynamic Fisher-Yates 洗牌 — 從 GLOBAL_SHARED_METHODS 抽取 count 道題
+ * @param {number} count
+ * @param {number} [seed]
+ * @param {{ requireDistinctType?: boolean }} [opts] — 預設 true：保證 type 維度互不相同
+ */
+export function pickDistinctSharedMethodQuestions(count = 1, seed, opts = {}) {
+  const { requireDistinctType = true } = opts;
+  ensureSeedMethodsInPool();
   const pool = getGlobalSharedMethods();
   if (!pool.length) return [];
 
-  let randInt;
-  if (seed != null) {
-    let state = (Number(seed) >>> 0) || 1;
-    randInt = (n) => {
-      state = (state * 1664525 + 1013904223) >>> 0;
-      return Math.floor(((state & 0x7fffffff) / 0x80000000) * n);
-    };
-  } else {
-    randInt = (n) => Math.floor(Math.random() * n);
+  const randInt = seed != null
+    ? createSeededRandInt(seed)
+    : (n) => Math.floor(Math.random() * n);
+
+  const shuffled = shuffleWithRandInt(pool, randInt);
+  const picked = [];
+  const usedTypes = new Set();
+  const usedIds = new Set();
+
+  shuffled.forEach((tpl) => {
+    if (picked.length >= count) return;
+    const typeKey = String(tpl.type ?? tpl.id ?? tpl.questionText ?? '').trim();
+    const idKey = String(tpl.id ?? tpl.sharedPoolId ?? tpl.questionText ?? '').trim();
+    if (requireDistinctType && typeKey && usedTypes.has(typeKey)) return;
+    if (usedIds.has(idKey)) return;
+    if (typeKey) usedTypes.add(typeKey);
+    usedIds.add(idKey);
+    picked.push(tpl);
+  });
+
+  if (picked.length < count) {
+    shuffled.forEach((tpl) => {
+      if (picked.length >= count) return;
+      const idKey = String(tpl.id ?? tpl.sharedPoolId ?? tpl.questionText ?? '').trim();
+      if (usedIds.has(idKey)) return;
+      usedIds.add(idKey);
+      picked.push(tpl);
+    });
   }
 
-  return shuffleWithRandInt(pool, randInt)
+  return picked
     .slice(0, Math.min(count, pool.length))
     .map(methodPoolItemToQuestion);
 }
@@ -521,7 +597,7 @@ export function buildQuizPoolWithGlobal(quizPoolCore, idiomToQuiz = idiomExamPoo
   ];
 }
 
-/** 呈分試池 = 靜態核心 + 中央共享 30 題詞彙語意 + 四大寫作手法 */
+/** 呈分試池 = 靜態核心 + 中央共享 30 題詞彙語意 + 十大呈分試手法矩陣 */
 export function buildSspaPoolWithGlobal(
   sspaPoolCore,
   idiomToSspa = idiomExamPoolToSspaPool,

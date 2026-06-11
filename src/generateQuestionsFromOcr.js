@@ -1,7 +1,9 @@
 /**
  * 香港小五/小六呈分試 — 純 JS 動態閱讀理解出題引擎（主入口）
  * ─────────────────────────────────────────────────────────────
- * 流程：OCR 全文 → Advanced Text Sanitizer → 純淨正文 → 隨機 3 題 → 標準物件陣列
+ * 流程：OCR 全文 → Advanced Text Sanitizer → 純淨正文
+ *       → 動態引擎 + GLOBAL_SHARED_METHODS（10 維度 Fisher-Yates 抽 3 種不同 type）
+ *       → 標準 8 題物件陣列
  *
  * @param {string} ocrText — Tesseract / 貼上全文
  * @param {{ seed?: number, questionCount?: number }} [options]
@@ -33,13 +35,14 @@ import {
 import {
   syncAndExpandSharedPool,
   pickRandomSharedIdiomQuestions,
-  pickRandomSharedMethodQuestions,
+  pickDistinctSharedMethodQuestions,
+  ensureSeedMethodsInPool,
   generateContributorLabel,
 } from './globalSharedPool.js';
 import { generateQuestionsFromCustomWords } from './customVocabMatcher.js';
 import { saveUploadedPreviewWords } from './prestudyDictationBridge.js';
 
-import { READING_MAX_QUESTIONS } from './readingConstants.js';
+import { READING_MAX_QUESTIONS, SHARED_METHOD_INJECT_COUNT } from './readingConstants.js';
 
 const DEFAULT_QUESTION_COUNT = READING_MAX_QUESTIONS;
 
@@ -110,46 +113,79 @@ function dedupeQuestions(questions = []) {
   return list;
 }
 
-function mergeSharedPoolQuestions(questions = [], articleLines = [], seed, targetCount) {
-  const seen = new Set(questions.map((q) => q.questionText));
-  const merged = [...questions];
-
-  // 從中央共享庫注入寫作手法題 + 四字詞語題（篇數增多時略增共享題比例）
-  const sharedMethods = pickRandomSharedMethodQuestions(3, seed + 17);
-  const sharedIdioms = pickRandomSharedIdiomQuestions(2, seed + 31);
-
-  [...sharedMethods, ...sharedIdioms].forEach((q) => {
-    if (merged.length >= targetCount) return;
-    if (!q?.questionText || seen.has(q.questionText)) return;
-    seen.add(q.questionText);
-    const normalized = normalizeQuestionObject(q, merged.length);
-    merged.push(normalized ? { ...q, ...normalized } : q);
-  });
-
-  return merged.slice(0, targetCount).map((q, i) => ({ ...q, id: i + 1 }));
+function createSeededRandInt(seed) {
+  let state = (Number(seed) >>> 0) || 1;
+  return (n) => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return Math.floor(((state & 0x7fffffff) / 0x80000000) * n);
+  };
 }
 
-function ensureQuestionCount(questions = [], articleLines = [], keywords = [], seed, targetCount = DEFAULT_QUESTION_COUNT) {
-  let list = dedupeQuestions(questions);
+function fisherYatesShuffleQuestions(questions, seed) {
+  const arr = [...questions];
+  const randInt = seed != null ? createSeededRandInt(seed) : (n) => Math.floor(Math.random() * n);
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = randInt(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
-  if (list.length < targetCount) {
+function mergeSharedPoolQuestions(questions = [], seed, targetCount) {
+  ensureSeedMethodsInPool();
+
+  const seen = new Set();
+  const merged = [];
+
+  const pushQuestion = (q) => {
+    if (merged.length >= targetCount) return;
+    if (!q?.questionText || seen.has(q.questionText)) return;
+    const normalized = normalizeQuestionObject(q, merged.length);
+    if (!normalized) return;
+    seen.add(normalized.questionText);
+    merged.push({ ...q, ...normalized });
+  };
+
+  // ① 名校呈分試共享池：Fisher-Yates 洗牌後抽 3 種不同 type（10 維度矩陣）
+  pickDistinctSharedMethodQuestions(SHARED_METHOD_INJECT_COUNT, seed + 17).forEach(pushQuestion);
+
+  // ② 動態引擎：依正文語境補足
+  questions.forEach(pushQuestion);
+
+  // ③ 中央共享四字詞語 UGC 補位
+  if (merged.length < targetCount) {
+    pickRandomSharedIdiomQuestions(
+      Math.min(2, targetCount - merged.length),
+      seed + 31,
+    ).forEach(pushQuestion);
+  }
+
+  return fisherYatesShuffleQuestions(merged, seed + 99)
+    .slice(0, targetCount)
+    .map((q, i) => ({ ...q, id: i + 1 }));
+}
+
+function ensureQuestionCount(articleLines = [], keywords = [], seed, targetCount = DEFAULT_QUESTION_COUNT) {
+  const dynamicTarget = Math.max(1, targetCount - SHARED_METHOD_INJECT_COUNT);
+
+  let dynamic = dedupeQuestions(generateDynamicQuestions(articleLines, {
+    minCount: dynamicTarget,
+    maxCount: targetCount,
+    seed: seed != null ? Number(seed) : undefined,
+    keywords,
+  }));
+
+  if (dynamic.length < dynamicTarget) {
     const extra = generateDynamicQuestions(articleLines, {
       minCount: targetCount,
       maxCount: targetCount,
-      seed: seed != null ? Number(seed) + list.length : undefined,
+      seed: seed != null ? Number(seed) + dynamic.length + 50 : undefined,
       keywords,
     });
-    extra.forEach((q) => {
-      const normalized = normalizeQuestionObject(q, list.length);
-      if (!normalized) return;
-      if (list.length < targetCount && !list.some((x) => x.questionText === normalized.questionText)) {
-        list.push({ ...normalized, id: list.length + 1 });
-      }
-    });
+    dynamic = dedupeQuestions([...dynamic, ...extra]);
   }
 
-  // 最後一步：對接中央共享庫，混入全港 UGC 題目
-  return mergeSharedPoolQuestions(list, articleLines, seed, targetCount);
+  return mergeSharedPoolQuestions(dynamic, seed, targetCount);
 }
 
 function resolveArticleFromOcr(cleanedText, cleanArticleLines, coreKeywords) {
@@ -241,12 +277,6 @@ export function generateQuestionsFromOcr(ocrText = '', options = {}) {
   const questionSeed = seed ?? Date.now() + randInt(100000);
 
   const questions = ensureQuestionCount(
-    generateDynamicQuestions(articleLines, {
-      minCount: questionCount,
-      maxCount: questionCount,
-      seed: questionSeed,
-      keywords: coreKeywords,
-    }),
     articleLines,
     coreKeywords,
     questionSeed,

@@ -29,7 +29,7 @@ import {
 /** 基礎 30 題小五/小六呈分試核心詞彙矩陣（答案已完全隔離）— 黃金種子庫 */
 export const BASE_IDIOM_POOL = IDIOM_EXAM_POOL;
 
-/** 基礎四大寫作手法題型池 — 黃金種子庫 */
+/** 基礎十大呈分試手法題型池（4 大寫作手法 + 6 類新高頻題型）— 黃金種子庫 */
 export const BASE_METHOD_TEMPLATES = EXAM_METHOD_TEMPLATES;
 
 export const DICTATION_VOCAB_POOL = [
@@ -120,7 +120,7 @@ export const SENTENCE_POOL = [
 
 /**
  * 呈分試閱讀理解 — 自訂隨機題型池（由 /admin-editor 匯出貼上）
- * 內建：四大黃金寫作手法 + 標點符號 + 語文知識 + 固定閱讀題（25 道可匯入樣版）
+ * 內建：十大呈分試手法矩陣 + 標點符號 + 語文知識 + 固定閱讀題（25 道可匯入樣版）
  */
 export const ADVANCED_QUESTION_POOL = buildDefaultAdvancedQuestionPool(
   examMethodTemplatesToMockPool(),
@@ -135,7 +135,7 @@ export const READING_POOL = BUILTIN_READING_POOL;
 
 /** 四字詞語語意池 — 供外部直接 import / 管理員編輯器 */
 export { IDIOM_EXAM_POOL } from './idiomExamPool.js';
-export { EXAM_METHOD_TEMPLATES } from './readingGoldenTechniquePool.js';
+export { EXAM_METHOD_TEMPLATES, EXAM_METHOD_TEMPLATE_COUNT } from './readingGoldenTechniquePool.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🌐 全港家長拍照共享題庫 —  re-export 自 globalSharedPool.js
@@ -162,6 +162,8 @@ export {
   methodPoolItemToQuestion,
   pickRandomSharedIdiomQuestions,
   pickRandomSharedMethodQuestions,
+  pickDistinctSharedMethodQuestions,
+  ensureSeedMethodsInPool,
   shuffleGlobalIdiomPool,
   generateContributorLabel,
   recordSharedItemStudy,
@@ -180,7 +182,7 @@ export function getQuizPoolWithGlobal() {
   return buildQuizPoolWithGlobal(QUIZ_POOL_CORE);
 }
 
-/** 呈分試池 = 靜態核心 + 中央共享 30 題詞彙語意 + 四大寫作手法 + UGC */
+/** 呈分試池 = 靜態核心 + 中央共享 30 題詞彙語意 + 十大呈分試手法矩陣 + UGC */
 export function getSspaPoolWithGlobal() {
   return buildSspaPoolWithGlobal(SSPA_POOL);
 }
