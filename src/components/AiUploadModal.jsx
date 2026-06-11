@@ -7,11 +7,15 @@ import { stopMediaStream } from './aiUploadUtils';
 import { buildUploadSummaryName, MAX_UPLOAD_IMAGES } from '../uploadMetaUtils';
 import { preloadReadingOcrEngine } from '../readingOcrService';
 
-/** 解析動畫最短時長 — OCR 實際很快，仍讓步驟條跑完以免「閃一下就完成」 */
-const BASE_PARSE_MS = 5200;
-const PARSE_MS_PER_IMAGE = 900;
-const MAX_PARSE_MS = 18000;
+/** 解析動畫 — OCR 完成後快速收尾，避免多等數秒 */
+const BASE_PARSE_MS = 2800;
+const PARSE_MS_PER_IMAGE = 600;
+const MAX_PARSE_MS = 14000;
 const MIN_PARSE_ERROR_MS = 900;
+/** OCR 完成後進度條跑完並關閉的最短尾段 */
+const POST_OCR_FINISH_MS = 450;
+/** 步驟動畫至少播放時長（避免閃一下就完成） */
+const MIN_PRE_OCR_ANIM_MS = 1200;
 /** OCR 請求最長等待 — 逾時後提示改用貼上文字或重試 */
 const MAX_OCR_WAIT_MS = 120000;
 
@@ -286,8 +290,10 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
 
     const finishParsing = (extraMeta = {}) => {
       setIsParsingLocked(false);
+      setParseProgress(100);
+      if (steps.length) setParseStep(steps.length - 1);
       setPhase('done');
-        onComplete?.({
+      const payload = {
         seed: Date.now(),
         fileCount: uploadItems.length || (pastedPassageText.trim() ? 1 : 0),
         fileName: buildUploadSummaryName(uploadItems.length ? uploadItems : [{ fileName: '貼上文章' }]),
@@ -296,7 +302,9 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
         source: uploadItems.length === 1 ? uploadItems[0].source : 'batch',
         mimeType: uploadItems[0]?.mimeType ?? null,
         ...extraMeta,
-      });
+      };
+      /** 先顯示完成畫面，再同步題庫（applyReadingPaperUpload 可能較重） */
+      queueMicrotask(() => onComplete?.(payload));
     };
 
     const resolveParseErrorMessage = (err) => (
@@ -316,7 +324,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
     const imageCount = uploadItems.length || (pastedPassageText.trim() ? 1 : 0);
     const minParseDuration = resolveMinParseDuration(imageCount);
 
-    const applyParseDisplay = (elapsed, { ocrDone, ocrProgress, ocrStepIndex }) => {
+    const applyParseDisplay = (elapsed, { ocrDone, ocrProgress, ocrStepIndex, ocrFinishedAt = 0 }) => {
       const timeRatio = Math.min(1, elapsed / minParseDuration);
       let displayRatio;
       let stepIndex = 0;
@@ -324,7 +332,12 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
       /** 最後一步（已同步）僅在 OCR 真正完成後顯示 */
       const preFinishStep = steps.length > 1 ? steps.length - 2 : 0;
 
-      if (!ocrDone) {
+      if (ocrDone && ocrFinishedAt) {
+        const sinceDone = Math.max(0, Date.now() - ocrFinishedAt);
+        const tailRatio = Math.min(1, sinceDone / POST_OCR_FINISH_MS);
+        displayRatio = 0.94 + tailRatio * 0.06;
+        stepIndex = lastStep;
+      } else if (!ocrDone) {
         if (elapsed >= minParseDuration) {
           const overtime = elapsed - minParseDuration;
           displayRatio = Math.min(0.95, 0.90 + (overtime / 15000) * 0.05);
@@ -354,6 +367,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
       let ocrResult = null;
       let ocrProgress = 0;
       let ocrStepIndex = 0;
+      let ocrFinishedAt = 0;
 
       const handleParseFailure = (err) => {
         setIsParsingLocked(false);
@@ -379,15 +393,17 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
         .then((result) => {
           ocrResult = result ?? {};
           ocrDone = true;
+          ocrFinishedAt = Date.now();
         })
         .catch((err) => {
           ocrError = err;
           ocrDone = true;
+          ocrFinishedAt = Date.now();
         });
 
       const tickParse = () => {
         const elapsed = Date.now() - parseStart;
-        applyParseDisplay(elapsed, { ocrDone, ocrProgress, ocrStepIndex });
+        applyParseDisplay(elapsed, { ocrDone, ocrProgress, ocrStepIndex, ocrFinishedAt });
 
         if (!ocrDone) {
           if (elapsed >= MAX_OCR_WAIT_MS) {
@@ -410,7 +426,9 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
           return;
         }
 
-        if (elapsed >= minParseDuration) {
+        const sinceOcrDone = ocrFinishedAt ? Date.now() - ocrFinishedAt : 0;
+        const readyToFinish = elapsed >= MIN_PRE_OCR_ANIM_MS && sinceOcrDone >= POST_OCR_FINISH_MS;
+        if (readyToFinish) {
           if (parseTimerRef.current) {
             clearInterval(parseTimerRef.current);
             parseTimerRef.current = null;

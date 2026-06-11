@@ -73,10 +73,13 @@ async function extractReadingPageFromImageBrowser(previewUrl, onProgress, fileNa
   };
 }
 
-/** 預載 OCR 引擎 — 優先雲端後端，否則載入瀏覽器 Tesseract */
+/** 預載 OCR 引擎 — 優先雲端後端，並在背景預載瀏覽器 Tesseract 備援 */
 export async function preloadReadingOcrEngine() {
   const backendOk = await checkReadingVisionAvailable(true);
   if (backendOk) {
+    import('./tesseractOcr')
+      .then(({ preloadTesseractEngine }) => preloadTesseractEngine())
+      .catch(() => {});
     return { mode: 'backend', ready: true };
   }
 

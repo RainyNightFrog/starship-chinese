@@ -22,7 +22,7 @@ function getReadingApiBase() {
 
 const OCR_HEALTH_PATH = '/api/reading/health';
 /** 略長於 Vercel serverless maxDuration(60)，逾時後改走瀏覽器 OCR 備援 */
-const OCR_FETCH_TIMEOUT_MS = 65000;
+const OCR_FETCH_TIMEOUT_MS = 38000;
 
 async function fetchHealthCheck() {
   const bases = [
