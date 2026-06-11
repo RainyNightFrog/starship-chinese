@@ -7,9 +7,15 @@ import { stopMediaStream } from './aiUploadUtils';
 import { buildUploadSummaryName, MAX_UPLOAD_IMAGES } from '../uploadMetaUtils';
 import { checkReadingVisionAvailable } from '../readingVisionClient';
 
-const BASE_PARSE_MS = 2800;
-const PARSE_MS_PER_IMAGE = 650;
-const MAX_PARSE_MS = 14000;
+/** 解析動畫最短時長 — OCR 實際很快，仍讓步驟條跑完以免「閃一下就完成」 */
+const BASE_PARSE_MS = 5200;
+const PARSE_MS_PER_IMAGE = 900;
+const MAX_PARSE_MS = 18000;
+const MIN_PARSE_ERROR_MS = 900;
+
+function resolveMinParseDuration(imageCount = 1) {
+  return Math.min(MAX_PARSE_MS, BASE_PARSE_MS + Math.max(1, imageCount) * PARSE_MS_PER_IMAGE);
+}
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -261,14 +267,66 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
       });
     };
 
+    const resolveParseErrorMessage = (err) => (
+      err?.code === 'tesseract_module_not_found'
+        ? (err.message || '後端找不到 tesseract.js，請在專案根目錄執行 npm install tesseract.js 後重啟 dev server。')
+        : err?.code === 'backend_unavailable'
+          ? (err.message || '【後端未連接】請執行 npm run dev:stop 後再 npm run dev。')
+          : err?.code === 'image_too_blurry'
+            ? err.message
+            : err?.code === 'vocab_worksheet_misroute'
+              ? err.message
+              : err?.code === 'payload_too_large'
+                ? err.message
+                : (err?.message || '解析失敗，請重試或改用較清晰的圖片。')
+    );
+
+    const imageCount = uploadItems.length || (pastedPassageText.trim() ? 1 : 0);
+    const minParseDuration = resolveMinParseDuration(imageCount);
+
+    const applyParseDisplay = (elapsed, { ocrDone, ocrProgress, ocrStepIndex }) => {
+      const timeRatio = Math.min(1, elapsed / minParseDuration);
+      let displayRatio;
+      let stepIndex = 0;
+
+      if (!ocrDone) {
+        displayRatio = Math.min(0.92, Math.max(timeRatio * 0.88, ocrProgress));
+        if (steps.length) {
+          stepIndex = Math.min(
+            steps.length - 1,
+            Math.max(ocrStepIndex, Math.floor(displayRatio * steps.length)),
+          );
+        }
+      } else {
+        displayRatio = Math.min(1, Math.max(timeRatio, 0.94));
+        stepIndex = steps.length ? steps.length - 1 : 0;
+      }
+
+      setParseProgress(Math.round(displayRatio * 100));
+      setParseStep(stepIndex);
+    };
+
     if (typeof config.parseUploadItems === 'function') {
+      const parseStart = Date.now();
+      let ocrDone = false;
+      let ocrError = null;
+      let ocrResult = null;
+      let ocrProgress = 0;
+      let ocrStepIndex = 0;
+
+      const handleParseFailure = (err) => {
+        setIsParsingLocked(false);
+        setParseError(resolveParseErrorMessage(err));
+        setPhase('gallery');
+      };
+
       config.parseUploadItems(uploadItems, {
         onProgress: (ratio, stepIndex) => {
-          setParseProgress(Math.round(Math.min(1, ratio) * 100));
+          ocrProgress = Math.min(1, ratio);
           if (typeof stepIndex === 'number' && steps.length) {
-            setParseStep(Math.min(steps.length - 1, stepIndex));
+            ocrStepIndex = Math.min(steps.length - 1, stepIndex);
           } else if (steps.length && ratio > 0) {
-            setParseStep(Math.min(steps.length - 1, Math.floor(ratio * steps.length)));
+            ocrStepIndex = Math.min(steps.length - 1, Math.floor(ratio * steps.length));
           }
         },
         onStitchPage: (current, total) => {
@@ -277,30 +335,46 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
         steps,
         pastedPassageText: config.allowTextPaste ? pastedPassageText : '',
       })
-        .then((result) => finishParsing(result ?? {}))
+        .then((result) => {
+          ocrResult = result ?? {};
+          ocrDone = true;
+        })
         .catch((err) => {
-          setIsParsingLocked(false);
-          const msg = err?.code === 'tesseract_module_not_found'
-            ? (err.message || '後端找不到 tesseract.js，請在專案根目錄執行 npm install tesseract.js 後重啟 dev server。')
-            : err?.code === 'backend_unavailable'
-              ? (err.message || '【後端未連接】請執行 npm run dev:stop 後再 npm run dev。')
-            : err?.code === 'image_too_blurry'
-              ? err.message
-              : err?.code === 'vocab_worksheet_misroute'
-                ? err.message
-              : err?.code === 'payload_too_large'
-                ? err.message
-              : (err?.message || '解析失敗，請重試或改用較清晰的圖片。');
-          setParseError(msg);
-          setPhase('gallery');
+          ocrError = err;
+          ocrDone = true;
         });
+
+      const tickParse = () => {
+        const elapsed = Date.now() - parseStart;
+        applyParseDisplay(elapsed, { ocrDone, ocrProgress, ocrStepIndex });
+
+        if (!ocrDone) return;
+
+        if (ocrError) {
+          if (elapsed < MIN_PARSE_ERROR_MS) return;
+          if (parseTimerRef.current) {
+            clearInterval(parseTimerRef.current);
+            parseTimerRef.current = null;
+          }
+          handleParseFailure(ocrError);
+          return;
+        }
+
+        if (elapsed >= minParseDuration) {
+          if (parseTimerRef.current) {
+            clearInterval(parseTimerRef.current);
+            parseTimerRef.current = null;
+          }
+          finishParsing(ocrResult ?? {});
+        }
+      };
+
+      parseTimerRef.current = setInterval(tickParse, 120);
+      tickParse();
       return;
     }
 
-    const parseDuration = Math.min(
-      MAX_PARSE_MS,
-      BASE_PARSE_MS + uploadItems.length * PARSE_MS_PER_IMAGE,
-    );
+    const parseDuration = minParseDuration;
     const start = Date.now();
     parseTimerRef.current = setInterval(() => {
       const ratio = Math.min(1, (Date.now() - start) / parseDuration);
