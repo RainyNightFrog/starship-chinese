@@ -600,7 +600,7 @@ export default function StudentWorkspace({
           studentType={studentType}
           language={language}
           onMarkRead={markComplete}
-          onSwapVocab={handleSwapPrestudyVocab}
+          onSwapVocab={prestudyUsesSessionPool ? handleSwapPrestudyVocab : undefined}
           onSessionComplete={handlePrestudyComplete}
           onGoToDictation={onSwitchTask ? () => onSwitchTask('dictation') : undefined}
         />
@@ -1113,44 +1113,8 @@ function VocabCards({
   const { wordVoiceLang, meaningVoiceLang } = useVoicePreferences();
   const { speak, speakingKind, loadingKind, speechBusy } = useSpeechContext();
 
-  /** 直接從 localStorage 安全解析完整 IDIOM 物件（禁止 JSON 裸字串渲染） */
-  const [previewWords, setPreviewWords] = useState([]);
-
-  useEffect(() => {
-    const loadPreviewFromStorage = () => {
-      const rawData = localStorage.getItem(PREVIEW_WORDS_STORAGE_KEY);
-      if (!rawData) {
-        setPreviewWords([]);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(rawData);
-        const finalArray = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
-        if (Array.isArray(finalArray)) {
-          setPreviewWords(finalArray);
-        } else {
-          setPreviewWords([]);
-        }
-      } catch (e) {
-        console.error('解析預習詞彙失敗:', e);
-        setPreviewWords([]);
-      }
-    };
-
-    loadPreviewFromStorage();
-    window.addEventListener('starship-vocab-uploaded', loadPreviewFromStorage);
-    return () => window.removeEventListener('starship-vocab-uploaded', loadPreviewFromStorage);
-  }, [vocabList]);
-
-  /** 優先使用 localStorage 配對物件，否則退回父層傳入詞表 */
-  const cardSourceList = useMemo(() => {
-    if (previewWords.length) {
-      return previewWords
-        .map((item, index) => previewWordToVocabItem(item, index))
-        .filter(Boolean);
-    }
-    return vocabList;
-  }, [previewWords, vocabList]);
+  /** 單一來源：父層已從 localStorage / 家長 config 正規化，禁止再讀舊快取混入隨機詞 */
+  const cardSourceList = vocabList;
 
   const vocabListKey = cardSourceList.map((v) => v.id).join('|');
   const [readIds, setReadIds] = useState(() => new Set());
@@ -1162,8 +1126,12 @@ function VocabCards({
       setReadIds(new Set());
       return;
     }
-    setReadIds(new Set(getCompletedIds('prestudy').map(String)));
-  }, [vocabListKey, onMarkRead]);
+    const validIds = new Set(cardSourceList.map((v) => String(v.id)));
+    const completed = getCompletedIds('prestudy')
+      .map(String)
+      .filter((id) => validIds.has(id));
+    setReadIds(new Set(completed));
+  }, [vocabListKey, onMarkRead, cardSourceList]);
 
   useEffect(() => {
     setSessionSaved(false);
@@ -1187,7 +1155,7 @@ function VocabCards({
     onMarkRead?.(vocab.id);
   };
 
-  const readCount = readIds.size;
+  const readCount = [...readIds].filter((id) => cardSourceList.some((v) => String(v.id) === id)).length;
   const totalCount = cardSourceList.length;
   const allRead = totalCount > 0 && readCount >= totalCount;
 

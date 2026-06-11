@@ -99,7 +99,7 @@ export function applyVocabListUpload(currentConfig, uploadMeta = {}, wrongWordEn
         ? uploadMeta.matchedQuestions
         : resolveCustomVocabFromInput(
           uploadMeta.customWordsInput ?? uploadMeta.extractedNewWords,
-          { source: uploadMeta.source ?? 'vocab_upload' },
+          { source: uploadMeta.source ?? 'vocab_upload', maxWords: uploadMeta.maxWords ?? 48 },
         ).matchedQuestions;
     }
     /** OCR 零命中時提示改貼文字，不寫入亂碼 */
@@ -123,18 +123,7 @@ export function applyVocabListUpload(currentConfig, uploadMeta = {}, wrongWordEn
     saveUploadedPreviewWords(matchedQuestions);
     label = `自訂詞表 · ${prestudy.length} 詞（精準配對）`;
   } else {
-    /** 無 OCR 結果時仍走精準配對（mock 池僅作詞語來源，不 random 渲染） */
-    const pack = generateVocabPack({ ...uploadMeta, seed });
-    const words = pack.prestudyList.map((v) => v.tc ?? v.word).filter(Boolean);
-    const resolved = resolveCustomVocabFromInput(words, { source: 'vocab_pack_seed' });
-    matchedQuestions = resolved.matchedQuestions;
-    prestudy = toPrestudyCardList(matchedQuestions);
-    dictation = cloneVocab(prestudy);
-    if (wrongWordEntries.length) {
-      dictation = mergeWrongWordsIntoDictation(dictation, wrongWordEntries);
-    }
-    saveUploadedPreviewWords(matchedQuestions);
-    label = pack.label;
+    throw new Error('未能取得詞表內容。請重新上載或貼上詞表文字（每行一詞）。');
   }
 
   return {

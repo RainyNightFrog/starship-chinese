@@ -18,11 +18,17 @@ import { mergeWrongWordsIntoDictation } from './vocabService';
 import { enrichVocabList } from './vocabHints';
 import { sanitizeReadingBankItem } from './readingDisplayGuard';
 import { shieldReadingBank } from './readingMismatchShield';
+import { loadPreviewWords } from './prestudyDictationBridge';
 
 const VOCAB_TASKS = new Set(['dictation', 'prestudy']);
 
 /** 合併家長上載詞表 — 有上載 session 時 100% 鎖定指定詞彙，禁止混入 mock 舊題庫 */
 function mergeVocabUpload(taskId, basePool, overrides = {}) {
+  if (taskId === 'prestudy') {
+    const fromStorage = loadPreviewWords();
+    if (fromStorage?.length) return fromStorage.map((v) => ({ ...v }));
+  }
+
   if (!overrides.vocabUploadSession) return basePool;
   const uploaded = overrides.vocabByTask?.[taskId];
   if (!uploaded?.length) return basePool;

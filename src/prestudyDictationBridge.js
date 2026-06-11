@@ -6,7 +6,7 @@
  */
 
 import { getGlobalSharedIdioms, shuffleGlobalIdiomPool } from './globalSharedPool.js';
-import { fisherYatesShuffle } from './questionEngineCore.js';
+import { fisherYatesShuffle, clearTaskHistory } from './questionEngineCore.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
 import { withHints, getVocabHintEn, enrichVocabList } from './vocabHints.js';
 import { resolveCustomVocabFromInput } from './customVocabMatcher.js';
@@ -117,6 +117,8 @@ export function saveUploadedPreviewWords(vocabItems = []) {
   const cardList = toPrestudyCardList(matchedQuestions);
 
   try {
+    clearTaskHistory('prestudy');
+    sessionStorage.removeItem(PRESTUDY_SESSION_KEY);
     localStorage.setItem(PREVIEW_WORDS_STORAGE_KEY, JSON.stringify(matchedQuestions));
     localStorage.setItem(
       STUDIED_WORDS_STORAGE_KEY,
@@ -190,6 +192,10 @@ export function idiomItemToVocabItem(item) {
 
 /** 從中央共享 GLOBAL_SHARED_IDIOMS 建立本次預習 15 詞（session 內固定） */
 export function getPrestudyIdiomVocabList(count = PRESTUDY_IDIOM_COUNT) {
+  /** 家長上載詞表 — 絕不回落隨機 15 詞 */
+  const fromUpload = loadPreviewWords();
+  if (fromUpload?.length) return fromUpload;
+
   try {
     const cached = sessionStorage.getItem(PRESTUDY_SESSION_KEY);
     if (cached) {
