@@ -6,6 +6,12 @@
 import { analyzeReadingImageWithVision } from './readingVisionClient.js';
 import { denoiseOcrText } from './generateQuestionsFromOcr.js';
 import { parseVocabFromOcrText } from './vocabOcrParser.js';
+import { PRESTUDY_IDIOM_COUNT } from './prestudyDictationBridge.js';
+
+function resolveMaxWords(imageCount = 1) {
+  /** 多頁字詞表：按頁提取，課文預習仍優先前 15 詞 */
+  return Math.min(PRESTUDY_IDIOM_COUNT + Math.max(0, imageCount - 1) * 8, 48);
+}
 
 function packVocabOcrResult(matchedQuestions, extra = {}) {
   const customWordsInput = matchedQuestions.map((q) => q.word);
@@ -57,7 +63,7 @@ export async function parseVocabUploadItems(uploadItems = [], {
   const pasted = pastedPassageText.trim();
   if (pasted) {
     onProgress?.(0.5, 1);
-    const matchedQuestions = parseVocabFromOcrText(pasted);
+    const matchedQuestions = parseVocabFromOcrText(pasted, { maxWords: PRESTUDY_IDIOM_COUNT });
     onProgress?.(1, Math.max(0, steps.length - 1));
     return packVocabOcrResult(matchedQuestions, { rawText: pasted, source: 'pasted' });
   }
@@ -94,7 +100,9 @@ export async function parseVocabUploadItems(uploadItems = [], {
   }
 
   onProgress?.(0.92, steps.length ? steps.length - 2 : 0);
-  const matchedQuestions = parseVocabFromOcrText(rawText);
+  const matchedQuestions = parseVocabFromOcrText(rawText, {
+    maxWords: resolveMaxWords(imageItems.length),
+  });
 
   if (!matchedQuestions.length) {
     throw new Error('未能從圖片中提取詞語，請確認上載的是默書單或詞表，並確保文字清晰。');

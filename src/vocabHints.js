@@ -2,8 +2,10 @@
  * 詞彙字義提示 — 正式書面語（繁/簡）+ 英文釋義（NCS／外語學生）
  */
 import { applyVocabDecomposition } from './vocabDecomposition.js';
+import { WORKSHEET_VOCAB_HINTS } from './worksheetVocabLexicon.js';
 
 export const VOCAB_HINTS = {
+  ...WORKSHEET_VOCAB_HINTS,
   安慰: { tc: '用言語或行動減輕他人的愁苦與壓力', sc: '用言语或行动减轻他人的愁苦与压力', en: 'To ease others\' distress through words or actions' },
   價值: { tc: '物品所具有的意義與重要程度', sc: '物品所具有的意义与重要程度', en: 'The significance and importance of something' },
   价值: { tc: '物品所具有的意義與重要程度', sc: '物品所具有的意义与重要程度', en: 'The significance and importance of something' },
