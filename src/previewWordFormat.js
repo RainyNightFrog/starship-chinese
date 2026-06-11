@@ -3,7 +3,7 @@
  * 禁止將 JSON 物件或 `[{"id"...` 原始字串渲染到字卡
  */
 
-import { toTraditionalVocabWord } from './vocabWordNormalize.js';
+import { toTraditionalVocabWord } from './vocabTrad.js';
 
 const JSON_BLOB_PATTERN = /^\s*[\[{]/;
 const JSON_KEY_LEAK = /"id"\s*:|"options"\s*:|"correctAnswerIndex"/;
