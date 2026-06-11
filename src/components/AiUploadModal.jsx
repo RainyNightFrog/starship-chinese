@@ -12,6 +12,8 @@ const BASE_PARSE_MS = 5200;
 const PARSE_MS_PER_IMAGE = 900;
 const MAX_PARSE_MS = 18000;
 const MIN_PARSE_ERROR_MS = 900;
+/** OCR 請求最長等待 — 逾時後提示改用貼上文字或重試 */
+const MAX_OCR_WAIT_MS = 120000;
 
 function resolveMinParseDuration(imageCount = 1) {
   return Math.min(MAX_PARSE_MS, BASE_PARSE_MS + Math.max(1, imageCount) * PARSE_MS_PER_IMAGE);
@@ -68,6 +70,8 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
   const [uploadItems, setUploadItems] = useState([]);
   const [parseStep, setParseStep] = useState(0);
   const [parseProgress, setParseProgress] = useState(0);
+  /** 動畫已跑完但 OCR 仍在進行 */
+  const [awaitingOcr, setAwaitingOcr] = useState(false);
   /** 多頁拼讀進度：current / total（如 1/2） */
   const [stitchPage, setStitchPage] = useState({ current: 0, total: 0 });
   /** 解析進行中 — 防止重複點擊 */
@@ -98,6 +102,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
     setUploadItems([]);
     setParseStep(0);
     setParseProgress(0);
+    setAwaitingOcr(false);
     setStitchPage({ current: 0, total: 0 });
     setIsParsingLocked(false);
     setCameraError(null);
@@ -275,6 +280,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
     setPhase('parsing');
     setParseStep(0);
     setParseProgress(0);
+    setAwaitingOcr(false);
     setStitchPage({ current: 0, total: uploadItems.length });
     setParseError(null);
 
@@ -314,20 +320,29 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
       const timeRatio = Math.min(1, elapsed / minParseDuration);
       let displayRatio;
       let stepIndex = 0;
+      const lastStep = steps.length ? steps.length - 1 : 0;
+      /** 最後一步（已同步）僅在 OCR 真正完成後顯示 */
+      const preFinishStep = steps.length > 1 ? steps.length - 2 : 0;
 
       if (!ocrDone) {
-        displayRatio = Math.min(0.92, Math.max(timeRatio * 0.88, ocrProgress));
+        if (elapsed >= minParseDuration) {
+          const overtime = elapsed - minParseDuration;
+          displayRatio = Math.min(0.95, 0.90 + (overtime / 15000) * 0.05);
+        } else {
+          displayRatio = Math.min(0.90, Math.max(timeRatio * 0.88, ocrProgress));
+        }
         if (steps.length) {
           stepIndex = Math.min(
-            steps.length - 1,
+            preFinishStep,
             Math.max(ocrStepIndex, Math.floor(displayRatio * steps.length)),
           );
         }
       } else {
         displayRatio = Math.min(1, Math.max(timeRatio, 0.94));
-        stepIndex = steps.length ? steps.length - 1 : 0;
+        stepIndex = lastStep;
       }
 
+      setAwaitingOcr(!ocrDone && elapsed >= minParseDuration);
       setParseProgress(Math.round(displayRatio * 100));
       setParseStep(stepIndex);
     };
@@ -374,7 +389,16 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
         const elapsed = Date.now() - parseStart;
         applyParseDisplay(elapsed, { ocrDone, ocrProgress, ocrStepIndex });
 
-        if (!ocrDone) return;
+        if (!ocrDone) {
+          if (elapsed >= MAX_OCR_WAIT_MS) {
+            if (parseTimerRef.current) {
+              clearInterval(parseTimerRef.current);
+              parseTimerRef.current = null;
+            }
+            handleParseFailure(new Error('OCR 處理逾時，請改用「貼上文章文字」或重試。'));
+          }
+          return;
+        }
 
         if (ocrError) {
           if (elapsed < MIN_PARSE_ERROR_MS) return;
@@ -617,13 +641,15 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
                       : (config.parsingLabel ?? 'AI 解析中…')}
                 </p>
                 <p className="text-xs text-slate-400 mt-1 font-bold">
-                  {config.useOfflineOcr || config.useBackendOcr || config.useLocalOllama
-                    ? (stitchPage.total >= 2
-                      ? (config.parsingSubLabelMulti ?? '伺服器正在逐頁 OCR 辨識，請勿關閉視窗…')
-                      : '後端 Tesseract 辨識中，請勿重複點擊…')
-                    : stitchPage.total >= 2
-                      ? '跨頁文字合併中，請稍候…'
-                      : `正在處理 ${uploadItems.length} 張圖片…`}
+                  {awaitingOcr
+                    ? '伺服器仍在辨識中，若超過 2 分鐘仍未完成請改用「貼上文章文字」…'
+                    : config.useOfflineOcr || config.useBackendOcr || config.useLocalOllama
+                      ? (stitchPage.total >= 2
+                        ? (config.parsingSubLabelMulti ?? '伺服器正在逐頁 OCR 辨識，請勿關閉視窗…')
+                        : '後端 Tesseract 辨識中，請勿重複點擊…')
+                      : stitchPage.total >= 2
+                        ? '跨頁文字合併中，請稍候…'
+                        : `正在處理 ${uploadItems.length} 張圖片…`}
                 </p>
               </div>
               <div className="space-y-2">

@@ -21,6 +21,8 @@ function getReadingApiBase() {
 }
 
 const OCR_HEALTH_PATH = '/api/reading/health';
+/** 略長於 Vercel serverless maxDuration(60)，逾時後改走瀏覽器 OCR 備援 */
+const OCR_FETCH_TIMEOUT_MS = 65000;
 
 async function fetchHealthCheck() {
   const bases = [
@@ -71,8 +73,14 @@ async function fetchOcrApi(path, options) {
 
   let lastErr;
   for (const base of bases) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), OCR_FETCH_TIMEOUT_MS);
     try {
-      const res = await fetch(`${base}${path}`, options);
+      const res = await fetch(`${base}${path}`, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
       if (res.status === 413) {
         const err = new Error('圖片總大小超過伺服器上限。請減少一次上載張數，或改用「貼上文字」備援。');
         err.code = 'payload_too_large';
@@ -81,8 +89,13 @@ async function fetchOcrApi(path, options) {
       resolvedApiBase = base;
       return res;
     } catch (netErr) {
+      clearTimeout(timer);
       if (netErr?.code === 'payload_too_large') throw netErr;
-      lastErr = netErr;
+      if (netErr?.name === 'AbortError') {
+        lastErr = new Error('OCR 請求逾時');
+      } else {
+        lastErr = netErr;
+      }
     }
   }
   ocrAvailableCache = null;

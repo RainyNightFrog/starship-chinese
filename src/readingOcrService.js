@@ -402,7 +402,7 @@ export async function parseReadingUploadItems(uploadItems = [], {
 
     const page = await extractReadingPageFromImage(
       item.previewUrl,
-      (ocrRatio) => onProgress?.(baseProgress + (ocrRatio * 0.85) / total, stepIndex),
+      (ocrRatio) => onProgress?.(baseProgress + (ocrRatio * 0.98) / total, stepIndex),
       item.fileName ?? `材料${i + 1}`,
     );
 
