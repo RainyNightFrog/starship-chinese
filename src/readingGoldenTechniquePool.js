@@ -193,6 +193,10 @@ export const PRIORITY_TEMPLATE_IDS = [
   'ws47_trees_breadfruit_location',
   'ws47_trees_food_contribution',
   'ws47_trees_expository_purpose',
+  'ws_liang_letter_para2',
+  'ws_liang_character_trait',
+  'ws_liang_travel_gifts',
+  'ws_liang_letter_purpose',
 ];
 
 /** 依文體判斷寫作手法題是否適用（說明文不宜出借物抒情） */

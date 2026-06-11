@@ -3,7 +3,7 @@
  * 由 mockDatabase READING_POOL 匯入使用
  */
 
-import { RICE_EXPOSITORY_PASSAGE, DUANWU_EXPOSITORY_PASSAGE, ZHENGPING_NARRATIVE_PASSAGE, STRANGE_TREES_EXPOSITORY_PASSAGE } from './readingWorksheetReferencePool.js';
+import { RICE_EXPOSITORY_PASSAGE, DUANWU_EXPOSITORY_PASSAGE, ZHENGPING_NARRATIVE_PASSAGE, STRANGE_TREES_EXPOSITORY_PASSAGE, LIANG_LETTER_PASSAGE } from './readingWorksheetReferencePool.js';
 
 /** @typedef {{ question: string, options: string[], correctIndex: number, explanation: string }} ReadingQuestionDef */
 
@@ -760,6 +760,53 @@ export const READING_PASSAGE_PACKS = [
       },
     ],
   },
+  {
+    passageId: 'read-23',
+    passageTitle: '書信：致梁主任的信',
+    genre: '書信',
+    passage: [...LIANG_LETTER_PASSAGE],
+    questions: [
+      {
+        question: 'Q1. 信中第二段主要內容是',
+        options: [
+          '說明梁主任的個性活潑好動。',
+          '說明旅遊對梁主任的重要性。',
+          '介紹梁主任以前活潑的教學方法。',
+          '記述梁主任以前在課堂上講述旅遊的經歷。',
+        ],
+        correctIndex: 3,
+        explanation: '第二段回憶老師在課堂分享旅遊見聞。',
+      },
+      {
+        question: 'Q2. 從信的內容可以知道梁主任是一個怎樣的人？',
+        options: ['備受愛戴', '勤奮積極', '謙虛有禮', '可敬可畏'],
+        correctIndex: 0,
+        explanation: '榮休晚會師生家長的愛戴，以及學生掛念，可見備受愛戴。',
+      },
+      {
+        question: 'Q3. 作者送給梁主任的「旅遊孖寶」是什麼？',
+        options: [
+          '登山手杖和隨身環保暖包',
+          '登山手杖和登山背囊',
+          '環保暖包和太陽傘',
+          '相機和地圖',
+        ],
+        correctIndex: 0,
+        explanation: '第三段介紹登山手杖與隨身環保暖包兩件禮物。',
+      },
+      {
+        question: 'Q4. 作者寫這封信的主要目的是甚麼？',
+        options: [
+          '表達對退休梁主任的掛念與問候，並相約探望',
+          '介紹世界各地的美食與風俗',
+          '說明登山手杖的使用方法',
+          '通知梁主任期中試的日期',
+        ],
+        correctIndex: 0,
+        explanation: '全文問候掛念，末段相約期中試後探望。',
+      },
+    ],
+  },
 ];
 
 /**
@@ -788,5 +835,5 @@ export function buildReadingPoolFromPacks(packs = READING_PASSAGE_PACKS) {
   return items;
 }
 
-/** 內建閱讀理解完整題池（22 篇 × 3–5 題） */
+/** 內建閱讀理解完整題池（23 篇 × 3–5 題） */
 export const BUILTIN_READING_POOL = buildReadingPoolFromPacks();

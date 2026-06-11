@@ -22,6 +22,9 @@ export const WORKSHEET_TECHNIQUE_TAGS = {
   EXPRESS_FEELINGS: 'express_feelings',
   HUMAN_CONTRIBUTION: 'human_contribution',
   FRUIT_LOCATION: 'fruit_location',
+  LETTER_PARAGRAPH: 'letter_paragraph',
+  CHARACTER_TRAIT: 'character_trait',
+  GIFT_DETAIL: 'gift_detail',
 };
 
 /** 參考文章《米》— 對標 beasmartc9 小五閱讀理解(43) 上文 */
@@ -822,12 +825,183 @@ export const WORKSHEET47_TREES_TEMPLATE_IDS = [
   ...WORKSHEET47_TREES_DYNAMIC_TEMPLATES.map((t) => t.id),
 ];
 
+/** 參考文章《致梁主任的信》— beasmartc9 書信閱讀真題上文（小炫） */
+export const LIANG_LETTER_PASSAGE = [
+  '親愛的梁主任：自去年暑假您退休以後，我們都很掛念您。在您的榮休晚會上，您為答謝校長、師生及家長的愛戴，更一展歌喉，這情景我們還歷歷在目。最近，余老師告訴我們關於您的近況。',
+  '余老師說您現在經常乘坐飛機到世界各地遊覽。我記得以往您喜歡在課堂上跟我們分享旅遊見聞，帶領我們的思想走出刻板的課本世界。除了世界各地的奇風異俗，還有刺激的玩意，都吸引我們留心聽您講授，對於您所描述的世界美食，我們更聽得「垂涎三尺」呢！',
+  '我們送給您的退休禮物，您還有用嗎？希望您走到世界各地，只要帶著我們送給您的「旅遊孖寶」，一定能無往不利。那枝登山手杖是否是個好助手？拿著它走路是不是十分省力呢？我想：它一定能陪伴您輕鬆走過艱辛的旅途。還有那個隨身環保暖包，不論走到多麼寒冷的地區，也能確保您不會著涼。',
+  '這個學期快將結束了，我們打算期中試後一同前來探望您，好嗎？順道跟您分享我們的近況，聽聽您最新的旅遊見聞。',
+  '祝身體健康！學生小炫上七月二日',
+];
+
+/** 固定參考選擇題（附 read-23 文章）— 對標真題 Q2–Q4 */
+export const WORKSHEET_LIANG_LETTER_FIXED_TEMPLATES = [
+  {
+    id: 'read_fixed_liang_para2',
+    passageId: 'read-23',
+    technique: WORKSHEET_TECHNIQUE_TAGS.LETTER_PARAGRAPH,
+    questionText: '【致梁主任的信】信中第二段主要內容是',
+    options: [
+      '說明梁主任的個性活潑好動。',
+      '說明旅遊對梁主任的重要性。',
+      '介紹梁主任以前活潑的教學方法。',
+      '記述梁主任以前在課堂上講述旅遊的經歷。',
+    ],
+    correctAnswerIndex: 3,
+    hint: '提示：第二段以「我記得以往您喜歡在課堂上……」回憶老師講述旅遊見聞。',
+    trapProfile: 'summary',
+    source: 'worksheet_ref_liang',
+  },
+  {
+    id: 'read_fixed_liang_character',
+    passageId: 'read-23',
+    technique: WORKSHEET_TECHNIQUE_TAGS.CHARACTER_TRAIT,
+    questionText: '【致梁主任的信】從信的內容可以知道梁主任是一個怎樣的人？',
+    options: ['備受愛戴', '勤奮積極', '謙虛有禮', '可敬可畏'],
+    correctAnswerIndex: 0,
+    hint: '提示：榮休晚會上師生、家長的愛戴，以及學生掛念，都可見其受尊重。',
+    trapProfile: 'character',
+    source: 'worksheet_ref_liang',
+  },
+  {
+    id: 'read_fixed_liang_travel_gifts',
+    passageId: 'read-23',
+    technique: WORKSHEET_TECHNIQUE_TAGS.GIFT_DETAIL,
+    questionText: '【致梁主任的信】作者送給梁主任的「旅遊孖寶」是什麼？',
+    options: [
+      '登山手杖和隨身環保暖包',
+      '登山手杖和登山背囊',
+      '環保暖包和太陽傘',
+      '相機和地圖',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：第三段逐一介紹「旅遊孖寶」兩件禮物的用途。',
+    trapProfile: 'line_detail',
+    source: 'worksheet_ref_liang',
+  },
+  {
+    id: 'read_fixed_liang_letter_purpose',
+    passageId: 'read-23',
+    technique: WORKSHEET_TECHNIQUE_TAGS.EXPRESS_FEELINGS,
+    questionText: '【致梁主任的信】作者寫這封信的主要目的是甚麼？',
+    options: [
+      '表達對退休梁主任的掛念與問候，並相約探望',
+      '介紹世界各地的美食與風俗',
+      '說明登山手杖的使用方法',
+      '通知梁主任期中試的日期',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：書信開首掛念、末段相約探望，全文重在問候與關懷。',
+    trapProfile: 'intent',
+    source: 'worksheet_ref_liang',
+  },
+];
+
+/** 動態 OCR 樣版 — 書信／致意類 */
+export const WORKSHEET_LIANG_LETTER_DYNAMIC_TEMPLATES = [
+  {
+    id: 'ws_liang_letter_para2',
+    category: 'paragraph_logic',
+    technique: WORKSHEET_TECHNIQUE_TAGS.LETTER_PARAGRAPH,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/梁主任/.test(text) || !/課堂上.*旅遊|分享旅遊見聞/.test(text)) return null;
+      const built = structured(
+        '記述梁主任以前在課堂上講述旅遊的經歷。',
+        [
+          '說明梁主任的個性活潑好動。',
+          '說明旅遊對梁主任的重要性。',
+          '介紹梁主任以前活潑的教學方法。',
+        ],
+        0,
+      );
+      return {
+        questionText: '信中第二段主要內容是',
+        ...built,
+        hint: '提示：歸納該段大意，留意是回憶課堂還是描述現況。',
+        trapProfile: 'summary',
+        worksheetRef: 'worksheet_ref_liang',
+      };
+    },
+  },
+  {
+    id: 'ws_liang_character_trait',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.CHARACTER_TRAIT,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/梁主任/.test(text) || !/榮休|退休|愛戴|掛念/.test(text)) return null;
+      const built = structured(
+        '備受愛戴',
+        ['勤奮積極', '謙虛有禮', '可敬可畏'],
+      );
+      return {
+        questionText: '從信的內容可以知道梁主任是一個怎樣的人？',
+        ...built,
+        hint: '提示：從師生、家長的態度及學生用詞推斷人物受歡迎程度。',
+        trapProfile: 'character',
+        worksheetRef: 'worksheet_ref_liang',
+      };
+    },
+  },
+  {
+    id: 'ws_liang_travel_gifts',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.GIFT_DETAIL,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/旅遊孖寶/.test(text) || !/登山手杖/.test(text)) return null;
+      const built = structured(
+        '登山手杖和隨身環保暖包',
+        ['登山手杖和登山背囊', '環保暖包和太陽傘', '相機和地圖'],
+      );
+      return {
+        questionText: '作者送給梁主任的「旅遊孖寶」是什麼？',
+        ...built,
+        hint: '提示：找出文中直接點名的兩件退休禮物。',
+        trapProfile: 'line_detail',
+        worksheetRef: 'worksheet_ref_liang',
+      };
+    },
+  },
+  {
+    id: 'ws_liang_letter_purpose',
+    category: 'main_theme',
+    technique: WORKSHEET_TECHNIQUE_TAGS.EXPRESS_FEELINGS,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/梁主任/.test(text) || !/親愛的|掛念|探望/.test(text)) return null;
+      const built = structured(
+        '表達對退休梁主任的掛念與問候，並相約探望',
+        [
+          '介紹世界各地的美食與風俗',
+          '說明登山手杖的使用方法',
+          '通知梁主任期中試的日期',
+        ],
+      );
+      return {
+        questionText: '作者寫這封信的主要目的是甚麼？',
+        ...built,
+        hint: '提示：書信常見目的包括問候、致意、相約；勿只取其中一段細節。',
+        trapProfile: 'intent',
+        worksheetRef: 'worksheet_ref_liang',
+      };
+    },
+  },
+];
+
+export const WORKSHEET_LIANG_LETTER_TEMPLATE_IDS = [
+  ...WORKSHEET_LIANG_LETTER_FIXED_TEMPLATES.map((t) => t.id),
+  ...WORKSHEET_LIANG_LETTER_DYNAMIC_TEMPLATES.map((t) => t.id),
+];
+
 /** 全部試卷參考樣版（固定附文 + 動態 OCR） */
 export const WORKSHEET_READING_FIXED_TEMPLATES = [
   ...WORKSHEET43_READING_FIXED_TEMPLATES,
   ...WORKSHEET_DUANWU_READING_FIXED_TEMPLATES,
   ...WORKSHEET_ZHENGPING_READING_FIXED_TEMPLATES,
   ...WORKSHEET47_TREES_READING_FIXED_TEMPLATES,
+  ...WORKSHEET_LIANG_LETTER_FIXED_TEMPLATES,
 ];
 
 export const WORKSHEET_DYNAMIC_TEMPLATES = [
@@ -835,6 +1009,7 @@ export const WORKSHEET_DYNAMIC_TEMPLATES = [
   ...WORKSHEET_DUANWU_DYNAMIC_TEMPLATES,
   ...WORKSHEET_ZHENGPING_DYNAMIC_TEMPLATES,
   ...WORKSHEET47_TREES_DYNAMIC_TEMPLATES,
+  ...WORKSHEET_LIANG_LETTER_DYNAMIC_TEMPLATES,
 ];
 
 export const WORKSHEET_TEMPLATE_IDS = [
@@ -842,4 +1017,5 @@ export const WORKSHEET_TEMPLATE_IDS = [
   ...WORKSHEET_DUANWU_TEMPLATE_IDS,
   ...WORKSHEET_ZHENGPING_TEMPLATE_IDS,
   ...WORKSHEET47_TREES_TEMPLATE_IDS,
+  ...WORKSHEET_LIANG_LETTER_TEMPLATE_IDS,
 ];
