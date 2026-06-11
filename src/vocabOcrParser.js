@@ -7,7 +7,7 @@ import { getGlobalSharedIdioms } from './globalSharedPool.js';
 import { withHints } from './vocabHints.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
 import { PRESTUDY_IDIOM_COUNT } from './prestudyDictationBridge.js';
-import { sanitizeDisplayText } from './previewWordFormat.js';
+import { resolveCustomVocabFromInput } from './customVocabMatcher.js';
 
 /** 默書／詞表版面特徵 */
 const VOCAB_SHEET_SIGNALS = /默書|默写|詞表|词表|詞語|词语|聽寫|听写|生字|默寫|新詞|新词|成語|成语|詞彙|词汇|校本詞|校本词|範文詞|范文词|溫習詞|温习词/;
@@ -159,18 +159,15 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
     });
   });
 
-  if (candidates.length < 3) {
-    const globalWords = getGlobalSharedIdioms()
-      .map((item) => item.word)
-      .filter(isValidWordToken);
-    globalWords.forEach((word) => {
-      if (candidates.length >= maxWords || seen.has(word)) return;
-      seen.add(word);
-      candidates.push(word);
-    });
+  if (candidates.length < 1) {
+    return [];
   }
 
-  return candidates
-    .slice(0, maxWords)
-    .map((word, index) => enrichExtractedWord(word, index, seed));
+  /** 精準配對 IDIOM_EXAM_POOL — 禁止 random 盲抽舊題庫 */
+  const { matchedQuestions } = resolveCustomVocabFromInput(candidates.slice(0, maxWords), {
+    source: 'ocr_vocab_parser',
+    seed,
+  });
+
+  return matchedQuestions;
 }

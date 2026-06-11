@@ -5,14 +5,16 @@
  * ➔ 課文預習 + 默書特訓（不走閱讀理解出題）
  */
 
-import { DICTATION_VOCAB_POOL, PRESTUDY_VOCAB_POOL } from './mockDatabase';
 import { cloneVocab, mergeWrongWordsIntoDictation } from './vocabService';
+import { DICTATION_VOCAB_POOL, PRESTUDY_VOCAB_POOL } from './mockDatabase';
 import { getUploadImageCount, mergeUploadImagesIntoContent } from './uploadMetaUtils';
 import { parseVocabUploadItems } from './vocabOcrService';
 import {
   saveUploadedPreviewWords,
+  toPrestudyCardList,
   PRESTUDY_IDIOM_COUNT,
 } from './prestudyDictationBridge';
+import { resolveCustomVocabFromInput } from './customVocabMatcher';
 
 export { parseVocabUploadItems };
 
@@ -88,23 +90,46 @@ export function applyVocabListUpload(currentConfig, uploadMeta = {}, wrongWordEn
   let prestudy;
   let dictation;
   let label;
+  let matchedQuestions = uploadMeta.matchedQuestions ?? [];
 
-  if (uploadMeta.extractedNewWords?.length) {
-    prestudy = cloneVocab(uploadMeta.extractedNewWords);
+  if (uploadMeta.extractedNewWords?.length || uploadMeta.matchedQuestions?.length) {
+    /** 精準配對：以家長 OCR/貼上詞語為準，禁止 random 盲抽 */
+    if (!matchedQuestions.length) {
+      matchedQuestions = uploadMeta.matchedQuestions?.length
+        ? uploadMeta.matchedQuestions
+        : resolveCustomVocabFromInput(
+          uploadMeta.customWordsInput ?? uploadMeta.extractedNewWords,
+          { source: uploadMeta.source ?? 'vocab_upload' },
+        ).matchedQuestions;
+    }
+    prestudy = toPrestudyCardList(matchedQuestions);
     dictation = cloneVocab(prestudy);
     if (wrongWordEntries.length) {
       dictation = mergeWrongWordsIntoDictation(dictation, wrongWordEntries);
     }
-    saveUploadedPreviewWords(prestudy);
-    label = `OCR 詞表 · ${uploadMeta.fileName ?? '校本默書單'}（${prestudy.length} 詞）`;
+    saveUploadedPreviewWords(matchedQuestions);
+    label = `精準詞表 · ${uploadMeta.fileName ?? '校本默書單'}（${prestudy.length} 詞 · 100% 對接）`;
+  } else if (uploadMeta.customWordsInput?.length) {
+    const resolved = resolveCustomVocabFromInput(uploadMeta.customWordsInput, {
+      source: 'parent_custom_input',
+    });
+    matchedQuestions = resolved.matchedQuestions;
+    prestudy = toPrestudyCardList(matchedQuestions);
+    dictation = cloneVocab(prestudy);
+    saveUploadedPreviewWords(matchedQuestions);
+    label = `自訂詞表 · ${prestudy.length} 詞（精準配對）`;
   } else {
+    /** 無 OCR 結果時仍走精準配對（mock 池僅作詞語來源，不 random 渲染） */
     const pack = generateVocabPack({ ...uploadMeta, seed });
-    dictation = cloneVocab(pack.dictationList);
+    const words = pack.prestudyList.map((v) => v.tc ?? v.word).filter(Boolean);
+    const resolved = resolveCustomVocabFromInput(words, { source: 'vocab_pack_seed' });
+    matchedQuestions = resolved.matchedQuestions;
+    prestudy = toPrestudyCardList(matchedQuestions);
+    dictation = cloneVocab(prestudy);
     if (wrongWordEntries.length) {
       dictation = mergeWrongWordsIntoDictation(dictation, wrongWordEntries);
     }
-    prestudy = cloneVocab(pack.prestudyList);
-    saveUploadedPreviewWords(prestudy);
+    saveUploadedPreviewWords(matchedQuestions);
     label = pack.label;
   }
 
@@ -122,11 +147,14 @@ export function applyVocabListUpload(currentConfig, uploadMeta = {}, wrongWordEn
         },
         vocabList: cloneVocab(prestudy),
         vocabUploadSession: seed,
+        matchedQuestions,
+        customWordsInput: uploadMeta.customWordsInput ?? matchedQuestions.map((q) => q.word),
       }, uploadMeta),
     },
     pack: {
       prestudyList: prestudy,
       dictationList: dictation,
+      matchedQuestions,
       seed,
       imageCount: uploadMeta.imageCount ?? uploadMeta.fileCount ?? 1,
       label,

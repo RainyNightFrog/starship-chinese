@@ -36,6 +36,7 @@ import {
   pickRandomSharedMethodQuestions,
   generateContributorLabel,
 } from './globalSharedPool.js';
+import { generateQuestionsFromCustomWords } from './customVocabMatcher.js';
 
 const DEFAULT_QUESTION_COUNT = 5;
 
@@ -189,6 +190,24 @@ function resolveArticleFromOcr(cleanedText, cleanArticleLines, coreKeywords) {
  * @returns {{ articleTitle, articleLines, questions, contentTrack, coreKeywords, expandedBy, source, questionCount }}
  */
 export function generateQuestionsFromOcr(ocrText = '', options = {}) {
+  /** 詞表模式：家長指定詞彙 → 精準配對 IDIOM_EXAM_POOL（禁止 random 盲抽） */
+  if (options.customWordsInput?.length) {
+    const { matchedQuestions, customWordsInput } = generateQuestionsFromCustomWords(
+      options.customWordsInput,
+      options,
+    );
+    return {
+      articleTitle: '校本自訂詞表',
+      articleLines: [],
+      questions: matchedQuestions,
+      contentTrack: 'vocab_custom',
+      coreKeywords: customWordsInput,
+      expandedBy: 'strict_vocab_match',
+      source: options.source ?? 'custom_words_input',
+      questionCount: matchedQuestions.length,
+    };
+  }
+
   const { seed, questionCount = DEFAULT_QUESTION_COUNT } = options;
   const { randInt } = createRng(seed ?? Date.now());
 

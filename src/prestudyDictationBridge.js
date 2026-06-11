@@ -9,10 +9,8 @@ import { getGlobalSharedIdioms, shuffleGlobalIdiomPool } from './globalSharedPoo
 import { fisherYatesShuffle } from './questionEngineCore.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
 import { withHints, getVocabHintEn, enrichVocabList } from './vocabHints.js';
+import { resolveCustomVocabFromInput } from './customVocabMatcher.js';
 import {
-  parsePreviewWordsStorage,
-  toPreviewStoragePayload,
-  normalizePreviewStorageItem,
   extractPreviewWord,
   extractPreviewMeaning,
   parsePreviewWordsJson,
@@ -95,16 +93,20 @@ export function previewWordToVocabItem(item, index = 0) {
 export function saveUploadedPreviewWords(vocabItems = []) {
   if (!Array.isArray(vocabItems) || !vocabItems.length) return false;
 
-  const previewData = toPreviewStoragePayload(vocabItems);
-  if (!previewData.length) return false;
+  /** 若已是 IDIOM 配對物件（含 options），直接寫入；否則先精準配對 */
+  const matchedQuestions = vocabItems[0]?.options?.length
+    ? vocabItems
+    : resolveCustomVocabFromInput(vocabItems).matchedQuestions;
 
-  const cardList = previewData.map((item, index) => previewWordToVocabItem(item, index)).filter(Boolean);
+  if (!matchedQuestions.length) return false;
+
+  const cardList = toPrestudyCardList(matchedQuestions);
 
   try {
-    localStorage.setItem(PREVIEW_WORDS_STORAGE_KEY, JSON.stringify(previewData));
+    localStorage.setItem(PREVIEW_WORDS_STORAGE_KEY, JSON.stringify(matchedQuestions));
     localStorage.setItem(
       STUDIED_WORDS_STORAGE_KEY,
-      JSON.stringify(previewData.map((item) => item.word)),
+      JSON.stringify(matchedQuestions.map((item) => extractPreviewWord(item) || item.word)),
     );
     sessionStorage.setItem(PRESTUDY_SESSION_KEY, JSON.stringify(cardList));
     try {
@@ -118,26 +120,16 @@ export function saveUploadedPreviewWords(vocabItems = []) {
   }
 }
 
-/** 課文預習初始化 — 優先讀取家長剛上載的新詞（安全 JSON.parse + 格式自愈） */
+/** 課文預習初始化 — 優先讀取家長剛上載的新詞（保留完整 IDIOM 配對物件） */
 export function loadPreviewWords() {
   try {
     const raw = localStorage.getItem(PREVIEW_WORDS_STORAGE_KEY);
     if (!raw) return null;
 
-    const normalized = parsePreviewWordsStorage(raw);
-    if (!normalized.length) return null;
+    const parsed = parsePreviewWordsJson(raw);
+    if (!parsed.length) return null;
 
-    /** 自愈：將舊版／損壞格式重寫為 { word, meaning } */
-    try {
-      localStorage.setItem(
-        PREVIEW_WORDS_STORAGE_KEY,
-        JSON.stringify(normalized.map(({ word, meaning }) => ({ word, meaning }))),
-      );
-    } catch {
-      /* ignore */
-    }
-
-    return toPrestudyCardList(normalized);
+    return toPrestudyCardList(parsed);
   } catch {
     return null;
   }
@@ -301,8 +293,9 @@ export function buildDictationListFromStudiedWords(words) {
   try {
     const previewRaw = localStorage.getItem(PREVIEW_WORDS_STORAGE_KEY);
     if (previewRaw) {
-      parsePreviewWordsStorage(previewRaw).forEach((item) => {
-        if (item?.word && !byWord.has(item.word)) byWord.set(item.word, item);
+      parsePreviewWordsJson(previewRaw).forEach((item) => {
+        const word = extractPreviewWord(item);
+        if (word && !byWord.has(word)) byWord.set(word, item);
       });
     }
   } catch {

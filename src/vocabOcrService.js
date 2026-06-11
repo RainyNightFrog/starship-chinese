@@ -4,8 +4,17 @@
  */
 
 import { analyzeReadingImageWithVision } from './readingVisionClient.js';
-import { parseVocabFromOcrText } from './vocabOcrParser.js';
-import { denoiseOcrText } from './generateQuestionsFromOcr.js';
+import { resolveCustomVocabFromInput } from './customVocabMatcher.js';
+
+function packVocabOcrResult(matchedQuestions, extra = {}) {
+  const customWordsInput = matchedQuestions.map((q) => q.word);
+  return {
+    extractedNewWords: matchedQuestions,
+    matchedQuestions,
+    customWordsInput,
+    ...extra,
+  };
+}
 
 async function ocrSingleImage(previewUrl, fileName, onProgress) {
   const data = await analyzeReadingImageWithVision({
@@ -47,9 +56,9 @@ export async function parseVocabUploadItems(uploadItems = [], {
   const pasted = pastedPassageText.trim();
   if (pasted) {
     onProgress?.(0.5, 1);
-    const extractedNewWords = parseVocabFromOcrText(pasted);
+    const matchedQuestions = parseVocabFromOcrText(pasted);
     onProgress?.(1, Math.max(0, steps.length - 1));
-    return { extractedNewWords, rawText: pasted, source: 'pasted' };
+    return packVocabOcrResult(matchedQuestions, { rawText: pasted, source: 'pasted' });
   }
 
   const imageItems = uploadItems.filter((item) => {
@@ -84,17 +93,16 @@ export async function parseVocabUploadItems(uploadItems = [], {
   }
 
   onProgress?.(0.92, steps.length ? steps.length - 2 : 0);
-  const extractedNewWords = parseVocabFromOcrText(rawText);
+  const matchedQuestions = parseVocabFromOcrText(rawText);
 
-  if (!extractedNewWords.length) {
+  if (!matchedQuestions.length) {
     throw new Error('未能從圖片中提取詞語，請確認上載的是默書單或詞表，並確保文字清晰。');
   }
 
   onProgress?.(1, Math.max(0, steps.length - 1));
-  return {
-    extractedNewWords,
+  return packVocabOcrResult(matchedQuestions, {
     rawText,
     source: imageItems.length >= 2 ? 'server-ocr-sequential' : 'server-ocr',
     imageCount: imageItems.length,
-  };
+  });
 }

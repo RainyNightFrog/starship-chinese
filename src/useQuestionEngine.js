@@ -21,16 +21,12 @@ import { shieldReadingBank } from './readingMismatchShield';
 
 const VOCAB_TASKS = new Set(['dictation', 'prestudy']);
 
-/** 合併家長上載詞表（OCR 提取）至默書/預習題池前端 */
+/** 合併家長上載詞表 — 有上載 session 時 100% 鎖定指定詞彙，禁止混入 mock 舊題庫 */
 function mergeVocabUpload(taskId, basePool, overrides = {}) {
   if (!overrides.vocabUploadSession) return basePool;
   const uploaded = overrides.vocabByTask?.[taskId];
   if (!uploaded?.length) return basePool;
-  const ids = new Set(uploaded.map((v) => String(v.id)));
-  return [
-    ...uploaded.map((v) => ({ ...v })),
-    ...basePool.filter((v) => !ids.has(String(v.id))),
-  ];
+  return uploaded.map((v) => ({ ...v }));
 }
 
 /**
