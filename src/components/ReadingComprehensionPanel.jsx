@@ -235,6 +235,11 @@ export default function ReadingComprehensionPanel({
   const [hoveredLine, setHoveredLine] = useState(null);
   const [readingPinnedLine, setReadingPinnedLine] = useState(null);
   const activeReadingLine = hoveredLine ?? readingPinnedLine;
+  const passageScrollRef = useRef(null);
+
+  useEffect(() => {
+    passageScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentQuestion?.passageId, displayPassage.length]);
 
   if (!currentQuestion && !passageFinished) {
     return (
@@ -340,7 +345,17 @@ export default function ReadingComprehensionPanel({
           center
           className={`font-black ${isNight ? 'text-amber-200' : theme?.accent}`}
         />
+        {displayPassage.length > 6 && (
+          <BilingualLabel
+            zh={dt(`共 ${displayPassage.length} 行 · 向上捲動可閱讀開首`)}
+            en={`${displayPassage.length} lines total · scroll up for the beginning`}
+            size={isSEN ? 'sm' : 'xs'}
+            center
+            className={`font-bold ${getMutedTextClass(isNight, isSEN ? 'text-sm' : 'text-xs')}`}
+          />
+        )}
         <div
+          ref={passageScrollRef}
           className={`rounded-xl border-2 overflow-y-auto xh-scroll w-full space-y-2
             ${passageScrollClass}
             ${isNight ? 'xh-scroll--dark' : 'xh-scroll'}

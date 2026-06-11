@@ -4,3 +4,6 @@ export const READING_MAX_QUESTIONS = 8;
 
 /** 每次上載從 GLOBAL_SHARED_METHODS 注入的不同題型數（名校呈分試矩陣） */
 export const SHARED_METHOD_INJECT_COUNT = 3;
+
+/** 單篇閱讀正文最多保留行數（長篇說明文如「米」需 30+ 句） */
+export const READING_MAX_ARTICLE_LINES = 48;

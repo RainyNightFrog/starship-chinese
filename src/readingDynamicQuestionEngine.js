@@ -13,6 +13,7 @@ import {
   isValidOptionCandidate,
   isGarbageOption,
 } from './readingTextQuality.js';
+import { READING_MAX_ARTICLE_LINES } from './readingConstants.js';
 
 const STOP_WORDS = new Set([
   '的', '了', '在', '是', '我', '他', '她', '它', '們', '這', '那', '有', '和', '與',
@@ -188,7 +189,7 @@ export function sentencesToPassageLines(sentences = []) {
     }
   }
 
-  return sanitizeArticleLines(lines).slice(0, 14);
+  return sanitizeArticleLines(lines).slice(0, READING_MAX_ARTICLE_LINES);
 }
 
 /**

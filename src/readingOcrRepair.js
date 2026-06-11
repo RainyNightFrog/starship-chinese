@@ -41,6 +41,8 @@ export function repairReadingOcrText(text = '') {
     s = s.replace(re, rep);
   });
 
+  s = stripWorksheetWatermarks(s);
+
   s = s.replace(
     /([\u4e00-\u9fff，「『：])([A-Za-z@#]{1,4})([\u4e00-\u9fff])/g,
     (all, before, mid, after) => {
@@ -52,6 +54,16 @@ export function repairReadingOcrText(text = '') {
   );
 
   return s;
+}
+
+/** 剝除試卷頁眉/頁腳水印（避免與正文黏連導致整段被誤判為無效行） */
+export function stripWorksheetWatermarks(text = '') {
+  return String(text ?? '')
+    .replace(/更多練習\s*[,，]?\s*歡迎到\s*www\.[a-zA-Z0-9.-]+\.[a-z]{2,}\s*免費下載/gi, '')
+    .replace(/更多練習\s*[,，]?\s*歡迎到\s*[a-zA-Z0-9-]+\.(?:com|hk|org|net)\s*免費下載/gi, '')
+    .replace(/www\.[a-zA-Z0-9.-]+\.[a-z]{2,}/gi, '')
+    .replace(/beasmartc9\.com/gi, '')
+    .replace(/免費下載(?=[\u4e00-\u9fff「])/g, '');
 }
 
 /** 修復後是否仍含可疑 OCR 殘留 */

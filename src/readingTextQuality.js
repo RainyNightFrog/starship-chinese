@@ -1,9 +1,10 @@
 /** 閱讀 OCR / 貼上文字 — 品質判斷與清理 */
 
 import { stripOptionLetterPrefix } from './readingOptionPrefixCleaner.js';
-import { repairReadingOcrText } from './readingOcrRepair.js';
+import { repairReadingOcrText, stripWorksheetWatermarks } from './readingOcrRepair.js';
+import { READING_MAX_ARTICLE_LINES } from './readingConstants.js';
 
-export { repairReadingOcrText, hasSuspiciousOcrArtifacts } from './readingOcrRepair.js';
+export { repairReadingOcrText, hasSuspiciousOcrArtifacts, stripWorksheetWatermarks } from './readingOcrRepair.js';
 
 export function chineseCharRatio(text = '') {
   if (!text.length) return 0;
@@ -92,6 +93,8 @@ const NOISE_LINE_PATTERNS = [
   /^[A-Za-z0-9\-_]{4,}$/,
   /^選項\s*\d/,
   /未能辨識|待重新上載/,
+  /更多練習.*(?:www\.|beasmart|免費下載)/i,
+  /www\.[a-zA-Z0-9.-]+\.[a-z]{2,}/i,
   // 其他大題雜訊（非閱讀正文框）
   /^四[、\.．]/,
   /句義辨析/,
@@ -262,7 +265,7 @@ export function isValidOptionCandidate(text = '', correct = '') {
 }
 
 export function isValidPassageLine(text = '') {
-  const line = cleanReadingLine(text);
+  const line = cleanReadingLine(stripWorksheetWatermarks(text));
   if (line.length < 8) return false;
   if (isNoiseLine(line)) return false;
   if (/^[A-DＡ-Ｄ][\.．、]/.test(line)) return false;
@@ -395,9 +398,37 @@ export function extractPassageBodyFromOcrText(rawText = '') {
   return sanitizeArticleLines(storyLines);
 }
 
+/** 超長 OCR 行按句號拆成多行，避免整段說明文被截斷或誤丟 */
+export function expandArticleLinesToSentences(lines = []) {
+  const expanded = [];
+
+  lines.forEach((raw) => {
+    const line = normalizePassageLine(stripWorksheetWatermarks(raw));
+    if (!line || line.length < 6) return;
+
+    if (line.length <= 72) {
+      expanded.push(line);
+      return;
+    }
+
+    const parts = line
+      .split(/(?<=[。！？；;])/)
+      .map((s) => cleanReadingLine(s))
+      .filter((s) => s.length >= 6);
+
+    if (parts.length >= 2) {
+      parts.forEach((p) => expanded.push(p));
+    } else {
+      expanded.push(line);
+    }
+  });
+
+  return expanded;
+}
+
 /** 清洗 AI / OCR 擷取的文章行 */
 export function sanitizeArticleLines(lines = []) {
-  const stripped = lines
+  const stripped = expandArticleLinesToSentences(lines)
     .map((line) => normalizePassageLine(
       cleanReadingLine(line).replace(/^第[一二三四五六七八九十\d]+行[：:]?/, ''),
     ))
@@ -405,7 +436,7 @@ export function sanitizeArticleLines(lines = []) {
   const truncated = truncateAtForeignSection(stripped);
   return truncated
     .filter((line) => isValidPassageLine(line) && !isWorksheetQuestionLine(line) && !isExamStructuralLine(line))
-    .slice(0, 20);
+    .slice(0, READING_MAX_ARTICLE_LINES);
 }
 
 /** 將貼上文字切成段落行 */

@@ -203,7 +203,9 @@ function isMethodApplicable(templateId, ctx) {
     case 'type_character_portrayal':
       return /他|她|同學|老師|驚|讚|眾人|旁人/.test((ctx.lines ?? []).join(''));
     case 'type_implied_meaning':
-      return (ctx.lines?.length ?? 0) >= 4;
+      return (ctx.lines?.length ?? 0) >= 4
+        && /他|她|主角|爺爺|媽媽|說：|「.+」/.test((ctx.lines ?? []).join(''))
+        && !/穀物|稻米|澱粉|營養|加工|品種|說明.*貢獻/.test((ctx.lines ?? []).join(''));
     default:
       return true;
   }
