@@ -260,8 +260,10 @@ export function lookupCharDecomposition(char) {
 
 /** 逐字拆解整個詞語 @returns {{ chars: Array<{ char: string, radical: string, body: string }> } | null} */
 export function getVocabDecomposition(vocab) {
-  const word = String(vocab?.tc || vocab?.sc || vocab?.idiomWord || '').trim();
-  if (!word) return null;
+  const word = String(vocab?.tc || vocab?.sc || vocab?.word || vocab?.idiomWord || '').trim();
+  if (!word || !/^[\u4e00-\u9fff]+$/.test(word)) return null;
+  /** 僅拆解 2–4 字成語／詞語；OCR 亂串不顯示拆解 */
+  if (word.length < 2 || word.length > 4) return null;
 
   const chars = [...word];
   return {

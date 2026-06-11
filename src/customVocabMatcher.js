@@ -29,6 +29,9 @@ export function normalizeCustomWordList(input = []) {
   const pushWord = (raw) => {
     const word = extractPreviewWord(raw) || String(raw ?? '').trim().replace(/\s/g, '');
     if (!word || !/^[\u4e00-\u9fff]{2,8}$/.test(word)) return;
+    /** 拒絕 OCR 長串亂碼與標題 */
+    if (/字詞表|词表|年級|年级|高年級|默書|封面|目錄/.test(word)) return;
+    if (!POOL_BY_WORD.has(word) && word.length > 4) return;
     if (seen.has(word)) return;
     seen.add(word);
     words.push(word);
