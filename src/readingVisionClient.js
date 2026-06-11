@@ -71,12 +71,20 @@ async function fetchOcrApi(path, options) {
   for (const base of bases) {
     try {
       const res = await fetch(`${base}${path}`, options);
+      if (res.status === 413) {
+        const err = new Error('圖片總大小超過伺服器上限。請減少一次上載張數，或改用「貼上文字」備援。');
+        err.code = 'payload_too_large';
+        throw err;
+      }
       resolvedApiBase = base;
       return res;
     } catch (netErr) {
+      if (netErr?.code === 'payload_too_large') throw netErr;
       lastErr = netErr;
     }
   }
+  ocrAvailableCache = null;
+  resolvedApiBase = null;
   throwBackendUnavailable(lastErr);
 }
 

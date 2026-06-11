@@ -152,4 +152,13 @@ export const VOCAB_UPLOAD_MODAL_CONFIG = {
   parsingSubLabelMulti: '伺服器正在逐頁 OCR 辨識詞表，請勿關閉視窗…',
   doneTitle: '校本詞表已同步至課文預習與默書特訓！',
   doneHint: '請切換至「課文預習」溫習新詞，完成後一鍵前往「默書特訓」聽寫',
+  galleryMultiLabel: ' · 將逐頁 OCR 合併全部詞語',
+  galleryMultiSubLabel: '請確認縮圖順序（1→2→…），再開始詞彙提取',
+  gallerySingleSubLabel: '可繼續添加，或開始詞彙提取',
+  pasteSuggestLabel: '✨ 建議：直接貼上詞表文字（比拍照 OCR 更準）',
+  pastePlaceholder: '每行一個詞語，例如：\n恍然大悟\n並肩作戰\n扣人心弦\n...\n\n（多頁可用 --- 分隔）',
+  emptyGalleryHint: '尚未添加圖片，請選擇檔案、拍照，或貼上詞表文字',
+  doneMultiSummary: (n) => `已從 ${n} 張默書單提取詞語，同步至課文預習與默書特訓`,
+  doneSingleSummary: (n) => `共解析 ${n} 張圖片`,
+  parseButtonLabel: '🧠 開始提取詞彙',
 };

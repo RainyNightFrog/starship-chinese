@@ -18,4 +18,13 @@ export const READING_UPLOAD_MODAL_CONFIG = {
   parsingSubLabelMulti: '伺服器正在逐頁 OCR 辨識，請勿關閉視窗…',
   doneTitle: '閱讀理解已同步至學生端！',
   doneHint: '已自動剔除考卷題號、分數欄與 A–D 選項，僅保留乾淨故事正文，並生成 3 道隨機理解題。',
+  galleryMultiLabel: ' · 將依序拼讀成一篇完整長文',
+  galleryMultiSubLabel: '請確認縮圖順序（1→2→…），再開始 AI 解析',
+  gallerySingleSubLabel: '可繼續添加，或開始 AI 解析',
+  pasteSuggestLabel: '✨ 建議：直接貼上文章文字（比拍照 OCR 更準）',
+  pastePlaceholder: '每行一段落，例如：\n暴雨令西環水浸。\n水中的汽車變成小島。\n...\n\n（多頁可用 --- 分隔）',
+  emptyGalleryHint: '尚未添加圖片，請選擇檔案、拍照，或貼上文章文字',
+  doneMultiSummary: (n) => `已將 ${n} 張考卷拼讀為 1 篇閱讀文章`,
+  doneSingleSummary: (n) => `共解析 ${n} 張圖片`,
+  parseButtonLabel: '🧠 開始 AI 解析',
 };

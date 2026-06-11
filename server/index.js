@@ -18,7 +18,7 @@ const app = express();
 const PORT = process.env.SPEECH_PORT || 3001;
 
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: '15mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 app.get('/api/speech/health', (_req, res) => {
   res.json({

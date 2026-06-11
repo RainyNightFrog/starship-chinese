@@ -225,9 +225,13 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
 
     /** 後端 OCR 模式：解析前確認 API 可用 */
     if (config.useBackendOcr && !pastedPassageText.trim()) {
+      setParseError(null);
       const ok = await checkReadingVisionAvailable(true);
       if (!ok) {
-        setParseError('後端 OCR 尚未就緒，請確認 npm run dev 已啟動且已安裝 tesseract.js。');
+        const msg = '後端 OCR 尚未就緒，請確認 npm run dev 已啟動且 tesseract.js 已安裝。';
+        setOcrEngineReady(false);
+        setOcrEngineError(msg);
+        setParseError(msg);
         return;
       }
       setOcrEngineReady(true);
@@ -283,6 +287,8 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
             : err?.code === 'image_too_blurry'
               ? err.message
               : err?.code === 'vocab_worksheet_misroute'
+                ? err.message
+              : err?.code === 'payload_too_large'
                 ? err.message
               : (err?.message || '解析失敗，請重試或改用較清晰的圖片。');
           setParseError(msg);
@@ -401,6 +407,15 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
 
           {phase === 'gallery' && (
             <div className="space-y-4 text-left">
+              {config.useBackendOcr && (
+                <p className={`text-xs font-bold rounded-lg px-3 py-2 text-center ${ocrEngineError ? 'text-rose-300 bg-rose-950/40 border border-rose-700' : ocrEngineReady ? 'text-emerald-300 bg-emerald-950/30 border border-emerald-700/50' : 'text-indigo-200 bg-indigo-950/30 border border-indigo-700/50'}`}>
+                  {ocrEngineError
+                    ? `⚠️ ${ocrEngineError}`
+                    : ocrEngineReady
+                      ? '✓ 後端 Node.js OCR 已就緒（chi_tra 繁體中文）'
+                      : '⏳ 正在連接後端 OCR 引擎…'}
+                </p>
+              )}
               {parseError && (
                 <p className="text-sm text-rose-300 font-bold bg-rose-950/50 border-2 border-rose-600 rounded-xl p-4 text-center leading-relaxed">
                   ⚠️ {parseError}
@@ -409,12 +424,12 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
               <div className="text-center">
                 <p className="font-black text-amber-200">
                   已選 {uploadItems.length} 張
-                  {uploadItems.length > 1 ? ' · 將依序拼讀成一篇完整長文' : ''}
+                  {uploadItems.length > 1 ? (config.galleryMultiLabel ?? ' · 將依序拼讀成一篇完整長文') : ''}
                 </p>
                 <p className="text-xs text-slate-400 mt-1 font-bold">
                   {uploadItems.length > 1
-                    ? '請確認縮圖順序（1→2→…），再開始 AI 解析'
-                    : '可繼續添加，或開始 AI 解析'}
+                    ? (config.galleryMultiSubLabel ?? '請確認縮圖順序（1→2→…），再開始 AI 解析')
+                    : (config.gallerySingleSubLabel ?? '可繼續添加，或開始 AI 解析')}
                 </p>
               </div>
 
@@ -445,18 +460,18 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
               </div>
 
               {!uploadItems.length && !pastedPassageText.trim() && (
-                <p className="text-center text-sm text-slate-500 font-bold py-4">尚未添加圖片，請選擇檔案、拍照，或貼上文章文字</p>
+                <p className="text-center text-sm text-slate-500 font-bold py-4">{config.emptyGalleryHint ?? '尚未添加圖片，請選擇檔案、拍照，或貼上文章文字'}</p>
               )}
 
               {config.allowTextPaste && (
                 <div className="space-y-2 rounded-xl border border-indigo-600/60 bg-indigo-950/30 p-3">
                   <p className="text-xs font-black text-indigo-200 text-center">
-                    ✨ 建議：直接貼上文章文字（比拍照 OCR 更準）
+                    {config.pasteSuggestLabel ?? '✨ 建議：直接貼上文章文字（比拍照 OCR 更準）'}
                   </p>
                   <textarea
                     value={pastedPassageText}
                     onChange={(e) => setPastedPassageText(e.target.value)}
-                    placeholder={'每行一段落，例如：\n暴雨令西環水浸。\n水中的汽車變成小島。\n...\n\n（多頁可用 --- 分隔）'}
+                    placeholder={config.pastePlaceholder ?? '每行一段落…\n\n（多頁可用 --- 分隔）'}
                     rows={5}
                     className="w-full rounded-lg border border-indigo-700 bg-slate-900 text-slate-100 text-sm p-3 font-bold leading-relaxed resize-y min-h-[100px]"
                   />
@@ -492,7 +507,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
                   onClick={startParsing}
                   className="flex-[2] py-3 rounded-xl font-black text-slate-900 bg-amber-400 hover:bg-amber-300 border-2 border-amber-500 disabled:opacity-40 text-sm"
                 >
-                  {isParsingLocked ? '⏳ 本機辨識中…' : `🧠 開始 AI 解析${pastedPassageText.trim() ? '（貼上文字）' : `（${uploadItems.length} 張）`}`}
+                  {isParsingLocked ? '⏳ 本機辨識中…' : `${config.parseButtonLabel ?? '🧠 開始 AI 解析'}${pastedPassageText.trim() ? '（貼上文字）' : `（${uploadItems.length} 張）`}`}
                 </button>
               </div>
             </div>
@@ -542,8 +557,12 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
               <p className="font-black text-emerald-300 text-lg">{config.doneTitle}</p>
               <p className="text-sm text-amber-200 font-bold">
                 {uploadItems.length > 1
-                  ? `已將 ${uploadItems.length} 張考卷拼讀為 1 篇閱讀文章`
-                  : `共解析 ${uploadItems.length} 張圖片`}
+                  ? (typeof config.doneMultiSummary === 'function'
+                    ? config.doneMultiSummary(uploadItems.length)
+                    : `已將 ${uploadItems.length} 張考卷拼讀為 1 篇閱讀文章`)
+                  : (typeof config.doneSingleSummary === 'function'
+                    ? config.doneSingleSummary(uploadItems.length)
+                    : `共解析 ${uploadItems.length} 張圖片`)}
               </p>
               <p className="text-sm text-slate-400">{config.doneHint}</p>
               <button type="button" onClick={handleClose} className="w-full py-3 rounded-xl font-black bg-amber-500 text-slate-900 hover:bg-amber-400">完成</button>

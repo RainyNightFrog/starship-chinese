@@ -1,11 +1,9 @@
 /**
  * 詞表上載 OCR — 後端 Tesseract 辨識 → 純詞彙清單（不走閱讀理解出題）
+ * 多張圖片採「逐頁 OCR」避免一次 POST 超過 body 上限（8+ 張默書單常見）
  */
 
-import {
-  analyzeReadingImageWithVision,
-  analyzeReadingImagesStitchedWithVision,
-} from './readingVisionClient.js';
+import { analyzeReadingImageWithVision } from './readingVisionClient.js';
 import { parseVocabFromOcrText } from './vocabOcrParser.js';
 import { denoiseOcrText } from './generateQuestionsFromOcr.js';
 
@@ -18,13 +16,23 @@ async function ocrSingleImage(previewUrl, fileName, onProgress) {
   return denoiseOcrText(data.rawText ?? data.articleLines?.join('\n') ?? '');
 }
 
-async function ocrMultipleImages(uploadItems, onProgress, onStitchPage) {
-  const data = await analyzeReadingImagesStitchedWithVision({
-    images: uploadItems,
-    onProgress,
-    onStitchPage,
-  });
-  return denoiseOcrText(data.rawText ?? data.articleLines?.join('\n') ?? '');
+/** 多張詞表 — 逐頁 OCR 後合併文字（不一次上傳全部 base64） */
+async function ocrMultipleImagesSequential(imageItems, onProgress, onStitchPage) {
+  const texts = [];
+  const total = imageItems.length;
+
+  for (let i = 0; i < total; i += 1) {
+    onStitchPage?.(i + 1, total);
+    const base = i / total;
+    const text = await ocrSingleImage(
+      imageItems[i].previewUrl,
+      imageItems[i].fileName ?? `第${i + 1}頁`,
+      (ratio) => onProgress?.(base + (ratio / total) * 0.95),
+    );
+    if (text.trim()) texts.push(text.trim());
+  }
+
+  return texts.join('\n\n');
 }
 
 /**
@@ -54,17 +62,16 @@ export async function parseVocabUploadItems(uploadItems = [], {
     throw new Error('請上載默書單或詞表圖片（PDF 請改用 JPG/PNG 拍照）。');
   }
 
+  onProgress?.(0, 0);
   let rawText = '';
 
   if (imageItems.length >= 2) {
-    onProgress?.(0, 0);
-    rawText = await ocrMultipleImages(
+    rawText = await ocrMultipleImagesSequential(
       imageItems,
       (ratio, stepIndex) => onProgress?.(ratio, stepIndex ?? 1),
       onStitchPage,
     );
   } else {
-    onProgress?.(0, 0);
     rawText = await ocrSingleImage(
       imageItems[0].previewUrl,
       imageItems[0].fileName,
@@ -87,7 +94,7 @@ export async function parseVocabUploadItems(uploadItems = [], {
   return {
     extractedNewWords,
     rawText,
-    source: imageItems.length >= 2 ? 'server-ocr-stitch' : 'server-ocr',
+    source: imageItems.length >= 2 ? 'server-ocr-sequential' : 'server-ocr',
     imageCount: imageItems.length,
   };
 }

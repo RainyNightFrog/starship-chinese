@@ -30,7 +30,7 @@ if (!fs.existsSync(path.join(distDir, 'index.html'))) {
 }
 
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: '15mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 app.get('/api/speech/health', (_req, res) => {
   res.json({
