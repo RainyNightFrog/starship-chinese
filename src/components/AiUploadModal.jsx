@@ -120,7 +120,11 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
         .then((ok) => {
           setOcrEngineReady(ok);
           if (!ok) {
-            setOcrEngineError('後端 OCR 尚未就緒，請確認 npm run dev 已啟動且 tesseract.js 已安裝。');
+            const onVercel = typeof window !== 'undefined'
+              && /\.vercel\.app$/i.test(window.location.hostname);
+            setOcrEngineError(onVercel
+              ? '後端 OCR 尚未就緒。請在 Vercel 設定 VITE_SPEECH_API_URL 指向已部署的雲端 API，並重新部署前端。'
+              : '後端 OCR 尚未就緒，請確認 npm run dev 已啟動且 tesseract.js 已安裝。');
           }
         })
         .catch(() => {

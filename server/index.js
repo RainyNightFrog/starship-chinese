@@ -1,45 +1,23 @@
-import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { synthesizeHandler, isAzureConfigured } from './azureTts.js';
-import {
-  readingOcrHealthHandler,
-  readingOcrSingleHandler,
-  readingOcrStitchHandler,
-  logReadingOcrStatus,
-} from './readingOcr.js';
-import { readingVocabOcrHandler } from './vocabOcr.js';
+import { createApiApp, logReadingOcrStatus, isAzureConfigured } from './createApp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const app = express();
-const PORT = process.env.SPEECH_PORT || 3001;
+const app = createApiApp();
+const PORT = Number(process.env.PORT || process.env.SPEECH_PORT || 3001);
+const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : undefined);
+const isProd = process.env.NODE_ENV === 'production';
 
-app.use(cors({ origin: true }));
-app.use(express.json({ limit: '50mb' }));
-
-app.get('/api/speech/health', (_req, res) => {
-  res.json({
-    ok: isAzureConfigured(),
-    provider: 'azure-neural',
-    region: process.env.AZURE_SPEECH_REGION || 'eastasia',
-  });
-});
-
-app.post('/api/speech/synthesize', synthesizeHandler);
-
-/** 閱讀 OCR — 後端 Node.js Tesseract（已移除 Ollama） */
-app.get('/api/reading/health', readingOcrHealthHandler);
-app.post('/api/reading/vision', readingOcrSingleHandler);
-app.post('/api/reading/vision-stitch', readingOcrStitchHandler);
-app.post('/api/reading/vocab-vision', readingVocabOcrHandler);
-
-const server = app.listen(PORT, () => {
-  console.log(`[Speech API] http://localhost:${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+  const hostLabel = HOST ?? 'localhost';
+  console.log(`[Speech API] http://${hostLabel}:${PORT}`);
   console.log(`[Speech API] Azure ${isAzureConfigured() ? '已設定 ✓' : '未設定 — 請編輯 .env 填入 AZURE_SPEECH_KEY'}`);
+  if (isProd) {
+    console.log('[Speech API] 生產模式 — 請在 Vercel 設定 VITE_SPEECH_API_URL=<此服務網址>/api/speech');
+  }
   logReadingOcrStatus();
 });
 

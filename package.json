@@ -9,6 +9,7 @@
     "dev:fresh": "npm run dev:stop && npm run dev",
     "live": "node scripts/go-live.mjs",
     "live:server": "node server/liveServer.js",
+    "start:api": "node server/index.js",
     "dev:client": "vite",
     "dev:server": "node server/index.js",
     "setup": "node scripts/setup-speech.mjs",

@@ -1,0 +1,20 @@
+# Render Blueprint — 一鍵部署後端 API
+# 用法：Render Dashboard → New → Blueprint → 連接此 GitHub repo
+# 部署完成後，把服務網址填入 Vercel 環境變數 VITE_SPEECH_API_URL
+services:
+  - type: web
+    name: starship-chinese-api
+    runtime: docker
+    plan: starter
+    region: singapore
+    healthCheckPath: /api/reading/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AZURE_SPEECH_REGION
+        value: eastasia
+      - key: AZURE_SPEECH_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+        # 例：https://starship-chinese.vercel.app,https://你的自訂網域
