@@ -8,6 +8,7 @@ import { buildOcrFallbackPack, buildReadingPackFromLines, buildReadingPackFromPa
 import { mapToReadingBankEntry } from './readingSchema';
 import { shieldReadingBank } from './readingMismatchShield';
 import { READING_MAX_QUESTIONS } from './readingConstants.js';
+import { ingestReadingBankToGlobalPool } from './globalSharedReadingPool.js';
 
 export { parseReadingUploadItems } from './readingOcrService';
 
@@ -73,6 +74,14 @@ export function generateReadingVariantPack(meta = {}) {
 
   const shieldedBank = shieldReadingBank(readingBank);
 
+  const globalIngest = shieldedBank.length
+    ? ingestReadingBankToGlobalPool(shieldedBank, {
+      seed,
+      contributorLabel: meta.contributorLabel,
+      source: meta.source ?? 'ugc_reading_upload',
+    })
+    : { added: false, totalPassages: 0 };
+
   return {
     readingBank: shieldedBank,
     passageTitle: shieldedBank[0]?.passageTitle ?? '校本閱讀',
@@ -80,6 +89,7 @@ export function generateReadingVariantPack(meta = {}) {
     imageCount,
     passageCount: 1,
     stitched: Boolean(meta.stitched || meta.extractedPassages?.[0]?.stitched),
+    globalIngest,
   };
 }
 

@@ -196,16 +196,26 @@ export function buildShuffledDeck(taskId, pool) {
   const idToItem = new Map(pool.map((q) => [String(q.id), q]));
   let orderedIds = remaining;
 
-  /** 閱讀理解：同一篇文章內按 Q1→Q2→Q3 順序，避免索引卡死 */
+  /** 依 passageId 分組後 Fisher-Yates 洗牌 — 避免每次都從 read-1「秋夜思鄉」開始 */
   if (taskId === 'reading') {
-    orderedIds = [...remaining].sort((idA, idB) => {
-      const a = idToItem.get(idA);
-      const b = idToItem.get(idB);
-      const pa = a?.passageId ?? '';
-      const pb = b?.passageId ?? '';
-      if (pa !== pb) return pa.localeCompare(pb);
-      return READING_Q_NUM(a) - READING_Q_NUM(b);
+    const groups = new Map();
+    remaining.forEach((id) => {
+      const item = idToItem.get(id);
+      const pid = item?.passageId ?? id;
+      if (!groups.has(pid)) groups.set(pid, []);
+      groups.get(pid).push(id);
     });
+
+    groups.forEach((ids) => {
+      ids.sort((idA, idB) => {
+        const a = idToItem.get(idA);
+        const b = idToItem.get(idB);
+        return READING_Q_NUM(a) - READING_Q_NUM(b);
+      });
+    });
+
+    const shuffledPassageIds = fisherYatesShuffle([...groups.keys()]);
+    orderedIds = shuffledPassageIds.flatMap((pid) => groups.get(pid) ?? []);
   } else {
     orderedIds = fisherYatesShuffle(remaining);
   }

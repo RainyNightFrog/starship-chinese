@@ -94,6 +94,8 @@ export default function ParentDebugPanel({
       imageCount: uploadMeta.fileCount ?? variants.imageCount ?? 1,
       passageTitle: variants.passageTitle,
       fileName: uploadMeta.fileName,
+      sharedGlobally: Boolean(variants.globalIngest?.added),
+      totalSharedPassages: variants.globalIngest?.totalPassages ?? 0,
       at: new Date().toLocaleString('zh-HK'),
     });
   }, [onConfigChange]);
@@ -401,7 +403,7 @@ export default function ParentDebugPanel({
                   <p><span className="text-slate-400">AI 詞表</span> 默{parentConfig.assignedContent.vocabByTask?.dictation?.length ?? 0} · 預{parentConfig.assignedContent.vocabByTask?.prestudy?.length ?? 0}</p>
                 )}
                 <p><span className="text-slate-400">本地題庫</span> 默{bankStats.dictation} · 預{bankStats.prestudy} · 測{bankStats.quiz} · 呈{bankStats.sspa} · 句{bankStats.sentence} · 閱{bankStats.reading}</p>
-                <p><span className="text-amber-400/90">🌐 全港共享題庫</span> 四字詞 {bankStats.globalSharedIdioms ?? 0}（UGC +{bankStats.ugcIdioms ?? 0}）· 寫作手法 {bankStats.globalSharedMethods ?? 0}（UGC +{bankStats.ugcMethods ?? 0}）</p>
+                <p><span className="text-amber-400/90">🌐 全港共享題庫</span> 四字詞 {bankStats.globalSharedIdioms ?? 0}（UGC +{bankStats.ugcIdioms ?? 0}）· 寫作手法 {bankStats.globalSharedMethods ?? 0}（UGC +{bankStats.ugcMethods ?? 0}）· 閱讀文章 {bankStats.globalSharedReadingPassages ?? 0} 篇</p>
                 <p><span className="text-slate-400">詞表方案</span> {parentConfig.uploadLabel ?? '—'}</p>
                 <p><span className="text-slate-400">常錯字</span> {wrongWordReminders?.length ?? 0} 個</p>
                 {(parentRedemptions?.length ?? 0) > 0 && (

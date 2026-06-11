@@ -25,6 +25,15 @@ import {
   enrichPoolItemWithContributor,
   getGlobalPoolStats,
 } from './globalSharedPool.js';
+import {
+  buildReadingPoolWithGlobal,
+  getGlobalSharedReadingStats,
+  ingestReadingBankToGlobalPool,
+  getGlobalSharedReadingBank,
+  reloadGlobalSharedReadingPool,
+  GLOBAL_SHARED_READING_PASSAGES,
+  LS_GLOBAL_READING,
+} from './globalSharedReadingPool.js';
 
 /** 基礎 30 題小五/小六呈分試核心詞彙矩陣（答案已完全隔離）— 黃金種子庫 */
 export const BASE_IDIOM_POOL = IDIOM_EXAM_POOL;
@@ -133,6 +142,11 @@ export { SSPA_REFERENCE_TEMPLATES } from './sspaReferenceTemplatePool.js';
 /** 內建閱讀理解 — 18 篇文章、54 道題（見 readingBuiltinPool.js） */
 export const READING_POOL = BUILTIN_READING_POOL;
 
+/** 閱讀理解池 = 全港 UGC 上載文章 + 內建 18 篇 */
+export function getReadingPoolWithGlobal() {
+  return buildReadingPoolWithGlobal(BUILTIN_READING_POOL);
+}
+
 /** 四字詞語語意池 — 供外部直接 import / 管理員編輯器 */
 export { IDIOM_EXAM_POOL } from './idiomExamPool.js';
 export { EXAM_METHOD_TEMPLATES, EXAM_METHOD_TEMPLATE_COUNT } from './readingGoldenTechniquePool.js';
@@ -177,6 +191,16 @@ export {
   getGlobalPoolStats,
 } from './globalSharedPool.js';
 
+export {
+  LS_GLOBAL_READING,
+  GLOBAL_SHARED_READING_PASSAGES,
+  getGlobalSharedReadingBank,
+  buildReadingPoolWithGlobal,
+  ingestReadingBankToGlobalPool,
+  reloadGlobalSharedReadingPool,
+  getGlobalSharedReadingStats,
+} from './globalSharedReadingPool.js';
+
 /** 單元測驗池 = 靜態核心 + 最新 GLOBAL_SHARED_IDIOMS */
 export function getQuizPoolWithGlobal() {
   return buildQuizPoolWithGlobal(QUIZ_POOL_CORE);
@@ -200,13 +224,14 @@ export function getPoolByTaskId(taskId) {
     case 'sspa':
       return getSspaPoolWithGlobal().map(enrichPoolItemWithContributor);
     case 'sentence': return SENTENCE_POOL;
-    case 'reading': return READING_POOL;
+    case 'reading': return getReadingPoolWithGlobal();
     default: return [];
   }
 }
 
 export function getQuestionBankStats() {
   const globalStats = getGlobalPoolStats();
+  const readingStats = getGlobalSharedReadingStats();
   const quizPool = getQuizPoolWithGlobal();
   const sspaPool = getSspaPoolWithGlobal();
   return {
@@ -215,10 +240,11 @@ export function getQuestionBankStats() {
     quiz: quizPool.length,
     sspa: sspaPool.length,
     sentence: SENTENCE_POOL.length,
-    reading: READING_POOL.length,
+    reading: getReadingPoolWithGlobal().length,
     advancedReading: ADVANCED_QUESTION_POOL.length,
     referenceTemplates: SSPA_REFERENCE_TEMPLATES.length,
     idiomExam: IDIOM_EXAM_POOL.length,
     ...globalStats,
+    ...readingStats,
   };
 }

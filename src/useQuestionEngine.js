@@ -14,6 +14,8 @@ import {
   clearTaskHistory,
 } from './questionEngineCore';
 import { getPoolByTaskId } from './mockDatabase';
+import { buildReadingPoolWithGlobal } from './globalSharedReadingPool.js';
+import { BUILTIN_READING_POOL } from './readingBuiltinPool.js';
 import { mergeWrongWordsIntoDictation } from './vocabService';
 import { enrichVocabList } from './vocabHints';
 import { sanitizeReadingBankItem } from './readingDisplayGuard';
@@ -77,6 +79,8 @@ function mergeAiOverrides(taskId, basePool, overrides = {}) {
   if (taskId === 'reading') {
     const rawBank = overrides.readingBank?.length ? overrides.readingBank : [];
     const bank = rawBank.length ? shieldReadingBank(rawBank) : [];
+    const communityPool = buildReadingPoolWithGlobal(BUILTIN_READING_POOL);
+
     if (overrides.readingUploadSession) {
       if (bank.length) {
         return bank.map((q) => sanitizeReadingBankItem({ ...q }));
@@ -84,9 +88,17 @@ function mergeAiOverrides(taskId, basePool, overrides = {}) {
       /** 有上載紀錄但動態題庫為空 — 禁止回退內建題，避免文章與選項脫節 */
       return [];
     }
-    if (!bank.length) return basePool;
+
+    /** 無家長指定上載：中央共享 UGC 文章 + 內建 18 篇（隨機篇章順序） */
+    if (!bank.length) {
+      return communityPool.map((q) => sanitizeReadingBankItem({ ...q }));
+    }
+
     const ids = new Set(bank.map((q) => String(q.id)));
-    const merged = [...bank, ...basePool.filter((q) => !ids.has(String(q.id)))];
+    const merged = [
+      ...bank.map((q) => sanitizeReadingBankItem({ ...q })),
+      ...communityPool.filter((q) => !ids.has(String(q.id))),
+    ];
     return merged.map((q) => sanitizeReadingBankItem({ ...q }));
   }
 
