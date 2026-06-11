@@ -12,6 +12,11 @@ import {
   idiomExamPoolToSspaPool,
 } from './idiomExamPool.js';
 import { EXAM_METHOD_TEMPLATES } from './readingGoldenTechniquePool.js';
+import {
+  isGarbageIdiomWord,
+  isPlayableVocabExamItem,
+  isScannableIdiomCandidate,
+} from './sharedIdiomQuality.js';
 
 export const LS_GLOBAL_IDIOMS = 'starship_global_idioms';
 export const LS_GLOBAL_METHODS = 'starship_global_methods';
@@ -106,9 +111,35 @@ function persistGlobalMethods() {
   writeJsonStorage(LS_GLOBAL_METHODS, GLOBAL_SHARED_METHODS);
 }
 
+/** 清理 localStorage 中 OCR 碎片與無法作答的舊版 UGC 題 */
+export function sanitizeGlobalIdiomPool(pool = GLOBAL_SHARED_IDIOMS) {
+  const cleaned = (pool ?? []).map((item) => {
+    const word = String(item?.word ?? '').trim();
+    if (!word || isGarbageIdiomWord(word)) return null;
+    if (!isPlayableVocabExamItem(item)) {
+      return {
+        ...item,
+        word,
+        dictationOnly: true,
+        hint: item.hint ?? `校本詞彙「${word}」`,
+      };
+    }
+    return item;
+  }).filter(Boolean);
+
+  const changed = cleaned.length !== pool.length
+    || cleaned.some((item, i) => item.dictationOnly !== pool[i]?.dictationOnly);
+  return { pool: cleaned, changed };
+}
+
 export function reloadGlobalSharedPools() {
   GLOBAL_SHARED_IDIOMS = loadPoolWithMigration(LS_GLOBAL_IDIOMS, LEGACY_LS_IDIOMS, IDIOM_EXAM_POOL);
   GLOBAL_SHARED_METHODS = loadPoolWithMigration(LS_GLOBAL_METHODS, LEGACY_LS_METHODS, EXAM_METHOD_TEMPLATES);
+  const { pool, changed } = sanitizeGlobalIdiomPool(GLOBAL_SHARED_IDIOMS);
+  if (changed) {
+    GLOBAL_SHARED_IDIOMS = pool;
+    persistGlobalIdioms();
+  }
   ensureSeedMethodsInPool();
   return { idioms: GLOBAL_SHARED_IDIOMS.length, methods: GLOBAL_SHARED_METHODS.length };
 }
@@ -165,23 +196,32 @@ function createSeededRandInt(seed) {
   };
 }
 
-/** 標準題目包裝 — 選項／提示絕不洩漏正確答案文字 */
+/** 標準題目包裝 — UGC 無精選選項時僅供默書／預習，不進呈分試 */
 export function wrapIdiomAsStandardQuestion(word, meta = {}) {
   const w = String(word ?? '').trim();
-  if (!w) return null;
+  if (!w || isGarbageIdiomWord(w)) return null;
+
+  const hasCuratedOptions = Array.isArray(meta.options) && meta.options.length >= 4
+    && isPlayableVocabExamItem({ word: w, options: meta.options, questionText: meta.questionText });
+
+  if (hasCuratedOptions) {
+    return {
+      word: w,
+      questionText: meta.questionText
+        ?? `「${w}」在呈分試語境中最接近以下哪一項語意？`,
+      options: [...meta.options],
+      correctAnswerIndex: Number(meta.correctAnswerIndex ?? 0),
+      hint: meta.hint ?? `提示：聯想「${w}」常見的課文用法，再選出最貼切的語意。`,
+      contributorLabel: meta.contributorLabel ?? generateContributorLabel(meta.seed ?? Date.now()),
+      source: meta.source ?? 'ugc_photo_scan',
+      isCommunityShared: true,
+    };
+  }
 
   return {
     word: w,
-    questionText: meta.questionText
-      ?? `文中使用了「${w}」，以下哪一項最能描述這個詞語在文中的意思？`,
-    options: [
-      '能結合上下文，概括該詞在文中的語境義',
-      '望文生義，理解成與本文主旨相反的意思',
-      '只按字面拆解每一個字，忽略段落語境',
-      '與該詞所在句子的敘述重點完全無關',
-    ],
-    correctAnswerIndex: 0,
-    hint: meta.hint ?? `提示：請回到原文找出「${w}」所在的句子，從前後文推斷語意（提示不會直接給答案）。`,
+    dictationOnly: true,
+    hint: meta.hint ?? `校本詞彙「${w}」— 請先理解詞義再默寫。`,
     contributorLabel: meta.contributorLabel ?? generateContributorLabel(meta.seed ?? Date.now()),
     source: meta.source ?? 'ugc_photo_scan',
     isCommunityShared: true,
@@ -190,7 +230,7 @@ export function wrapIdiomAsStandardQuestion(word, meta = {}) {
 
 export function saveToGlobalPool(newWordObj) {
   const word = String(newWordObj?.word ?? '').trim();
-  if (!word) return false;
+  if (!word || isGarbageIdiomWord(word)) return false;
 
   if (GLOBAL_SHARED_IDIOMS.some((item) => item.word === word)) return false;
 
@@ -240,8 +280,7 @@ export function scanIdiomCandidatesFromText(cleanText = '') {
 
   matches.forEach((word) => {
     if (seen.has(word)) return;
-    if (SCAN_STOP_WORDS.has(word)) return;
-    if (/^[第行選項題分]/.test(word)) return;
+    if (!isScannableIdiomCandidate(word)) return;
     seen.add(word);
     candidates.push(word);
   });
@@ -349,9 +388,13 @@ export function ingestFromExamPatterns(idiomPatterns = [], meta = {}) {
 }
 
 export function globalIdiomsToVocabPool(idiomPool = getGlobalSharedIdioms()) {
-  return idiomPool.map((item) => {
+  return idiomPool
+    .filter((item) => item?.word && !isGarbageIdiomWord(item.word))
+    .map((item) => {
     const correctIdx = Number(item.correctAnswerIndex ?? 0);
-    const meaning = item.options?.[correctIdx] ?? stripHintPrefix(item.hint);
+    const meaning = item.dictationOnly
+      ? stripHintPrefix(item.hint)
+      : (item.options?.[correctIdx] ?? stripHintPrefix(item.hint));
     return {
       id: item.id ?? `global-vocab-${item.word}`,
       tc: item.word,
@@ -591,9 +634,10 @@ export function enrichQuizItemWithContributor(quizItem) {
 }
 
 export function buildQuizPoolWithGlobal(quizPoolCore, idiomToQuiz = idiomExamPoolToQuizPool) {
+  const playableIdioms = getGlobalSharedIdioms().filter(isPlayableVocabExamItem);
   return [
     ...quizPoolCore,
-    ...idiomToQuiz(getGlobalSharedIdioms()),
+    ...idiomToQuiz(playableIdioms),
   ];
 }
 
@@ -602,9 +646,10 @@ export function buildSspaPoolWithGlobal(
   sspaPoolCore,
   idiomToSspa = idiomExamPoolToSspaPool,
 ) {
+  const playableIdioms = getGlobalSharedIdioms().filter(isPlayableVocabExamItem);
   return [
     ...sspaPoolCore,
-    ...idiomToSspa(getGlobalSharedIdioms()),
+    ...idiomToSspa(playableIdioms),
     ...getGlobalSharedMethods().map(methodPoolItemToSspaQuestion),
   ];
 }

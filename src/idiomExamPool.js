@@ -1,3 +1,5 @@
+import { isPlayableVocabExamItem } from './sharedIdiomQuality.js';
+
 /**
  * 核心詞彙語意池（30 題）— 小五/小六呈分試難度
  * ─────────────────────────────────────────────
@@ -429,7 +431,7 @@ function buildIdiomPoolMeta(item) {
 }
 
 export function idiomExamPoolToQuizPool(pool = IDIOM_EXAM_POOL) {
-  return pool.map((item) => {
+  return pool.filter(isPlayableVocabExamItem).map((item) => {
     const correctIdx = Number(item.correctAnswerIndex ?? 0);
     const correctText = item.options[correctIdx] ?? '';
     const correctKey = OPTION_KEYS[correctIdx] ?? 'A';
@@ -473,7 +475,7 @@ export function idiomExamPoolToAdvancedPool(pool = IDIOM_EXAM_POOL) {
 
 /** 轉為呈分試模擬（sspa）引擎格式 */
 export function idiomExamPoolToSspaPool(pool = IDIOM_EXAM_POOL) {
-  return pool.map((item, index) => {
+  return pool.filter(isPlayableVocabExamItem).map((item, index) => {
     const correctIdx = Number(item.correctAnswerIndex ?? 0);
     const correctText = item.options[correctIdx] ?? '';
 

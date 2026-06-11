@@ -24,6 +24,7 @@ import {
   enrichQuizItemWithContributor,
   enrichPoolItemWithContributor,
   getGlobalPoolStats,
+  reloadGlobalSharedPools,
 } from './globalSharedPool.js';
 import {
   buildReadingPoolWithGlobal,
@@ -205,6 +206,9 @@ export {
 export function getQuizPoolWithGlobal() {
   return buildQuizPoolWithGlobal(QUIZ_POOL_CORE);
 }
+
+/** 啟動時清理 OCR 碎片題，避免呈分試出現無原文的「文中詞義」題 */
+reloadGlobalSharedPools();
 
 /** 呈分試池 = 靜態核心 + 中央共享 30 題詞彙語意 + 十大呈分試手法矩陣 + UGC */
 export function getSspaPoolWithGlobal() {
