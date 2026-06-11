@@ -25,6 +25,16 @@ function resolveMaxWords(imageCount = 1) {
   return Math.min(PRESTUDY_IDIOM_COUNT + Math.max(0, imageCount - 1) * 8, 48);
 }
 
+function assertMinVocabWords(matchedQuestions, imageCount = 1) {
+  const min = imageCount >= 2 ? 5 : 3;
+  if (matchedQuestions.length < min) {
+    throw new Error(
+      `只辨識到 ${matchedQuestions.length} 個詞語（至少需要 ${min} 個）。`
+      + '建議直接貼上詞表文字（每行一詞），或重新拍照確保標題與詞語清晰。',
+    );
+  }
+}
+
 function packVocabOcrResult(matchedQuestions, extra = {}) {
   const customWordsInput = matchedQuestions.map((q) => q.word);
   return {
@@ -75,7 +85,10 @@ export async function parseVocabUploadItems(uploadItems = [], {
   const pasted = pastedPassageText.trim();
   if (pasted) {
     onProgress?.(0.5, 1);
-    const matchedQuestions = parseVocabFromOcrText(pasted, { maxWords: PRESTUDY_IDIOM_COUNT });
+    const matchedQuestions = parseVocabFromOcrText(pasted, {
+      maxWords: PRESTUDY_IDIOM_COUNT,
+      minWords: 1,
+    });
     onProgress?.(1, Math.max(0, steps.length - 1));
     return packVocabOcrResult(matchedQuestions, { rawText: pasted, source: 'pasted' });
   }
@@ -115,11 +128,14 @@ export async function parseVocabUploadItems(uploadItems = [], {
   const matchedQuestions = parseVocabFromOcrText(rawText, {
     maxWords: resolveMaxWords(imageItems.length),
     imageCount: imageItems.length,
+    minWords: imageItems.length >= 2 ? 5 : 3,
   });
 
   if (!matchedQuestions.length) {
     throw new Error('未能從圖片中提取詞語，請確認上載的是默書單或詞表，並確保文字清晰。');
   }
+
+  assertMinVocabWords(matchedQuestions, imageItems.length);
 
   onProgress?.(1, Math.max(0, steps.length - 1));
   return packVocabOcrResult(matchedQuestions, {

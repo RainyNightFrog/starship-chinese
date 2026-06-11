@@ -72,6 +72,21 @@ export const WORKSHEET_VOCAB_HINTS = {
   形形色色: { tc: '種類繁多，各式各樣', sc: '形形色色', en: 'Of all kinds; diverse' },
   不約而同: { tc: '沒有事先商量而做法相同', sc: '不约而同', en: 'To act in unison without prior agreement' },
   自暴自棄: { tc: '甘心墮落，不求上進', sc: '自暴自弃', en: 'To give up on oneself; self-destructive' },
+
+  // ── 字詞表頁（四字成語 · 第二組）──
+  大發雷霆: { tc: '形容大發脾氣，聲勢猛烈', sc: '大发雷霆', en: 'To fly into a thunderous rage' },
+  風吹雨打: { tc: '比喻遭受恶劣環境的侵襲或折磨', sc: '风吹雨打', en: 'To endure wind and rain; hardship' },
+  憤憤不平: { tc: '心中不服，感到憤怒', sc: '愤愤不平', en: 'Indignant and resentful' },
+  目不暇接: { tc: '形容事物太多，來不及看', sc: '目不暇接', en: 'Too much to take in at once' },
+  波瀾壯闊: { tc: '比喻聲勢浩大或規模宏偉', sc: '波澜壮阔', en: 'Magnificent and sweeping' },
+  不知不覺: { tc: '沒有察覺到', sc: '不知不觉', en: 'Unconsciously; without noticing' },
+  奔流不息: { tc: '形容水流不斷，也比喻連續不斷', sc: '奔流不息', en: 'Flowing ceaselessly' },
+  永無止境: { tc: '永遠沒有盡頭', sc: '永无止境', en: 'Endless; without limit' },
+  星羅棋佈: { tc: '像星星和棋子一樣散布，形容數量多而廣', sc: '星罗棋布', en: 'Scattered like stars and chess pieces' },
+  星羅棋布: { tc: '像星星和棋子一樣散布，形容數量多而廣', sc: '星罗棋布', en: 'Scattered like stars and chess pieces' },
+  興致勃勃: { tc: '形容興致很高，情緒旺盛', sc: '兴致勃勃', en: 'In high spirits; enthusiastic' },
+  連綿不斷: { tc: '連續不斷，沒有間斷', sc: '连绵不断', en: 'Continuous and unbroken' },
+  夜以繼日: { tc: '日夜不停地做某事', sc: '夜以继日', en: 'Day and night without stop' },
 };
 
 /** 四字成語錨點 — 判斷該頁應以 4 字切分 */
@@ -79,6 +94,8 @@ export const WORKSHEET_IDIOM_ANCHORS = [
   '汗流浹背', '鰥寡孤獨', '彬彬有禮', '微不足道', '語重心長',
   '百折不回', '百折不撓', '眾目睽睽', '形形色色', '不約而同',
   '恍然大悟', '自暴自棄',
+  '大發雷霆', '風吹雨打', '憤憤不平', '目不暇接', '波瀾壯闊', '不知不覺',
+  '奔流不息', '永無止境', '星羅棋佈', '興致勃勃', '連綿不斷', '夜以繼日',
 ];
 
 export const ALL_WORKSHEET_WORDS = new Set([
@@ -97,4 +114,6 @@ export const WORKSHEET_ORDERED_WORDS = [
   '資產', '傳媒', '創建', '義務', '敬慕', '尊嚴', '宗旨', '服侍', '愛戴',
   '汗流浹背', '鰥寡孤獨', '彬彬有禮', '微不足道', '語重心長', '百折不回',
   '百折不撓', '眾目睽睽', '形形色色', '不約而同', '恍然大悟', '自暴自棄',
+  '大發雷霆', '風吹雨打', '憤憤不平', '目不暇接', '波瀾壯闊', '不知不覺',
+  '奔流不息', '永無止境', '星羅棋佈', '星羅棋布', '興致勃勃', '連綿不斷', '夜以繼日',
 ];

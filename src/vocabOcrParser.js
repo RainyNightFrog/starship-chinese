@@ -102,6 +102,69 @@ function isKnownWord(word) {
   return KNOWN_WORD_SET.has(word) && !TITLE_FRAGMENT.has(word);
 }
 
+/** 可接受的 OCR 詞語（含詞庫外新詞，拒絕標題碎片） */
+function isValidExtractedWord(word) {
+  if (!/^[\u4e00-\u9fff]{2,4}$/.test(word)) return false;
+  if (TITLE_FRAGMENT.has(word)) return false;
+  if (/字詞表|词表|年級|年级|高年級|小學|小学|詞語表/.test(word)) return false;
+  return true;
+}
+
+/** 從 OCR 行收集逐字主字流（格子字表） */
+function buildCharStream(rawText = '') {
+  const charStream = [];
+
+  String(rawText).split(/\n+/).forEach((rawLine) => {
+    if (NOISE_LINE.test(rawLine)) return;
+    const line = rawLine.trim();
+    if (!line) return;
+
+    const leading = line.match(/^[\s\d.·\-*•]*([\u4e00-\u9fff])/);
+    if (leading) {
+      charStream.push(leading[1]);
+      return;
+    }
+
+    const hanOnly = line.replace(/[^\u4e00-\u9fff]/g, '');
+    if (hanOnly.length === 1) {
+      charStream.push(hanOnly);
+    } else if (hanOnly.length === 2) {
+      charStream.push(hanOnly[0], hanOnly[1]);
+    } else if (hanOnly.length <= 4) {
+      hanOnly.split('').forEach((ch) => charStream.push(ch));
+    }
+  });
+
+  return charStream;
+}
+
+/** 字流 2/4 字切分 — 自動選較佳配對（成語頁 vs 雙字詞頁） */
+function extractGenericGridWords(rawText = '') {
+  const charStream = buildCharStream(rawText);
+  if (charStream.length < 4) return [];
+
+  const pairChunk = (chunkSize) => {
+    const hits = [];
+    for (let i = 0; i + chunkSize <= charStream.length; i += chunkSize) {
+      const word = charStream.slice(i, i + chunkSize).join('');
+      if (isValidExtractedWord(word)) {
+        hits.push({ word, pos: i });
+      }
+    }
+    return hits;
+  };
+
+  const as4 = pairChunk(4);
+  const as2 = pairChunk(2);
+
+  const scoreHits = (hits) => hits.reduce(
+    (sum, h) => sum + (isKnownWord(h.word) ? 3 : 1),
+    0,
+  );
+
+  return mergeWordHits(scoreHits(as4) >= scoreHits(as2) ? as4 : as2);
+}
+
 function stripWorksheetTitle(text = '') {
   return String(text)
     .replace(/小學高年級字詞表/g, ' ')
@@ -372,8 +435,10 @@ function extractLineTokens(rawText = '', { lexiconOnly = false } = {}) {
       .map((s) => s.replace(/[^\u4e00-\u9fff]/g, ''))
       .filter((w) => w.length === 2 || w.length === 4)
       .forEach((w) => {
-        if (!isKnownWord(w) || seen.has(w)) return;
+        if (lexiconOnly && !isKnownWord(w)) return;
+        if (!lexiconOnly && !isValidExtractedWord(w)) return;
         if (lexiconOnly && !KNOWN_WORD_SET.has(w)) return;
+        if (seen.has(w)) return;
         seen.add(w);
         tokens.push(w);
       });
@@ -390,6 +455,14 @@ function isWorksheetUpload(rawText = '') {
   return (hanCount >= 20 && latinCount >= 5) || (VOCAB_SHEET_SIGNALS.test(rawText) && hanCount >= 12);
 }
 
+/** 家長貼上詞表 — 每行一詞 */
+function looksLikePastedWordList(rawText = '') {
+  const lines = String(rawText).trim().split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length < 2) return false;
+  const wordLines = lines.filter((l) => /^[\u4e00-\u9fff]{2,4}$/.test(l.replace(/\s/g, '')));
+  return wordLines.length >= Math.ceil(lines.length * 0.6);
+}
+
 export function isVocabWorksheetContent(rawText = '') {
   const text = String(rawText ?? '').trim();
   if (!text) return false;
@@ -403,25 +476,45 @@ export function isVocabWorksheetContent(rawText = '') {
 export function parseVocabFromOcrText(rawText = '', options = {}) {
   const maxWords = options.maxWords ?? PRESTUDY_IDIOM_COUNT;
   const seed = options.seed ?? Date.now();
+  const minWords = options.minWords ?? 3;
+
+  if (looksLikePastedWordList(rawText)) {
+    const candidates = extractLineTokens(rawText, { lexiconOnly: false }).filter(isValidExtractedWord);
+    if (candidates.length >= minWords) {
+      const { matchedQuestions } = resolveCustomVocabFromInput(candidates.slice(0, maxWords), {
+        source: 'pasted_vocab_list',
+        seed,
+        maxWords,
+      });
+      return matchedQuestions.filter((q) => isValidExtractedWord(q.word)).slice(0, maxWords);
+    }
+  }
 
   let candidates = extractWorksheetWordsHybrid(rawText);
 
-  if (candidates.length < 1) {
-    candidates = extractLineTokens(rawText, { lexiconOnly: true });
-  }
-
-  /** 偵測校本字詞表但 OCR 極差 — 依順序模糊對齊 */
-  if (candidates.length < 3 && isWorksheetUpload(rawText)) {
-    const plainFull = toPlainHan(rawText);
+  /** 格子字表通用提取（支援詞庫外成語） */
+  if (candidates.length < minWords) {
     candidates = mergeWordHits(
-      recoverOrderedWorksheetWords(plainFull),
-      extractGridHeadChars(rawText),
+      candidates.map((word, pos) => ({ word, pos })),
+      extractGenericGridWords(rawText),
+      extractLineTokens(rawText, { lexiconOnly: false }),
     );
   }
 
-  candidates = candidates.filter(isKnownWord);
+  /** 偵測校本字詞表但 OCR 極差 — 依順序模糊對齊 */
+  if (candidates.length < minWords && isWorksheetUpload(rawText)) {
+    const plainFull = toPlainHan(rawText);
+    candidates = mergeWordHits(
+      candidates.map((word, pos) => ({ word, pos })),
+      recoverOrderedWorksheetWords(plainFull),
+      extractGridHeadChars(rawText),
+      extractGenericGridWords(rawText),
+    );
+  }
 
-  if (!candidates.length) {
+  candidates = candidates.filter(isValidExtractedWord);
+
+  if (candidates.length < minWords) {
     return [];
   }
 
@@ -431,5 +524,5 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
     maxWords,
   });
 
-  return matchedQuestions.filter((q) => isKnownWord(q.word)).slice(0, maxWords);
+  return matchedQuestions.filter((q) => isValidExtractedWord(q.word)).slice(0, maxWords);
 }

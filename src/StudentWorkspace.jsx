@@ -300,6 +300,7 @@ export default function StudentWorkspace({
   }, []);
 
   /** 課文預習 — 優先 localStorage 上載新詞 → 家長 config → 共享池（全部正規化） */
+  const hasUploadedPreview = Boolean(loadPreviewWords()?.length);
   const basePrestudyVocabList = useMemo(() => {
     const fromStorage = loadPreviewWords();
     if (fromStorage?.length) return fromStorage;
@@ -585,8 +586,8 @@ export default function StudentWorkspace({
         {reshuffled && <DeckReshuffledBanner isSEN={isSEN} isNight={isNight} total={todayProgress.total} dt={dt} />}
         <QuestionEngineMeta todayProgress={todayProgress} isSEN={isSEN} isNight={isNight} dt={dt} />
         <BilingualLabel
-          zh={dt(`預習詞表（核心詞彙 ${prestudyVocabList.length} 詞${assignedContent.vocabByTask?.prestudy?.length ? ' · 家長上載' : ' · 呈分試語意池'}）：`)}
-          en={`Pre-study list (${prestudyVocabList.length} words${assignedContent.vocabByTask?.prestudy?.length ? ' · uploaded' : ' · exam vocab pool'}):`}
+          zh={dt(`預習詞表（核心詞彙 ${prestudyVocabList.length} 詞${hasUploadedPreview || assignedContent.vocabByTask?.prestudy?.length ? ' · 家長上載' : ' · 呈分試語意池'}）：`)}
+          en={`Pre-study list (${prestudyVocabList.length} word${prestudyVocabList.length === 1 ? '' : 's'}${hasUploadedPreview || assignedContent.vocabByTask?.prestudy?.length ? ' · uploaded' : ' · exam vocab pool'}):`}
           size={isSEN ? 'md' : 'sm'}
           className={`font-bold ${isNight ? 'text-amber-200' : theme.accent}`}
         />
