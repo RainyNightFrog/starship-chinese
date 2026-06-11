@@ -1,6 +1,5 @@
 /**
- * 閱讀理解解析 — 前端上載 → 後端 Node.js Tesseract OCR → 純 JS 考點擴寫
- * OCR 在 server/readingOcr.js 執行；前端不再載入 tesseract.js
+ * 閱讀理解解析 — 後端 Node.js Tesseract OCR，雲端 API 不可用時改走瀏覽器 OCR 備援
  */
 
 import { parseReadingPageFromOcr } from './readingPageParser';
@@ -9,6 +8,7 @@ import {
   applyDualTrackEngine,
   buildBlurryUploadPayload,
   READING_BLUR_ERROR_CODE,
+  READING_BACKEND_UNAVAILABLE_CODE,
 } from './readingDualTrackEngine';
 import { splitPastedPages } from './readingTextQuality';
 import { advancedSanitizeOcrText, assertCleanArticleLines } from './readingAdvancedTextSanitizer';
@@ -17,7 +17,77 @@ import { generateQuestionsFromOcr } from './generateQuestionsFromOcr';
 import {
   analyzeReadingImageWithVision,
   analyzeReadingImagesStitchedWithVision,
+  checkReadingVisionAvailable,
 } from './readingVisionClient';
+
+function isBackendOcrFailure(err) {
+  const code = err?.code;
+  if (code === READING_BACKEND_UNAVAILABLE_CODE || code === 'tesseract_module_not_found') {
+    return true;
+  }
+  const msg = String(err?.message ?? err ?? '');
+  return /failed to fetch|networkerror|load failed|後端未連接|後端 OCR API/i.test(msg);
+}
+
+function buildParsedFromBrowserOcr(rawText, ocrLines = [], fileName = '校本閱讀', meta = {}) {
+  const pageParsed = parseReadingPageFromOcr(ocrLines, rawText);
+  const generated = generateQuestionsFromOcr(rawText);
+  const { cleanArticleLines } = advancedSanitizeOcrText(rawText);
+  const articleLines = assertCleanArticleLines(
+    cleanArticleLines.length >= 2 ? cleanArticleLines : pageParsed.passageLines,
+  );
+  const questions = generated.questions.length >= 3
+    ? generated.questions
+    : (pageParsed.questions ?? []);
+
+  return buildParsedFromServerResponse({
+    rawText,
+    articleLines,
+    articleTitle: fileName,
+    questions,
+    qualityOk: articleLines.length >= 2 && questions.length >= 3,
+    qualityReason: 'browser_ocr',
+    ocrSource: 'browser-tesseract',
+    contentTrack: generated.contentTrack,
+    coreKeywords: generated.coreKeywords,
+    expandedBy: generated.source,
+  }, fileName, { ...meta, ocrSource: 'browser-tesseract' });
+}
+
+async function extractReadingPageFromImageBrowser(previewUrl, onProgress, fileName) {
+  const { recognizeImageToText } = await import('./tesseractOcr');
+  const { rawText, ocrLines } = await recognizeImageToText(previewUrl, onProgress);
+
+  if (shouldRedirectToVocabUpload(rawText)) {
+    const err = new Error('偵測到默書詞表／詞彙清單，請改用「📷 上載新詞表」，詞彙將同步至課文預習與默書特訓（不會變成閱讀理解題）。');
+    err.code = 'vocab_worksheet_misroute';
+    throw err;
+  }
+
+  const parsed = buildParsedFromBrowserOcr(rawText, ocrLines, fileName ?? '校本閱讀');
+  return {
+    lines: parsed.articleLines,
+    parsed,
+    rawText: parsed.rawText || parsed.articleLines.join('\n'),
+    source: 'browser-ocr',
+  };
+}
+
+/** 預載 OCR 引擎 — 優先雲端後端，否則載入瀏覽器 Tesseract */
+export async function preloadReadingOcrEngine() {
+  const backendOk = await checkReadingVisionAvailable(true);
+  if (backendOk) {
+    return { mode: 'backend', ready: true };
+  }
+
+  try {
+    const { preloadTesseractEngine } = await import('./tesseractOcr');
+    await preloadTesseractEngine();
+    return { mode: 'browser', ready: true };
+  } catch {
+    return { mode: null, ready: false };
+  }
+}
 
 function buildParsedFromServerResponse(data = {}, fileName = '校本閱讀', meta = {}) {
   const rawText = data.rawText ?? '';
@@ -110,7 +180,7 @@ function buildExtractedFromPastedLines(lines = [], fileName = '貼上文章') {
   };
 }
 
-/** 單張圖片 — 後端 OCR */
+/** 單張圖片 — 後端 OCR，失敗時改走瀏覽器 OCR */
 export async function extractReadingPageFromImage(previewUrl, onProgress, fileName) {
   if (!previewUrl) {
     return {
@@ -122,51 +192,102 @@ export async function extractReadingPageFromImage(previewUrl, onProgress, fileNa
   }
 
   onProgress?.(0.05);
-  const data = await analyzeReadingImageWithVision({
-    imageDataUrl: previewUrl,
-    fileName: fileName ?? '校本閱讀',
-    onProgress,
-  });
-  onProgress?.(1);
 
-  const rawText = data.rawText ?? data.articleLines?.join('\n') ?? '';
-  if (shouldRedirectToVocabUpload(rawText)) {
-    const err = new Error('偵測到默書詞表／詞彙清單，請改用「📷 上載新詞表」，詞彙將同步至課文預習與默書特訓（不會變成閱讀理解題）。');
-    err.code = 'vocab_worksheet_misroute';
-    throw err;
+  try {
+    const data = await analyzeReadingImageWithVision({
+      imageDataUrl: previewUrl,
+      fileName: fileName ?? '校本閱讀',
+      onProgress,
+    });
+    onProgress?.(1);
+
+    const rawText = data.rawText ?? data.articleLines?.join('\n') ?? '';
+    if (shouldRedirectToVocabUpload(rawText)) {
+      const err = new Error('偵測到默書詞表／詞彙清單，請改用「📷 上載新詞表」，詞彙將同步至課文預習與默書特訓（不會變成閱讀理解題）。');
+      err.code = 'vocab_worksheet_misroute';
+      throw err;
+    }
+
+    const parsed = buildParsedFromServerResponse(data, fileName ?? '校本閱讀');
+    return {
+      lines: parsed.articleLines,
+      parsed,
+      rawText: parsed.rawText || parsed.articleLines.join('\n'),
+      source: 'server-ocr',
+    };
+  } catch (err) {
+    if (!isBackendOcrFailure(err)) throw err;
   }
 
-  const parsed = buildParsedFromServerResponse(data, fileName ?? '校本閱讀');
-
-  return {
-    lines: parsed.articleLines,
-    parsed,
-    rawText: parsed.rawText || parsed.articleLines.join('\n'),
-    source: 'server-ocr',
-  };
+  return extractReadingPageFromImageBrowser(previewUrl, onProgress, fileName);
 }
 
-/** 多張圖片 — 後端 OCR 合併 */
+/** 多張圖片 — 後端 OCR 合併，失敗時改走瀏覽器逐頁 OCR */
 export async function extractReadingStitchedPagesOcr(uploadItems = [], onProgress, onStitchPage) {
   onProgress?.(0.05);
-  const data = await analyzeReadingImagesStitchedWithVision({
-    images: uploadItems,
-    onProgress,
-    onStitchPage,
-  });
-  onProgress?.(1);
 
-  const rawText = data.rawText ?? data.articleLines?.join('\n') ?? '';
-  if (shouldRedirectToVocabUpload(rawText)) {
-    const err = new Error('偵測到默書詞表／詞彙清單，請改用「📷 上載新詞表」，詞彙將同步至課文預習與默書特訓（不會變成閱讀理解題）。');
-    err.code = 'vocab_worksheet_misroute';
-    throw err;
+  try {
+    const data = await analyzeReadingImagesStitchedWithVision({
+      images: uploadItems,
+      onProgress,
+      onStitchPage,
+    });
+    onProgress?.(1);
+
+    const rawText = data.rawText ?? data.articleLines?.join('\n') ?? '';
+    if (shouldRedirectToVocabUpload(rawText)) {
+      const err = new Error('偵測到默書詞表／詞彙清單，請改用「📷 上載新詞表」，詞彙將同步至課文預習與默書特訓（不會變成閱讀理解題）。');
+      err.code = 'vocab_worksheet_misroute';
+      throw err;
+    }
+
+    const label = uploadItems.map((item) => item.fileName).filter(Boolean).join(' + ')
+      || `多頁 OCR（${uploadItems.length} 張）`;
+
+    const parsed = buildParsedFromServerResponse(data, label, {
+      stitched: true,
+      imageCount: uploadItems.length,
+    });
+
+    return {
+      fileName: label,
+      lines: parsed.articleLines,
+      parsed,
+      rawText: parsed.rawText || parsed.articleLines.join('\n'),
+      source: 'server-ocr-stitch',
+      qualityOk: parsed.qualityOk,
+      qualityReason: parsed.qualityReason,
+      passageTitle: parsed.articleTitle,
+      articleTitle: parsed.articleTitle,
+      stitched: true,
+      imageCount: uploadItems.length,
+      questionsFromAi: false,
+    };
+  } catch (err) {
+    if (!isBackendOcrFailure(err)) throw err;
   }
 
+  const total = uploadItems.length;
+  const mergedTexts = [];
+
+  for (let i = 0; i < total; i += 1) {
+    onStitchPage?.(i + 1, total);
+    const item = uploadItems[i];
+    const page = await extractReadingPageFromImageBrowser(
+      item.previewUrl,
+      (ratio) => onProgress?.(0.05 + ((i + ratio) / total) * 0.9),
+      item.fileName ?? `第${i + 1}頁`,
+    );
+    if (page.rawText?.trim()) mergedTexts.push(page.rawText.trim());
+  }
+
+  onProgress?.(1);
+  onStitchPage?.(total, total);
+
+  const mergedText = mergedTexts.join('\n\n');
   const label = uploadItems.map((item) => item.fileName).filter(Boolean).join(' + ')
     || `多頁 OCR（${uploadItems.length} 張）`;
-
-  const parsed = buildParsedFromServerResponse(data, label, {
+  const parsed = buildParsedFromBrowserOcr(mergedText, [], label, {
     stitched: true,
     imageCount: uploadItems.length,
   });
@@ -176,7 +297,7 @@ export async function extractReadingStitchedPagesOcr(uploadItems = [], onProgres
     lines: parsed.articleLines,
     parsed,
     rawText: parsed.rawText || parsed.articleLines.join('\n'),
-    source: 'server-ocr-stitch',
+    source: 'browser-ocr-stitch',
     qualityOk: parsed.qualityOk,
     qualityReason: parsed.qualityReason,
     passageTitle: parsed.articleTitle,

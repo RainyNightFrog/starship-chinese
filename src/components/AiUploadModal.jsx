@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { stopMediaStream } from './aiUploadUtils';
 import { buildUploadSummaryName, MAX_UPLOAD_IMAGES } from '../uploadMetaUtils';
-import { checkReadingVisionAvailable } from '../readingVisionClient';
+import { preloadReadingOcrEngine } from '../readingOcrService';
 
 /** 解析動畫最短時長 — OCR 實際很快，仍讓步驟條跑完以免「閃一下就完成」 */
 const BASE_PARSE_MS = 5200;
@@ -39,6 +39,14 @@ function isAllowedUploadFile(file) {
   return /\.(jpe?g|png|gif|webp|bmp|heic|heif|pdf)$/.test(name);
 }
 
+function resolveOcrStatusMessage({ ocrEngineError, ocrEngineReady, ocrEngineMode }) {
+  if (ocrEngineError) return `⚠️ ${ocrEngineError}`;
+  if (!ocrEngineReady) return '⏳ 正在載入 OCR 引擎…';
+  if (ocrEngineMode === 'backend') return '✓ 雲端 OCR 已就緒（chi_tra 繁體中文）';
+  if (ocrEngineMode === 'browser') return '✓ 瀏覽器 OCR 已就緒（chi_tra 繁體中文 · 無需雲端後端）';
+  return '✓ OCR 已就緒';
+}
+
 function isImageUploadFile(file) {
   if (file.type.startsWith('image/')) return true;
   const name = file.name?.toLowerCase() ?? '';
@@ -70,6 +78,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
   const [facingMode, setFacingMode] = useState('environment');
   /** 後端 OCR 引擎是否已就緒 */
   const [ocrEngineReady, setOcrEngineReady] = useState(false);
+  const [ocrEngineMode, setOcrEngineMode] = useState(null);
   const [ocrEngineError, setOcrEngineError] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -94,6 +103,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
     setCameraError(null);
     setParseError(null);
     setOcrEngineReady(false);
+    setOcrEngineMode(null);
     setOcrEngineError(null);
     setPastedPassageText('');
     if (parseTimerRef.current) {
@@ -113,23 +123,21 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
       return undefined;
     }
 
-    /** 後端 OCR 模式：模態開啟時檢查 Speech API 上的 Tesseract 是否就緒 */
+    /** 後端 OCR 模式：模態開啟時檢查雲端 API，不可用則載入瀏覽器 OCR 備援 */
     if (config.useBackendOcr) {
       setOcrEngineError(null);
-      checkReadingVisionAvailable(true)
-        .then((ok) => {
-          setOcrEngineReady(ok);
-          if (!ok) {
-            const onVercel = typeof window !== 'undefined'
-              && /\.vercel\.app$/i.test(window.location.hostname);
-            setOcrEngineError(onVercel
-              ? '後端 OCR 尚未就緒。請在 Vercel 設定 VITE_SPEECH_API_URL 指向已部署的雲端 API，並重新部署前端。'
-              : '後端 OCR 尚未就緒，請確認 npm run dev 已啟動且 tesseract.js 已安裝。');
+      preloadReadingOcrEngine()
+        .then(({ mode, ready }) => {
+          setOcrEngineReady(ready);
+          setOcrEngineMode(mode);
+          if (!ready) {
+            setOcrEngineError('OCR 引擎載入失敗，請重新整理頁面，或改用「貼上文章文字」。');
           }
         })
         .catch(() => {
           setOcrEngineReady(false);
-          setOcrEngineError('無法連接後端伺服器（:3001），請執行 npm run dev:stop 後再 npm run dev。');
+          setOcrEngineMode(null);
+          setOcrEngineError('OCR 引擎載入失敗，請重新整理頁面，或改用「貼上文章文字」。');
         });
     }
 
@@ -233,18 +241,20 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
     if (!uploadItems.length && !pastedPassageText.trim()) return;
     if (isParsingLocked) return;
 
-    /** 後端 OCR 模式：解析前確認 API 可用 */
+    /** 後端 OCR 模式：解析前確認 OCR 引擎可用（含瀏覽器備援） */
     if (config.useBackendOcr && !pastedPassageText.trim()) {
       setParseError(null);
-      const ok = await checkReadingVisionAvailable(true);
-      if (!ok) {
-        const msg = '後端 OCR 尚未就緒，請確認 npm run dev 已啟動且 tesseract.js 已安裝。';
+      const { mode, ready } = await preloadReadingOcrEngine();
+      if (!ready) {
+        const msg = 'OCR 引擎尚未就緒，請重新整理頁面，或改用「貼上文章文字」。';
         setOcrEngineReady(false);
+        setOcrEngineMode(null);
         setOcrEngineError(msg);
         setParseError(msg);
         return;
       }
       setOcrEngineReady(true);
+      setOcrEngineMode(mode);
       setOcrEngineError(null);
     }
 
@@ -427,11 +437,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
               <p className="text-sm text-slate-300 font-bold leading-relaxed">{config.intro}</p>
               {config.useBackendOcr && (
                 <p className={`text-xs font-bold rounded-lg px-3 py-2 ${ocrEngineError ? 'text-rose-300 bg-rose-950/40 border border-rose-700' : ocrEngineReady ? 'text-emerald-300 bg-emerald-950/30 border border-emerald-700/50' : 'text-indigo-200 bg-indigo-950/30 border border-indigo-700/50'}`}>
-                  {ocrEngineError
-                    ? `⚠️ ${ocrEngineError}`
-                    : ocrEngineReady
-                      ? '✓ 後端 Node.js OCR 已就緒（chi_tra 繁體中文）'
-                      : '⏳ 正在連接後端 OCR 引擎…'}
+                  {resolveOcrStatusMessage({ ocrEngineError, ocrEngineReady, ocrEngineMode })}
                 </p>
               )}
               {config.useOfflineOcr && !config.useBackendOcr && (
@@ -487,11 +493,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
             <div className="space-y-4 text-left">
               {config.useBackendOcr && (
                 <p className={`text-xs font-bold rounded-lg px-3 py-2 text-center ${ocrEngineError ? 'text-rose-300 bg-rose-950/40 border border-rose-700' : ocrEngineReady ? 'text-emerald-300 bg-emerald-950/30 border border-emerald-700/50' : 'text-indigo-200 bg-indigo-950/30 border border-indigo-700/50'}`}>
-                  {ocrEngineError
-                    ? `⚠️ ${ocrEngineError}`
-                    : ocrEngineReady
-                      ? '✓ 後端 Node.js OCR 已就緒（chi_tra 繁體中文）'
-                      : '⏳ 正在連接後端 OCR 引擎…'}
+                  {resolveOcrStatusMessage({ ocrEngineError, ocrEngineReady, ocrEngineMode })}
                 </p>
               )}
               {parseError && (
