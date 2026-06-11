@@ -206,8 +206,49 @@ export function filterGroundedQuestions(questions = [], articleLines = []) {
   return questions.filter((q) => {
     if (!validateQuestionGrounding(q, articleLines)) return false;
     const match = validateQuestionArticleMatch(q.questionText ?? '', articleLines);
-    return match.ok;
+    if (!match.ok) return false;
+    const topicMatch = validateOptionsTopicMatch(q.options ?? [], articleLines);
+    return topicMatch.ok;
   });
+}
+
+/** 選項是否提及某主題但正文完全無關（防 profile 誤判） */
+const READING_TOPIC_SIGNATURES = [
+  {
+    label: '孔子',
+    optionTerms: /孔子|孔廟|論語|六經|萬世師表|儒家思想|仲尼/,
+    articleTerms: /孔子|仲尼|孔丘|儒家|六經|論語|萬世師表|有教無類/,
+  },
+  {
+    label: '端午節',
+    optionTerms: /端午|屈原|粽子|龍舟|汨羅/,
+    articleTerms: /端午|屈原|粽子|龍舟|汨羅/,
+  },
+  {
+    label: '米',
+    optionTerms: /稻米|糯米|粳米|糙米|粒粒皆辛苦|誰知盤中飧/,
+    articleTerms: /米飯|稻米|稻穀|糯米|粳米|糙米|粒粒皆辛苦/,
+  },
+  {
+    label: '紅樹',
+    optionTerms: /紅樹|紅樹林|濕地公園|鹽腺/,
+    articleTerms: /紅樹|紅樹林|濕地|鹽腺/,
+  },
+];
+
+export function validateOptionsTopicMatch(options = [], articleLines = []) {
+  const plainArticle = articleLines
+    .map((line) => cleanReadingLine(line).replace(/^第[一二三四五六七八九十\d]+行[：:]?/, ''))
+    .join('');
+
+  for (const sig of READING_TOPIC_SIGNATURES) {
+    const optionHits = options.filter((opt) => sig.optionTerms.test(String(opt ?? ''))).length;
+    if (optionHits >= 2 && !sig.articleTerms.test(plainArticle)) {
+      return { ok: false, reason: `選項涉及「${sig.label}」但正文無相關內容` };
+    }
+  }
+
+  return { ok: true, reason: 'matched' };
 }
 
 /** 題幹關鍵字是否能在文章中找到（防脫節） */

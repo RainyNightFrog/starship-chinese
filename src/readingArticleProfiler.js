@@ -223,7 +223,33 @@ export function inferArticleProfile(ctx = {}) {
       ],
     },
     {
-      test: /孔子|儒家|六經|論語|萬世師表|私學|仁|禮/,
+      test: /母校|畢業|操場|足球|禮堂|校歌|同學|懷念|舊日|小學.*同學|重返.*校/,
+      genre: 'nostalgic',
+      subject: '母校',
+      articleFocus: '通過回憶母校生活，抒發對同學與校園的思念',
+      focusDistractors: NOSTALGIA_DISTRACTORS,
+      authorPurpose: '描述校園活動以表達對母校和同學的思念',
+      purposeDistractors: [
+        '展望自己離開學校以後的生活',
+        '介紹校園各項體育設施',
+        '說明不能再像以往那樣開心地踢球',
+        '記錄一次普通的放學活動',
+      ],
+      difficultyAspect: '主角小學時踢足球的經歷',
+      difficultyPara: Math.min(2, lineCount),
+      emotions: ['懷念母校', '想念舊日與朋友一起玩樂的情景'],
+      emotionDistractors: ['不滿自己的球技比不上別人', '後悔因踢球而忽略學業'],
+      quotePurpose: '借往事帶出對昔日校園生活的懷念',
+      paraIdeas: [
+        '交代回母校的原因與整體感受',
+        '敘述在操場踢足球的舊日情景',
+        '回憶雨天在體育室打乒乓球的經歷',
+        '描寫畢業禮上的感動場面',
+        '抒發對友誼與時光流逝的感慨',
+      ],
+    },
+    {
+      test: /孔子|仲尼|孔丘|儒家學派|六經|論語|萬世師表|有教無類|「仁」|「禮」/,
       genre: 'biography',
       subject: '孔子',
       articleFocus: '介紹孔子的生平、思想與對中華文化的貢獻',
@@ -253,32 +279,6 @@ export function inferArticleProfile(ctx = {}) {
         '創立了儒家思想',
         '開創了私學的風氣',
         '在世界各地興建孔廟',
-      ],
-    },
-    {
-      test: /母校|畢業|操場|足球|禮堂|校歌|同學|懷念|舊日/,
-      genre: 'nostalgic',
-      subject: '母校',
-      articleFocus: '通過回憶母校生活，抒發對同學與校園的思念',
-      focusDistractors: NOSTALGIA_DISTRACTORS,
-      authorPurpose: '描述校園活動以表達對母校和同學的思念',
-      purposeDistractors: [
-        '展望自己離開學校以後的生活',
-        '介紹校園各項體育設施',
-        '說明不能再像以往那樣開心地踢球',
-        '記錄一次普通的放學活動',
-      ],
-      difficultyAspect: '主角小學時踢足球的經歷',
-      difficultyPara: Math.min(2, lineCount),
-      emotions: ['懷念母校', '想念舊日與朋友一起玩樂的情景'],
-      emotionDistractors: ['不滿自己的球技比不上別人', '後悔因踢球而忽略學業'],
-      quotePurpose: '借往事帶出對昔日校園生活的懷念',
-      paraIdeas: [
-        '交代回母校的原因與整體感受',
-        '敘述在操場踢足球的舊日情景',
-        '回憶雨天在體育室打乒乓球的經歷',
-        '描寫畢業禮上的感動場面',
-        '抒發對友誼與時光流逝的感慨',
       ],
     },
     {
@@ -359,8 +359,14 @@ export function inferArticleProfile(ctx = {}) {
     },
   ];
 
-  const hit = profiles.find((p) => p.test.test(text));
-  if (hit) return { ...hit, lineCount };
+  const scored = profiles
+    .map((p) => {
+      const matches = text.match(new RegExp(p.test.source, 'g')) ?? [];
+      return { profile: p, score: matches.length };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score);
+  if (scored.length) return { ...scored[0].profile, lineCount };
 
   const k1 = pickKeyword(kw, 0, '成長');
   const k2 = pickKeyword(kw, 1, '堅持');

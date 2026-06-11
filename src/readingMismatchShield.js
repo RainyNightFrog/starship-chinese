@@ -6,7 +6,7 @@
  */
 
 import { cleanReadingLine } from './readingTextQuality.js';
-import { validateQuestionGrounding, validateQuestionArticleMatch } from './readingSchema.js';
+import { validateQuestionGrounding, validateQuestionArticleMatch, validateOptionsTopicMatch } from './readingSchema.js';
 import { sanitizeReadingBankItem } from './readingDisplayGuard.js';
 
 function stripPassagePrefix(line = '') {
@@ -23,11 +23,6 @@ export function validateAndRepairReadingEntry(entry = {}) {
     return { ok: false, entry: null, repaired: false };
   }
 
-  /** 後端 OCR / 上載模板題 — 信任 server 產出，跳過嚴格脫節檢查，避免 Q2/Q3 被誤刪 */
-  if (entry.isAiGenerated || entry.fromVisionDynamic) {
-    return { ok: true, entry: sanitizeReadingBankItem(entry), repaired: false };
-  }
-
   const articleLines = entry.passage.map(stripPassagePrefix);
   const schemaQ = {
     questionText: entry.question.replace(/^Q\d\.\s*/, ''),
@@ -35,16 +30,21 @@ export function validateAndRepairReadingEntry(entry = {}) {
     correctAnswerIndex: entry.correctIndex ?? 0,
   };
 
+  const topicResult = validateOptionsTopicMatch(schemaQ.options ?? [], articleLines);
+  if (!topicResult.ok) {
+    return { ok: false, entry: null, repaired: false };
+  }
+
+  /** 後端 OCR / 上載模板題 — 跳過逐字 grounding，但仍須通過主題一致性 */
+  if (entry.isAiGenerated || entry.fromVisionDynamic) {
+    return { ok: true, entry: sanitizeReadingBankItem(entry), repaired: false };
+  }
+
   const groundingOk = validateQuestionGrounding(schemaQ, articleLines);
   const matchResult = validateQuestionArticleMatch(schemaQ.questionText, articleLines);
 
   if (groundingOk && matchResult.ok) {
     return { ok: true, entry: sanitizeReadingBankItem(entry), repaired: false };
-  }
-
-  /** Vision 動態題脫節 → 不替換為靜態程序化題，直接剔除 */
-  if (entry.fromVisionDynamic || entry.isAiGenerated) {
-    return { ok: false, entry: null, repaired: false };
   }
 
   return { ok: false, entry: null, repaired: false };

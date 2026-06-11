@@ -22,7 +22,7 @@ import {
   assertCleanArticleLines,
 } from './readingAdvancedTextSanitizer.js';
 import { inferArticleProfile } from './readingArticleProfiler.js';
-import { normalizeReadingPayload } from './readingSchema.js';
+import { normalizeReadingPayload, filterGroundedQuestions } from './readingSchema.js';
 import {
   createRng,
   sliceTextToSentences,
@@ -43,7 +43,7 @@ import {
 import { generateQuestionsFromCustomWords } from './customVocabMatcher.js';
 import { saveUploadedPreviewWords } from './prestudyDictationBridge.js';
 
-import { READING_MAX_QUESTIONS, SHARED_METHOD_INJECT_COUNT } from './readingConstants.js';
+import { READING_MAX_QUESTIONS, SHARED_METHOD_INJECT_COUNT, READING_MIN_QUESTIONS } from './readingConstants.js';
 
 const DEFAULT_QUESTION_COUNT = READING_MAX_QUESTIONS;
 
@@ -292,11 +292,16 @@ export function generateQuestionsFromOcr(ocrText = '', options = {}) {
     questionCount,
   );
 
+  const grounded = filterGroundedQuestions(questions, articleLines);
+  const finalQuestions = grounded.length >= READING_MIN_QUESTIONS
+    ? grounded
+    : questions;
+
   return {
     articleTitle,
     articleLines,
-    questions,
-    questionCount: questions.length,
+    questions: finalQuestions,
+    questionCount: finalQuestions.length,
     contentTrack,
     coreKeywords,
     expandedBy,
