@@ -56,6 +56,7 @@ export function denoiseOcrText(ocrText = '') {
   let text = denoiseOcrTextPreserveLines(ocrText);
   text = text.replace(SCORE_NOISE, ' ');
   text = text.replace(SCHOOL_NOISE, ' ');
+  text = text.replace(/G@/gi, '做');
   text = text.replace(ENGLISH_GARBAGE, (match) => (match.length <= 3 ? match : ' '));
   return text
     .split('\n')

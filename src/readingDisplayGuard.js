@@ -15,6 +15,7 @@ import {
   isValidPassageLine,
   sanitizeArticleLines,
 } from './readingTextQuality.js';
+import { repairReadingOcrText } from './readingOcrRepair.js';
 import { stripOptionLetterPrefix } from './readingOptionPrefixCleaner.js';
 
 /** 連續無意義英文字母碎片（OCR 典型亂碼） */
@@ -39,7 +40,7 @@ export function repairPassageDisplayLine(line = '') {
   const prefix = prefixMatch?.[1] ?? '';
   const body = prefixMatch?.[2] ?? raw;
 
-  const cleanedBody = cleanReadingLine(body);
+  const cleanedBody = cleanReadingLine(repairReadingOcrText(body));
   if (!cleanedBody) return null;
 
   if (MOSTLY_LATIN_LINE.test(cleanedBody)) return null;

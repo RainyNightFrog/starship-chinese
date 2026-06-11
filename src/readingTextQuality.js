@@ -1,6 +1,9 @@
 /** 閱讀 OCR / 貼上文字 — 品質判斷與清理 */
 
 import { stripOptionLetterPrefix } from './readingOptionPrefixCleaner.js';
+import { repairReadingOcrText } from './readingOcrRepair.js';
+
+export { repairReadingOcrText, hasSuspiciousOcrArtifacts } from './readingOcrRepair.js';
 
 export function chineseCharRatio(text = '') {
   if (!text.length) return 0;
@@ -9,12 +12,12 @@ export function chineseCharRatio(text = '') {
 }
 
 export function cleanReadingLine(text = '') {
-  return String(text).replace(/\s+/g, '').trim();
+  return repairReadingOcrText(String(text)).replace(/\s+/g, '').trim();
 }
 
-/** 剝除 OCR 常見填空記號，如 ()、(的/地) */
+/** 剝除 OCR 常見填空記號，如 ()、(的/地)、①② */
 export function stripOcrFillInBlanks(text = '') {
-  return String(text)
+  return repairReadingOcrText(String(text))
     .replace(/\(\s*\)\s*\([^)]{0,12}\)/g, '')
     .replace(/\(\s*\)/g, '')
     .replace(/\([^)]{0,6}[\/／][^)]{0,6}\)/g, '')
@@ -296,7 +299,7 @@ export function truncateAtForeignSection(lines = []) {
  * OCR 去噪 — 保留換行，只壓縮行內空白（避免整頁黏成一行）
  */
 export function denoiseOcrTextPreserveLines(ocrText = '') {
-  let text = String(ocrText ?? '');
+  let text = repairReadingOcrText(String(ocrText ?? ''));
   text = text.replace(/\r/g, '\n');
   text = text.replace(/\(\s*\d+\s*分\s*\)/g, ' ');
   text = text.replace(/\d+\s*\/\s*\d+\s*分/g, ' ');
