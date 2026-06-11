@@ -25,9 +25,9 @@ export function stripOcrFillInBlanks(text = '') {
     .trim();
 }
 
-/** 閱讀正文行標準化（指引剝除 + 試題截斷 + 填空清理） */
+/** 閱讀正文行標準化（指引剝除 + 試題截斷 + 填空清理 + 頁腳水印） */
 export function normalizePassageLine(text = '') {
-  return stripOcrFillInBlanks(truncateLineBeforeWorksheet(text));
+  return stripWorksheetWatermarks(stripOcrFillInBlanks(truncateLineBeforeWorksheet(text)));
 }
 
 /** 該行是否在試題區被截斷（不含填空記號清理） */
@@ -94,6 +94,8 @@ const NOISE_LINE_PATTERNS = [
   /^選項\s*\d/,
   /未能辨識|待重新上載/,
   /更多練習.*(?:www\.|beasmart|免費下載)/i,
+  /更[多八][练練]?[習习][,，]?\s*歡迎到/i,
+  /^歡迎到[一\d\s—\-–_\.]{2,}$/,
   /www\.[a-zA-Z0-9.-]+\.[a-z]{2,}/i,
   // 其他大題雜訊（非閱讀正文框）
   /^四[、\.．]/,
