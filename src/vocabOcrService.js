@@ -4,7 +4,7 @@
  */
 
 import { recognizeVocabImageText } from './readingVisionClient.js';
-import { parseVocabFromOcrText } from './vocabOcrParser.js';
+import { parseVocabFromOcrText, isVocabWorksheetContent } from './vocabOcrParser.js';
 import { PRESTUDY_IDIOM_COUNT } from './prestudyDictationBridge.js';
 
 /** 詞表 OCR 去噪 — 不剝除「小學」等標題用字（閱讀理解 SCHOOL_NOISE 會誤傷詞表） */
@@ -20,9 +20,15 @@ function denoiseVocabOcrText(ocrText = '') {
     .trim();
 }
 
-function resolveMaxWords(imageCount = 1) {
-  /** 多頁字詞表：按頁提取，課文預習仍優先前 15 詞 */
-  return Math.min(PRESTUDY_IDIOM_COUNT + Math.max(0, imageCount - 1) * 8, 48);
+function resolveMaxWords(imageCount = 1, rawText = '') {
+  const base = PRESTUDY_IDIOM_COUNT + Math.max(0, imageCount - 1) * 8;
+  if (imageCount === 1 && isVocabWorksheetContent(rawText)) {
+    const hanCount = (String(rawText).match(/[\u4e00-\u9fff]/g) || []).length;
+    /** 單頁 6×4 字詞表約 24 詞；預留標題字扣除 */
+    const estimated = Math.max(20, Math.min(48, Math.floor((hanCount - 8) / 2)));
+    return Math.min(48, Math.max(base, estimated));
+  }
+  return Math.min(base, 48);
 }
 
 function assertMinVocabWords(matchedQuestions, imageCount = 1) {
@@ -86,7 +92,7 @@ export async function parseVocabUploadItems(uploadItems = [], {
   if (pasted) {
     onProgress?.(0.5, 1);
     const matchedQuestions = parseVocabFromOcrText(pasted, {
-      maxWords: PRESTUDY_IDIOM_COUNT,
+      maxWords: resolveMaxWords(1, pasted),
       minWords: 1,
     });
     onProgress?.(1, Math.max(0, steps.length - 1));
@@ -126,7 +132,7 @@ export async function parseVocabUploadItems(uploadItems = [], {
 
   onProgress?.(0.92, steps.length ? steps.length - 2 : 0);
   const matchedQuestions = parseVocabFromOcrText(rawText, {
-    maxWords: resolveMaxWords(imageItems.length),
+    maxWords: resolveMaxWords(imageItems.length, rawText),
     imageCount: imageItems.length,
     minWords: imageItems.length >= 2 ? 5 : 3,
   });

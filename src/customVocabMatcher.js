@@ -17,8 +17,8 @@ import {
   normalizeVocabMatchItem,
 } from './vocabWordNormalize.js';
 
-/** 課文預習固定 15 詞（與 prestudyDictationBridge 對齊，避免循環引用） */
-const CUSTOM_WORD_CAP = 15;
+/** 單次上載詞數上限（與 uploadMetaUtils.MAX_UPLOAD_IMAGES 多頁策略對齊） */
+const CUSTOM_WORD_CAP = 48;
 
 /** 黃金 30 題核心庫 — 詞語 → 完整題目物件（O(1) 查找） */
 const POOL_BY_WORD = new Map(

@@ -192,6 +192,7 @@ function buildCharStream(rawText = '') {
     if (NOISE_LINE.test(rawLine)) return;
     const line = rawLine.trim();
     if (!line) return;
+    if (WORKSHEET_TITLE_PATTERN.test(line) || /小學.*字詞表|高年級.*字詞表/.test(line)) return;
 
     /** OCR 常輸出「風 | 吹 | 雨 | 打」— 先拆 | 再取全部漢字 */
     line.split(/\|/).forEach((segment) => {
@@ -224,19 +225,19 @@ function extractGenericGridWords(rawText = '') {
   const charStream = buildCharStream(rawText);
   if (charStream.length < 4) return [];
 
-  const pairChunk = (chunkSize) => {
+  const pairChunk = (chunkSize, { lexiconOnly = true } = {}) => {
     const hits = [];
     for (let i = 0; i + chunkSize <= charStream.length; i += chunkSize) {
-      const word = charStream.slice(i, i + chunkSize).join('');
-      if (isValidExtractedWord(word) && isKnownWord(word)) {
-        hits.push({ word, pos: i });
-      }
+      const word = toTraditionalVocabWord(charStream.slice(i, i + chunkSize).join(''));
+      if (!isValidExtractedWord(word)) continue;
+      if (lexiconOnly && !isKnownWord(word)) continue;
+      hits.push({ word, pos: i });
     }
     return hits;
   };
 
-  const as4 = pairChunk(4);
-  const as2 = pairChunk(2);
+  const as4 = pairChunk(4, { lexiconOnly: true });
+  const as2 = pairChunk(2, { lexiconOnly: true });
 
   const scoreHits = (hits) => hits.reduce(
     (sum, h) => sum + (isKnownWord(h.word) ? 3 : 1),
@@ -244,6 +245,40 @@ function extractGenericGridWords(rawText = '') {
   );
 
   return mergeWordHits(scoreHits(as4) >= scoreHits(as2) ? as4 : as2);
+}
+
+/** 字詞表格子 — 逐字主字流 2 字一組（含詞庫外新詞，供家長上載校本詞表） */
+function extractRawGridWordPairs(rawText = '') {
+  const charStream = buildCharStream(rawText);
+  if (charStream.length < 4) return [];
+
+  const isIdiomSheet = /成語|汗流|恍然|百折不|四字/.test(rawText);
+  const chunk = isIdiomSheet ? 4 : 2;
+  const hits = [];
+  const seen = new Set();
+
+  for (let i = 0; i + chunk <= charStream.length; i += chunk) {
+    const word = toTraditionalVocabWord(charStream.slice(i, i + chunk).join(''));
+    if (!isValidExtractedWord(word) || seen.has(word)) continue;
+    seen.add(word);
+    hits.push({ word, pos: i });
+  }
+
+  return hits;
+}
+
+function mergeRawWordHits(hitList = []) {
+  const byWord = new Map();
+  hitList.forEach(({ word, pos }) => {
+    const out = toTraditionalVocabWord(word);
+    if (!isValidExtractedWord(out)) return;
+    if (!byWord.has(out) || pos < byWord.get(out)) {
+      byWord.set(out, pos);
+    }
+  });
+  return [...byWord.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(([word]) => word);
 }
 
 function stripWorksheetTitle(text = '') {
@@ -692,6 +727,16 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
 
   candidates = candidates.filter((w) => isValidExtractedWord(w) && isKnownWord(w));
   candidates = dedupeVocabWords(candidates);
+
+  /** 校本字詞表 — 詞庫外新詞亦納入（避免只命中零星舊庫詞如「珍貴」） */
+  if (isWorksheetUpload(rawText)) {
+    const rawGrid = mergeRawWordHits(extractRawGridWordPairs(rawText));
+    if (rawGrid.length > candidates.length) {
+      candidates = rawGrid;
+    }
+  }
+
+  candidates = dedupeVocabWords(candidates.filter(isValidExtractedWord));
 
   if (candidates.length < minWords) {
     return [];
