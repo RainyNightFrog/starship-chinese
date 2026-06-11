@@ -19,6 +19,7 @@ import { getBrowserSpeechRate } from './speechRate';
 import { convertToSimplified, getDisplayText, isSimplifiedScript as checkSimplifiedScript } from './chineseScript';
 import { sanitizeDictationHint } from './dictationHintUtils';
 import { getVocabHintEn } from './vocabHints';
+import { sanitizeDisplayText, looksLikeJsonLeak } from './previewWordFormat.js';
 
 export { getDisplayText, makeDisplayText } from './chineseScript';
 
@@ -74,10 +75,11 @@ export function isSimplifiedScript(language, studentType) {
 
 export function getVocabChar(vocab, { language, studentType }) {
   if (!vocab) return '';
+  const word = vocab.tc ?? vocab.word ?? vocab.idiomWord ?? '';
   if (isSimplifiedScript(language, studentType)) {
-    return vocab.sc || convertToSimplified(vocab.tc);
+    return vocab.sc || convertToSimplified(word);
   }
-  return vocab.tc;
+  return word;
 }
 
 export function getVocabRomanization(vocab, { language, studentType }) {
@@ -109,9 +111,9 @@ export function getVocabMeaning(vocab, { voiceLang, studentType, language = 'zh-
     };
   }
 
-  const scChar = vocab.sc || convertToSimplified(vocab.tc);
-  const rawHintTc = vocab.hintTc;
-  const rawHintSc = vocab.hintSc;
+  const scChar = vocab.sc || convertToSimplified(vocab.tc ?? vocab.word ?? '');
+  const rawHintTc = looksLikeJsonLeak(vocab.hintTc) ? '' : sanitizeDisplayText(vocab.hintTc ?? vocab.meaning ?? '');
+  const rawHintSc = looksLikeJsonLeak(vocab.hintSc) ? '' : sanitizeDisplayText(vocab.hintSc ?? vocab.meaning ?? '');
 
   const resolveHint = (raw, displaySimplified) => {
     if (raw) {

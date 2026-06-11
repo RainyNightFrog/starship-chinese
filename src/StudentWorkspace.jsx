@@ -37,8 +37,11 @@ import {
   saveStudiedWords,
   loadStudiedWords,
   loadPreviewWords,
+  toPrestudyCardList,
   buildDictationListFromStudiedWords,
   swapPrestudyVocab,
+  getPrestudyCardWord,
+  getPrestudyCardMeaning,
   PRESTUDY_IDIOM_COUNT,
   PREVIEW_WORDS_STORAGE_KEY,
   STUDIED_WORDS_STORAGE_KEY,
@@ -294,12 +297,12 @@ export default function StudentWorkspace({
     };
   }, []);
 
-  /** 課文預習 — 優先 localStorage 上載新詞 → 家長 config → 共享池 */
+  /** 課文預習 — 優先 localStorage 上載新詞 → 家長 config → 共享池（全部正規化） */
   const basePrestudyVocabList = useMemo(() => {
     const fromStorage = loadPreviewWords();
     if (fromStorage?.length) return fromStorage;
     const uploaded = assignedContent.vocabByTask?.prestudy;
-    if (uploaded?.length) return uploaded;
+    if (uploaded?.length) return toPrestudyCardList(uploaded);
     return getPrestudyIdiomVocabList(PRESTUDY_IDIOM_COUNT);
   }, [assignedContent.vocabByTask?.prestudy, vocabStorageRevision]);
 
@@ -1172,6 +1175,8 @@ function VocabCards({
         />
       )}
       {vocabList.map((vocab) => {
+        const displayWord = getPrestudyCardWord(vocab, { language, studentType, getVocabChar });
+        const displayMeaning = getPrestudyCardMeaning(vocab);
         const meaning = getVocabMeaning(vocab, { voiceLang: meaningVoiceLang, studentType, language });
         const decomp = getVocabDecomposition(vocab);
         const isRead = readIds.has(String(vocab.id));
@@ -1211,13 +1216,13 @@ function VocabCards({
               </span>
             )}
             <ruby className={`font-black ${isNight ? 'text-amber-100' : 'text-amber-950'} ${isSEN ? 'text-3xl' : 'text-2xl'}`}>
-              {getVocabChar(vocab, { language, studentType })}
+              {displayWord}
               <rt className={`text-sm font-mono block font-bold ${isNight ? 'text-sky-300' : 'text-sky-600'}`}>
                 {getVocabRomanization(vocab, { language, studentType })}
               </rt>
             </ruby>
             <p className={`mt-1.5 font-bold leading-relaxed ${isSEN ? 'text-base' : 'text-sm'} ${isNight ? 'text-stone-200' : 'text-slate-700'}`}>
-              {meaning.label}
+              {displayMeaning}
             </p>
             {(meaning.hintEn || vocab.hintEn) && (
               <span className={`text-sm block mt-1.5 font-bold leading-relaxed ${isNight ? 'text-purple-300' : 'text-purple-700'}`}>

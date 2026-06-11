@@ -7,6 +7,7 @@ import { getGlobalSharedIdioms } from './globalSharedPool.js';
 import { withHints } from './vocabHints.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
 import { PRESTUDY_IDIOM_COUNT } from './prestudyDictationBridge.js';
+import { sanitizeDisplayText } from './previewWordFormat.js';
 
 /** 默書／詞表版面特徵 */
 const VOCAB_SHEET_SIGNALS = /默書|默写|詞表|词表|詞語|词语|聽寫|听写|生字|默寫|新詞|新词|成語|成语|詞彙|词汇|校本詞|校本词|範文詞|范文词|溫習詞|温习词/;
@@ -100,7 +101,8 @@ export function isVocabWorksheetContent(rawText = '') {
 /** 詞彙池項目 → 標準上載格式（含 word 欄位） */
 export function enrichExtractedWord(word, index, seed = Date.now()) {
   const base = LOOKUP_POOL.get(word);
-  const meaning = base?.hintTc ?? base?.hint ?? `校本詞語：${word}`;
+  const meaningFromPool = base?.hintTc ?? base?.hint ?? '';
+  const meaning = sanitizeDisplayText(meaningFromPool) || `校本詞語「${word}」— 請熟讀字形與讀音`;
 
   const item = withHints(applyVocabDecomposition({
     id: `ocr-vocab-${seed}-${index}`,
