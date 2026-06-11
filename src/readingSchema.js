@@ -103,8 +103,8 @@ export function validateStrictReadingAiResponse(payload = {}) {
   } else if (articleLines.join('').length < 80) {
     errors.push('articleLines 正文過短，未能構成完整閱讀材料');
   }
-  if (!Array.isArray(questions) || questions.length < 3 || questions.length > 5) {
-    errors.push(`questions 須為 3–5 題（目前 ${questions.length} 題）`);
+  if (!Array.isArray(questions) || questions.length < 3 || questions.length > 8) {
+    errors.push(`questions 須為 3–8 題（目前 ${questions.length} 題）`);
   } else {
     questions.forEach((q, i) => {
       const label = `第 ${i + 1} 題`;

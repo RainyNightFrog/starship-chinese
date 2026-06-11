@@ -139,7 +139,7 @@ function buildThemeQuestion(lines) {
 function buildProgrammaticQuestions(lines, seed) {
   const keywords = extractCoreKeywords(lines);
   const dynamic = generateDynamicQuestions(lines, {
-    minCount: 3,
+    minCount: READING_MAX_QUESTIONS,
     maxCount: READING_MAX_QUESTIONS,
     seed,
     keywords,

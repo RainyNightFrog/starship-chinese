@@ -114,9 +114,9 @@ function mergeSharedPoolQuestions(questions = [], articleLines = [], seed, targe
   const seen = new Set(questions.map((q) => q.questionText));
   const merged = [...questions];
 
-  // 從中央共享庫注入寫作手法題 + 四字詞語題（前人載樹，後人乘涼）
-  const sharedMethods = pickRandomSharedMethodQuestions(2, seed + 17);
-  const sharedIdioms = pickRandomSharedIdiomQuestions(1, seed + 31);
+  // 從中央共享庫注入寫作手法題 + 四字詞語題（篇數增多時略增共享題比例）
+  const sharedMethods = pickRandomSharedMethodQuestions(3, seed + 17);
+  const sharedIdioms = pickRandomSharedIdiomQuestions(2, seed + 31);
 
   [...sharedMethods, ...sharedIdioms].forEach((q) => {
     if (merged.length >= targetCount) return;

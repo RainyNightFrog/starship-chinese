@@ -11,7 +11,9 @@ export const MEILING_TEMPLATE = {
   questions: [],
 };
 
-/** 正規化 3–5 道選擇題物件陣列 */
+/** 正規化選擇題物件陣列（上限見 READING_MAX_QUESTIONS） */
+import { READING_MAX_QUESTIONS } from '../src/readingConstants.js';
+
 export function normalizeQuestionsArray(raw) {
   if (typeof raw === 'string' || !Array.isArray(raw)) {
     return [];
@@ -27,5 +29,5 @@ export function normalizeQuestionsArray(raw) {
     }))
     .filter((q) => q.questionText.length >= 4 && q.options.length >= 4);
 
-  return valid.slice(0, 5).map((q, i) => ({ ...q, id: i + 1 }));
+  return valid.slice(0, READING_MAX_QUESTIONS).map((q, i) => ({ ...q, id: i + 1 }));
 }

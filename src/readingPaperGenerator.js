@@ -17,7 +17,7 @@ export const READING_PARSE_STEPS = [
   { text: 'Tesseract 逐頁辨識繁體中文（chi_tra）...', progress: 40 },
   { text: '清洗雜訊（校名、分數欄、無意義英文）...', progress: 55 },
   { text: '關鍵詞匹配與考點擴寫...', progress: 70 },
-  { text: '動態樣版池隨機生成 3–5 道呈分試理解題...', progress: 85 },
+  { text: '動態樣版池隨機生成 8 道呈分試理解題...', progress: 85 },
   { text: '正在同步至學生端...', progress: 94 },
   { text: '✅ 閱讀理解已同步至學生端', progress: 100 },
 ];
@@ -47,7 +47,7 @@ function buildPackForImage(meta, imageIndex) {
   return buildOcrFallbackPack(fileLabel, imageIndex, extracted?.qualityReason ?? parsed?.qualityReason);
 }
 
-/** 依上載生成閱讀題庫 — 每次上載只出一篇文章，最多 5 題 */
+/** 依上載生成閱讀題庫 — 每次上載只出一篇文章，最多 8 題 */
 export function generateReadingVariantPack(meta = {}) {
   const seed = meta.seed ?? Date.now();
   const imageCount = getUploadImageCount(meta);
