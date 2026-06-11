@@ -12,6 +12,9 @@ const PHRASE_FIXES = [
   ['好好珍惜真不要', '好好珍惜，不要'],
   ['用途處，', '用途，'],
   ['用途處。', '用途。'],
+  ['深入了解呢2', '深入了解呢？'],
+  ['更多了解呢2', '更多了解呢？'],
+  ['深入人心', '深入民心'],
 ];
 
 /** 行內 regex 修復 */
@@ -45,6 +48,7 @@ export function repairReadingOcrText(text = '') {
   });
 
   s = stripWorksheetWatermarks(s);
+  s = stripTrailingQuestionNumberArtifacts(s);
 
   s = s.replace(
     /([\u4e00-\u9fff，「『：])([A-Za-z@#]{1,4})([\u4e00-\u9fff])/g,
@@ -56,6 +60,16 @@ export function repairReadingOcrText(text = '') {
     },
   );
 
+  return s;
+}
+
+/** 剝除黏在句尾的試題編號（如「呢2」← 下題「2.」誤黏） */
+function stripTrailingQuestionNumberArtifacts(text = '') {
+  let s = String(text ?? '');
+  s = s.replace(/([呢吗嗎吧啊呀哇])([0-9０-９]{1,2})+$/g, '$1');
+  s = s.replace(/([。！？；，])([0-9０-９]{1,2})+$/g, '$1');
+  s = s.replace(/([\u4e00-\u9fff])([1-9１-９])$/g, '$1');
+  s = s.replace(/是不是有了更多了解呢(?!([？?]))/g, '是不是有了更多了解呢？');
   return s;
 }
 
