@@ -61,7 +61,33 @@ export const WORKSHEET_VOCAB_HINTS = {
   服侍: { tc: '伺候、照顧他人', sc: '服侍', en: 'To serve; attend to' },
   愛戴: { tc: '衷心擁護、愛護', sc: '爱戴', en: 'To love and respect' },
 
-  // ── 字詞表頁 3（四字成語）──
+  // ── 字詞表頁 3（雙字詞 · 落後～滋補）──
+  落後: { tc: '落在後面；進度比別人慢', sc: '落后', en: 'To fall behind; backward' },
+  明確: { tc: '清楚、不含糊', sc: '明确', en: 'Clear; explicit' },
+  擅自: { tc: '未經允許而自作主張', sc: '擅自', en: 'Without permission; on one\'s own authority' },
+  氣餒: { tc: '因失敗或挫折而失去信心', sc: '气馁', en: 'Discouraged; dejected' },
+  勤奮: { tc: '努力用功', sc: '勤奋', en: 'Diligent; hardworking' },
+  濃重: { tc: '（顏色、氣味等）又濃又重', sc: '浓重', en: 'Dense; thick; strong' },
+  協調: { tc: '互相配合、調和', sc: '协调', en: 'To coordinate; harmonize' },
+  感悟: { tc: '因有所觸動而領悟', sc: '感悟', en: 'To feel and comprehend' },
+  安詳: { tc: '安詳寧靜（多形容臨終或神態）', sc: '安详', en: 'Peaceful; serene' },
+  嘆息: { tc: '因感慨而長聲呼出', sc: '叹息', en: 'To sigh' },
+  清理: { tc: '整理、清除', sc: '清理', en: 'To clean up; clear' },
+  擦拭: { tc: '用布等擦抹乾淨', sc: '擦拭', en: 'To wipe; rub clean' },
+  樹叢: { tc: '樹木聚集生長的地方', sc: '树丛', en: 'Thicket; cluster of trees' },
+  使勁: { tc: '用力', sc: '使劲', en: 'To exert force; use strength' },
+  故鄉: { tc: '家鄉', sc: '故乡', en: 'Hometown; native place' },
+  盛開: { tc: '（花朵）開得很旺盛', sc: '盛开', en: 'In full bloom' },
+  無論: { tc: '不管、不論', sc: '无论', en: 'Regardless; no matter' },
+  新鮮: { tc: '沒有變質；新奇', sc: '新鲜', en: 'Fresh; novel' },
+  趕緊: { tc: '抓緊時間，不加延誤', sc: '赶紧', en: 'Hurry; promptly' },
+  適宜: { tc: '合適、相當', sc: '适宜', en: 'Suitable; appropriate' },
+  奇異: { tc: '奇怪、特別', sc: '奇异', en: 'Strange; unusual' },
+  允許: { tc: '答應、准許', sc: '允许', en: 'To allow; permit' },
+  焦黃: { tc: '（顏色）黃而乾枯', sc: '焦黄', en: 'Scorched yellow' },
+  滋補: { tc: '用有營養的食物補養身體', sc: '滋补', en: 'Nourishing; tonic' },
+
+  // ── 字詞表頁 4（四字成語）──
   汗流浹背: { tc: '汗水流滿背部；形容非常辛勞或緊張', sc: '汗流浃背', en: 'Sweating profusely from hard work or stress' },
   鰥寡孤獨: { tc: '沒有配偶、沒有父母、沒有子女的人', sc: '鳏寡孤独', en: 'The widowed, lonely and childless' },
   彬彬有禮: { tc: '形容文雅有禮貌', sc: '彬彬有礼', en: 'Polite and refined' },
@@ -104,6 +130,67 @@ export const ALL_WORKSHEET_WORDS = new Set([
   '了解',
 ]);
 
+/** 各頁詞表 — OCR 偵測頁面後只提取該頁詞彙（避免跨頁誤配） */
+/** 雙字詞拼音 → 詞語（OCR 拼音行配對，無聲調） */
+export const WORKSHEET_PINYIN_PAIRS = {
+  lianjie: '廉潔', huihuang: '輝煌', pingfan: '平凡', pengtiao: '烹調',
+  yichan: '遺產', jingxi: '精細', caiyao: '菜餚', meiguan: '美觀',
+  jiangjiu: '講究', qiqiu: '祈求', ziwei: '滋味', jizai: '記載',
+  wangyang: '汪洋', liaojie: '瞭解', liojie: '了解', xueshi: '學識',
+  luohou: '落後', mingque: '明確', shanzi: '擅自', qinei: '氣餒',
+  qinfen: '勤奮', nongzhong: '濃重', xietiao: '協調', ganwu: '感悟',
+  anxiang: '安詳', tanxi: '嘆息', qingli: '清理', cashi: '擦拭',
+  shucong: '樹叢', shijin: '使勁', guxiang: '故鄉', shengkai: '盛開',
+  wulun: '無論', xinxian: '新鮮', ganjin: '趕緊', shiyi: '適宜',
+  qiyi: '奇異', yunxu: '允許', jiaohuang: '焦黃', zibu: '滋補',
+};
+
+export const WORKSHEET_PAGES = [
+  {
+    id: 'page1',
+    anchors: ['廉潔', '輝煌', '平凡', '烹調', '遺產', '精細'],
+    words: [
+      '廉潔', '輝煌', '平凡', '烹調', '遺產', '精細', '菜餚', '美觀',
+      '講究', '祈求', '滋味', '記載', '汪洋', '瞭解', '了解', '學識',
+      '預報', '永恆', '沈積', '珊瑚', '蔚藍', '招牌', '陰森', '輕盈', '籠罩',
+    ],
+  },
+  {
+    id: 'page2',
+    anchors: ['消散', '仿佛', '規律', '複雜', '依靠', '氣候'],
+    words: [
+      '消散', '仿佛', '彷彿', '規律', '複雜', '依靠', '氣候', '覆蓋',
+      '扭曲', '留神', '威脅', '研製', '依賴', '屢次', '頒發', '獎勵',
+      '資產', '傳媒', '創建', '義務', '敬慕', '尊嚴', '宗旨', '服侍', '愛戴',
+    ],
+  },
+  {
+    id: 'page3',
+    anchors: ['落後', '明確', '擅自', '氣餒', '勤奮', '濃重'],
+    words: [
+      '落後', '明確', '擅自', '氣餒', '勤奮', '濃重', '協調', '感悟',
+      '安詳', '嘆息', '清理', '擦拭', '樹叢', '使勁', '故鄉', '盛開',
+      '無論', '新鮮', '趕緊', '適宜', '奇異', '允許', '焦黃', '滋補',
+    ],
+  },
+  {
+    id: 'idioms1',
+    anchors: ['汗流浹背', '鰥寡孤獨', '恍然大悟', '百折不回'],
+    words: [
+      '汗流浹背', '鰥寡孤獨', '彬彬有禮', '微不足道', '語重心長', '百折不回',
+      '百折不撓', '眾目睽睽', '形形色色', '不約而同', '恍然大悟', '自暴自棄',
+    ],
+  },
+  {
+    id: 'idioms2',
+    anchors: ['大發雷霆', '風吹雨打', '目不暇接', '星羅棋佈'],
+    words: [
+      '大發雷霆', '風吹雨打', '憤憤不平', '目不暇接', '波瀾壯闊', '不知不覺',
+      '奔流不息', '永無止境', '星羅棋佈', '星羅棋布', '興致勃勃', '連綿不斷', '夜以繼日',
+    ],
+  },
+];
+
 /** 字詞表頁面順序 — 供 OCR 子串掃描（OCR 順序錯亂時仍能找回校本詞） */
 export const WORKSHEET_ORDERED_WORDS = [
   '廉潔', '輝煌', '平凡', '烹調', '遺產', '精細', '菜餚', '美觀',
@@ -112,6 +199,9 @@ export const WORKSHEET_ORDERED_WORDS = [
   '消散', '仿佛', '彷彿', '規律', '複雜', '依靠', '氣候', '覆蓋',
   '扭曲', '留神', '威脅', '研製', '依賴', '屢次', '頒發', '獎勵',
   '資產', '傳媒', '創建', '義務', '敬慕', '尊嚴', '宗旨', '服侍', '愛戴',
+  '落後', '明確', '擅自', '氣餒', '勤奮', '濃重', '協調', '感悟',
+  '安詳', '嘆息', '清理', '擦拭', '樹叢', '使勁', '故鄉', '盛開',
+  '無論', '新鮮', '趕緊', '適宜', '奇異', '允許', '焦黃', '滋補',
   '汗流浹背', '鰥寡孤獨', '彬彬有禮', '微不足道', '語重心長', '百折不回',
   '百折不撓', '眾目睽睽', '形形色色', '不約而同', '恍然大悟', '自暴自棄',
   '大發雷霆', '風吹雨打', '憤憤不平', '目不暇接', '波瀾壯闊', '不知不覺',

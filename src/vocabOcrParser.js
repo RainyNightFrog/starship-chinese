@@ -14,6 +14,8 @@ import {
   WORKSHEET_TITLE_PATTERN,
   ALL_WORKSHEET_WORDS,
   WORKSHEET_ORDERED_WORDS,
+  WORKSHEET_PAGES,
+  WORKSHEET_PINYIN_PAIRS,
 } from './worksheetVocabLexicon.js';
 
 const VOCAB_SHEET_SIGNALS = /默書|默写|詞表|词表|詞語|词语|聽寫|听写|生字|默寫|新詞|新词|成語|成语|詞彙|词汇|校本詞|校本词|範文詞|范文词|溫習詞|温习词|字詞表/;
@@ -70,6 +72,11 @@ const CHAR_EQUIV = new Map([
   ['棄', '弃'], ['弃', '棄'],
   ['撓', '挠'], ['挠', '撓'],
   ['浹', '浃'], ['浃', '浹'],
+  ['洛', '落'], ['落', '洛'],
+  ['瘓', '痰'], ['痰', '瘓'],
+  ['斜', '鮮'], ['鮮', '斜'],
+  ['穫', '勁'], ['勁', '穫'],
+  ['協', '協'], ['調', '調'],
 ]);
 
 function charsEquivalent(a, b) {
@@ -101,6 +108,49 @@ function fuzzyFindWord(plain, word, startPos = 0) {
 
 function isKnownWord(word) {
   return KNOWN_WORD_SET.has(word) && !TITLE_FRAGMENT.has(word);
+}
+
+/** OCR 兩字 → 詞庫內最接近的雙字詞（容忍 1 字偏差） */
+function resolveOcrPairToKnownWord(char1, char2) {
+  const raw = toTraditionalVocabWord(`${char1}${char2}`);
+  if (isKnownWord(raw)) return raw;
+
+  for (const word of KNOWN_WORDS_SORTED) {
+    if (word.length !== 2) continue;
+    if (fuzzyMatchAt(raw, 0, word)) return word;
+  }
+  return null;
+}
+
+function extractFirstHanChar(text = '') {
+  const m = String(text).match(/[\u4e00-\u9fff]/);
+  return m ? m[0] : null;
+}
+
+/**
+ * 格子 OCR 常輸出「明|確| |擅||自」— 按 | 分列後每 2 字配對
+ */
+function extractPipeDelimitedPairs(rawText = '') {
+  const hits = [];
+  const seen = new Set();
+
+  String(rawText).split(/\n+/).forEach((rawLine, lineIdx) => {
+    if (NOISE_LINE.test(rawLine)) return;
+    if (!/[|｜]/.test(rawLine)) return;
+
+    const chars = rawLine.split(/[|｜]/)
+      .map((seg) => extractFirstHanChar(seg))
+      .filter(Boolean);
+
+    for (let i = 0; i + 2 <= chars.length; i += 2) {
+      const word = resolveOcrPairToKnownWord(chars[i], chars[i + 1]);
+      if (!word || seen.has(word)) continue;
+      seen.add(word);
+      hits.push({ word, pos: lineIdx * 200 + i });
+    }
+  });
+
+  return hits;
 }
 
 /** 可接受的 OCR 詞語（含詞庫外新詞，拒絕標題碎片） */
@@ -158,8 +208,8 @@ function mergeWordHits(...hitLists) {
 
   hitLists.flat().forEach(({ word, pos }) => {
     const out = toTraditionalVocabWord(word);
-    if (!isValidExtractedWord(out) && !isKnownWord(out)) return;
-    if (!isValidExtractedWord(out)) return;
+    /** OCR 只保留詞庫命中，拒絕「後明、確擅」等盲切亂碼 */
+    if (!isValidExtractedWord(out) || !isKnownWord(out)) return;
     if (!byWord.has(out) || pos < byWord.get(out)) {
       byWord.set(out, pos);
     }
@@ -178,7 +228,7 @@ function extractGenericGridWords(rawText = '') {
     const hits = [];
     for (let i = 0; i + chunkSize <= charStream.length; i += chunkSize) {
       const word = charStream.slice(i, i + chunkSize).join('');
-      if (isValidExtractedWord(word)) {
+      if (isValidExtractedWord(word) && isKnownWord(word)) {
         hits.push({ word, pos: i });
       }
     }
@@ -390,6 +440,104 @@ function extractSingleCharLinePairs(rawText = '') {
   return hits;
 }
 
+const PINYIN_OCR_TOKEN_FIX = new Map([
+  ['gdn', 'gan'], ['wuu', 'wu'], ['qn', 'an'], ['xiqng', 'xiang'], ['xigng', 'xiang'],
+  ['ki', 'kai'], ['jm', 'jin'], ['xinq', 'xin'], ['xiqn', 'xian'], ['gtan', 'gan'],
+  ['gtm', 'gan'], ['sh', 'shi'], ['joo', 'jiao'], ['huqng', 'huang'], ['huang', 'huang'],
+  ['z', 'zi'], ['syss', ''], ['sssy', ''],
+]);
+
+function normalizeOcrPinyinLine(line = '') {
+  let s = String(line)
+    .toLowerCase()
+    .replace(/0/g, 'o')
+    .replace(/1/g, 'i')
+    .replace(/3/g, 'e')
+    .replace(/4/g, 'a')
+    .replace(/[^a-z]/g, '');
+
+  if (PINYIN_OCR_TOKEN_FIX.has(s)) {
+    s = PINYIN_OCR_TOKEN_FIX.get(s);
+  }
+
+  return s;
+}
+
+/** 從 OCR 拼音行配對詞語（字表格上方常見 luò hòu 等） */
+function extractPinyinLinePairs(rawText = '', activePage = null) {
+  if (!activePage) return [];
+
+  const allowed = new Set(activePage.words);
+  const latinTokens = [];
+
+  String(rawText).split(/\n+/).forEach((line) => {
+    const t = line.trim();
+    if (!t || NOISE_LINE.test(t)) return;
+    if (/[\u4e00-\u9fff]/.test(t)) return;
+
+    t.split(/\s+/).forEach((part) => {
+      const norm = normalizeOcrPinyinLine(part);
+      if (norm.length >= 2 && norm.length <= 10) {
+        latinTokens.push(norm);
+      }
+    });
+  });
+
+  const hits = [];
+  const seen = new Set();
+
+  for (let i = 0; i + 1 < latinTokens.length; i += 1) {
+    const pairKey = latinTokens[i] + latinTokens[i + 1];
+    const word = WORKSHEET_PINYIN_PAIRS[pairKey];
+    if (!word || !allowed.has(word) || seen.has(word)) continue;
+    seen.add(word);
+    hits.push({ word, pos: i });
+  }
+
+  return hits;
+}
+
+/** 偵測最可能的詞表頁 — 依錨點詞命中數 */
+function detectWorksheetPage(plainHan = '') {
+  let bestPage = null;
+  let bestScore = 0;
+
+  WORKSHEET_PAGES.forEach((page) => {
+    const score = page.anchors.filter((anchor) => fuzzyFindWord(plainHan, anchor, 0) >= 0).length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestPage = page;
+    }
+  });
+
+  return bestScore >= 2 ? bestPage : null;
+}
+
+/** 鎖定詞表頁後 — 依頁內順序找回所有可辨識詞（容忍 OCR 錯字） */
+function extractDetectedPageWords(plainHan = '', rawText = '') {
+  const page = detectWorksheetPage(plainHan);
+  if (!page) return [];
+
+  const byWord = new Map();
+
+  page.words.forEach((word, order) => {
+    if (!isKnownWord(word)) return;
+    if (fuzzyFindWord(plainHan, word, 0) >= 0) {
+      byWord.set(word, order);
+    }
+  });
+
+  extractPinyinLinePairs(rawText, page).forEach(({ word }) => {
+    if (!byWord.has(word)) {
+      byWord.set(word, page.words.indexOf(word));
+    }
+  });
+
+  return [...byWord.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(([word, pos]) => ({ word, pos }));
+}
+
 /** 在校本詞表固定順序中，掃描 OCR 全文是否含該詞（含模糊匹配） */
 function scanWorksheetLexiconPresence(plainHan = '') {
   const hits = [];
@@ -408,19 +556,6 @@ function scanWorksheetLexiconPresence(plainHan = '') {
 }
 
 /** 多層校本詞表提取 */
-/** 連續漢字流 — 每 2 字切詞（字詞表 OCR 常輸出「廉潔輝煌…」連串） */
-function extractSequentialPairsFromPlain(plainHan = '') {
-  const body = removeTitleFromPlain(plainHan);
-  const hits = [];
-  for (let i = 0; i + 2 <= body.length; i += 2) {
-    const word = body.slice(i, i + 2);
-    if (isValidExtractedWord(word)) {
-      hits.push({ word, pos: i });
-    }
-  }
-  return hits;
-}
-
 function extractWorksheetWordsHybrid(rawText = '') {
   const plainFull = toPlainHan(rawText);
   const plainBody = removeTitleFromPlain(plainFull);
@@ -440,7 +575,8 @@ function extractWorksheetWordsHybrid(rawText = '') {
     slidingWindowLexiconScan(plainBody),
     fuzzyLexiconScan(plainBody),
     fuzzyLexiconScan(plainFull),
-    extractSequentialPairsFromPlain(plainFull),
+    extractPipeDelimitedPairs(rawText),
+    extractDetectedPageWords(plainFull, rawText),
     extractSingleCharLinePairs(rawText),
     extractGridHeadChars(rawText),
     scanWorksheetLexiconPresence(plainFull),
@@ -516,29 +652,45 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
     }
   }
 
-  let candidates = extractWorksheetWordsHybrid(rawText);
+  const plainFull = toPlainHan(rawText);
+  const pageHits = extractDetectedPageWords(plainFull, rawText);
 
-  /** 格子字表通用提取（支援詞庫外成語） */
+  /** 鎖定詞表頁 — 只輸出該頁命中詞（杜絕跨頁誤配如「落寞」「瞭解」） */
+  let candidates;
+  if (pageHits.length >= minWords) {
+    candidates = pageHits
+      .sort((a, b) => a.pos - b.pos)
+      .map((h) => h.word);
+  } else {
+    candidates = extractWorksheetWordsHybrid(rawText);
+  }
+
+  /** 格子字表 — 僅詞庫命中（禁止盲切未知雙字） */
   if (candidates.length < minWords) {
     candidates = mergeWordHits(
       candidates.map((word, pos) => ({ word, pos })),
+      extractPipeDelimitedPairs(rawText),
       extractGenericGridWords(rawText),
-      extractLineTokens(rawText, { lexiconOnly: false }),
+      extractLineTokens(rawText, { lexiconOnly: true }),
     );
   }
 
   /** 偵測校本字詞表但 OCR 極差 — 依順序模糊對齊 */
   if (candidates.length < minWords && isWorksheetUpload(rawText)) {
-    const plainFull = toPlainHan(rawText);
-    candidates = mergeWordHits(
-      candidates.map((word, pos) => ({ word, pos })),
-      recoverOrderedWorksheetWords(plainFull),
-      extractGridHeadChars(rawText),
-      extractGenericGridWords(rawText),
-    );
+    const pageHitsRetry = extractDetectedPageWords(plainFull, rawText);
+    candidates = pageHitsRetry.length >= minWords
+      ? mergeWordHits(pageHitsRetry)
+      : mergeWordHits(
+        candidates.map((word, pos) => ({ word, pos })),
+        pageHitsRetry,
+        recoverOrderedWorksheetWords(plainFull),
+        extractGridHeadChars(rawText),
+        extractPipeDelimitedPairs(rawText),
+        extractGenericGridWords(rawText),
+      );
   }
 
-  candidates = candidates.filter(isValidExtractedWord);
+  candidates = candidates.filter((w) => isValidExtractedWord(w) && isKnownWord(w));
   candidates = dedupeVocabWords(candidates);
 
   if (candidates.length < minWords) {
