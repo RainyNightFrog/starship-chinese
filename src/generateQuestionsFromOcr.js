@@ -37,6 +37,7 @@ import {
   generateContributorLabel,
 } from './globalSharedPool.js';
 import { generateQuestionsFromCustomWords } from './customVocabMatcher.js';
+import { saveUploadedPreviewWords } from './prestudyDictationBridge.js';
 
 const DEFAULT_QUESTION_COUNT = 5;
 
@@ -196,6 +197,10 @@ export function generateQuestionsFromOcr(ocrText = '', options = {}) {
       options.customWordsInput,
       options,
     );
+    /** 固化 localStorage 管道 — 完整 IDIOM 物件 + 純文字默書陣列 */
+    if (options.persistPreviewWords !== false && matchedQuestions.length) {
+      saveUploadedPreviewWords(matchedQuestions);
+    }
     return {
       articleTitle: '校本自訂詞表',
       articleLines: [],

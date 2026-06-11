@@ -111,8 +111,103 @@ export function extractPreviewMeaning(item) {
   return '';
 }
 
+/** 字卡標題 — 固定綁定 item.word（絕不渲染 JSON 裸字串） */
+export function resolveIdiomCardWord(item) {
+  if (item == null) return '';
+
+  if (typeof item === 'string') {
+    if (looksLikeJsonLeak(item)) {
+      try {
+        const parsed = JSON.parse(item);
+        return resolveIdiomCardWord(parsed);
+      } catch {
+        return '';
+      }
+    }
+    const text = item.trim().replace(/\s/g, '');
+    return /^[\u4e00-\u9fff]{2,8}$/.test(text) ? text : '';
+  }
+
+  if (typeof item !== 'object') return '';
+
+  const word = String(item.word ?? '').trim().replace(/\s/g, '');
+  if (word && /^[\u4e00-\u9fff]{2,8}$/.test(word) && !looksLikeJsonLeak(word)) {
+    return word;
+  }
+
+  return extractPreviewWord(item);
+}
+
+/** 字卡解釋 — 固定綁定 options[correctAnswerIndex] 或 meaning */
+export function resolveIdiomCardMeaning(item) {
+  if (item == null) return '';
+
+  if (typeof item === 'string') {
+    if (looksLikeJsonLeak(item)) {
+      try {
+        return resolveIdiomCardMeaning(JSON.parse(item));
+      } catch {
+        return '';
+      }
+    }
+    return stripHintPrefix(sanitizeDisplayText(item));
+  }
+
+  if (typeof item !== 'object') return '';
+
+  if (Array.isArray(item.options) && item.options.length) {
+    const idx = Math.min(
+      item.options.length - 1,
+      Math.max(0, Number(item.correctAnswerIndex ?? 0)),
+    );
+    const fromOpt = stripHintPrefix(String(item.options[idx] ?? '').trim());
+    if (fromOpt && !looksLikeJsonLeak(fromOpt)) return fromOpt;
+  }
+
+  if (typeof item.meaning === 'string' && item.meaning.trim()) {
+    const m = stripHintPrefix(sanitizeDisplayText(item.meaning));
+    if (m && !looksLikeJsonLeak(m)) return m;
+  }
+
+  return extractPreviewMeaning(item);
+}
+
+/** 默書專用 — 安全解析 starship_last_studied_words 為純中文詞語陣列 */
+export function parseStudiedWordsJson(raw) {
+  if (raw == null || raw === '') return [];
+
+  try {
+    let parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map((entry) => {
+        if (typeof entry === 'string') {
+          if (looksLikeJsonLeak(entry)) {
+            try {
+              const obj = JSON.parse(entry);
+              return resolveIdiomCardWord(obj);
+            } catch {
+              return '';
+            }
+          }
+          return entry.trim().replace(/\s/g, '');
+        }
+        if (entry && typeof entry === 'object') {
+          return resolveIdiomCardWord(entry);
+        }
+        return sanitizeDisplayText(entry, 8).replace(/\s/g, '');
+      })
+      .filter((w) => /^[\u4e00-\u9fff]{2,8}$/.test(w));
+  } catch {
+    return [];
+  }
+}
+
 /**
- * 正規化為 starship_preview_words 標準格式
+ * 正規化為 starship_preview_words 標準格式（保留 options 供字卡直接綁定）
  */
 export function normalizePreviewStorageItem(item, index = 0) {
   const word = extractPreviewWord(item);
@@ -137,6 +232,12 @@ export function normalizePreviewStorageItem(item, index = 0) {
     ...(en ? { en } : {}),
     id: item?.id ?? `preview-${word}-${index}`,
     source: item?.source ?? 'ocr_vocab_upload',
+    ...(Array.isArray(item?.options) && item.options.length
+      ? {
+        options: item.options.map((opt) => sanitizeDisplayText(opt)),
+        correctAnswerIndex: Number(item.correctAnswerIndex ?? 0),
+      }
+      : {}),
   };
 }
 
@@ -178,22 +279,20 @@ export function toPreviewStoragePayload(items = []) {
 
 /** 字卡標題 — 供 React 渲染 */
 export function getPrestudyCardWord(vocab, { language, studentType, getVocabChar } = {}) {
-  const word = extractPreviewWord(vocab)
-    || sanitizeDisplayText(vocab?.tc ?? vocab?.word ?? '', 8);
-  if (word && /^[\u4e00-\u9fff]{2,8}$/.test(word.replace(/\s/g, ''))) {
-    if (getVocabChar && (vocab?.tc || vocab?.word)) {
-      return getVocabChar({ ...vocab, tc: vocab.tc || word, word }, { language, studentType });
+  const word = resolveIdiomCardWord(vocab);
+  if (word) {
+    if (getVocabChar) {
+      return getVocabChar({ ...vocab, tc: word, word }, { language, studentType });
     }
     return word;
   }
-  return getVocabChar ? getVocabChar(vocab, { language, studentType }) : (vocab?.tc ?? vocab?.word ?? '');
+  return '';
 }
 
 /** 字卡解釋 — 供 React 渲染（絕不含 JSON） */
 export function getPrestudyCardMeaning(vocab) {
-  const meaning = extractPreviewMeaning(vocab)
-    || stripHintPrefix(sanitizeDisplayText(vocab?.hintTc ?? vocab?.hintSc ?? ''));
-  if (meaning && !looksLikeJsonLeak(meaning)) return meaning;
-  const word = extractPreviewWord(vocab) || vocab?.tc || vocab?.word;
+  const meaning = resolveIdiomCardMeaning(vocab);
+  if (meaning) return meaning;
+  const word = resolveIdiomCardWord(vocab);
   return word ? `校本詞語「${word}」— 請熟讀字形與讀音` : '請聽讀詞語，理解字義';
 }

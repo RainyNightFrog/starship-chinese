@@ -19,7 +19,7 @@ import { getBrowserSpeechRate } from './speechRate';
 import { convertToSimplified, getDisplayText, isSimplifiedScript as checkSimplifiedScript } from './chineseScript';
 import { sanitizeDictationHint } from './dictationHintUtils';
 import { getVocabHintEn } from './vocabHints';
-import { sanitizeDisplayText, looksLikeJsonLeak } from './previewWordFormat.js';
+import { sanitizeDisplayText, looksLikeJsonLeak, resolveIdiomCardWord } from './previewWordFormat.js';
 
 export { getDisplayText, makeDisplayText } from './chineseScript';
 
@@ -75,7 +75,10 @@ export function isSimplifiedScript(language, studentType) {
 
 export function getVocabChar(vocab, { language, studentType }) {
   if (!vocab) return '';
-  const word = vocab.tc ?? vocab.word ?? vocab.idiomWord ?? '';
+  const safeWord = resolveIdiomCardWord(vocab);
+  const raw = safeWord || (vocab.tc ?? vocab.word ?? vocab.idiomWord ?? '');
+  if (looksLikeJsonLeak(raw)) return safeWord || '';
+  const word = safeWord || raw;
   if (isSimplifiedScript(language, studentType)) {
     return vocab.sc || convertToSimplified(word);
   }
@@ -87,9 +90,10 @@ export function getVocabRomanization(vocab, { language, studentType }) {
 }
 
 export function getWordSpeakText(vocab, voiceLang) {
-  if (voiceLang === 'en-US') return vocab.en || vocab.tc;
-  if (voiceLang === 'zh-CN') return vocab.sc || vocab.tc;
-  return vocab.tc;
+  const word = resolveIdiomCardWord(vocab) || vocab.tc || vocab.word || '';
+  if (voiceLang === 'en-US') return vocab.en || word;
+  if (voiceLang === 'zh-CN') return vocab.sc || word;
+  return word;
 }
 
 export function getSpeakText(vocab, isMainland) {

@@ -40,8 +40,9 @@ import {
   toPrestudyCardList,
   buildDictationListFromStudiedWords,
   swapPrestudyVocab,
-  getPrestudyCardWord,
-  getPrestudyCardMeaning,
+  resolveIdiomCardWord,
+  resolveIdiomCardMeaning,
+  previewWordToVocabItem,
   PRESTUDY_IDIOM_COUNT,
   PREVIEW_WORDS_STORAGE_KEY,
   STUDIED_WORDS_STORAGE_KEY,
@@ -1109,7 +1110,47 @@ function VocabCards({
 }) {
   const { wordVoiceLang, meaningVoiceLang } = useVoicePreferences();
   const { speak, speakingKind, loadingKind, speechBusy } = useSpeechContext();
-  const vocabListKey = vocabList.map((v) => v.id).join('|');
+
+  /** 直接從 localStorage 安全解析完整 IDIOM 物件（禁止 JSON 裸字串渲染） */
+  const [previewWords, setPreviewWords] = useState([]);
+
+  useEffect(() => {
+    const loadPreviewFromStorage = () => {
+      const rawData = localStorage.getItem(PREVIEW_WORDS_STORAGE_KEY);
+      if (!rawData) {
+        setPreviewWords([]);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(rawData);
+        const finalArray = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+        if (Array.isArray(finalArray)) {
+          setPreviewWords(finalArray);
+        } else {
+          setPreviewWords([]);
+        }
+      } catch (e) {
+        console.error('解析預習詞彙失敗:', e);
+        setPreviewWords([]);
+      }
+    };
+
+    loadPreviewFromStorage();
+    window.addEventListener('starship-vocab-uploaded', loadPreviewFromStorage);
+    return () => window.removeEventListener('starship-vocab-uploaded', loadPreviewFromStorage);
+  }, [vocabList]);
+
+  /** 優先使用 localStorage 配對物件，否則退回父層傳入詞表 */
+  const cardSourceList = useMemo(() => {
+    if (previewWords.length) {
+      return previewWords
+        .map((item, index) => previewWordToVocabItem(item, index))
+        .filter(Boolean);
+    }
+    return vocabList;
+  }, [previewWords, vocabList]);
+
+  const vocabListKey = cardSourceList.map((v) => v.id).join('|');
   const [readIds, setReadIds] = useState(() => new Set());
   const [sessionSaved, setSessionSaved] = useState(false);
   const [swapBusyId, setSwapBusyId] = useState(null);
@@ -1143,7 +1184,7 @@ function VocabCards({
   };
 
   const readCount = readIds.size;
-  const totalCount = vocabList.length;
+  const totalCount = cardSourceList.length;
   const allRead = totalCount > 0 && readCount >= totalCount;
 
   const handleSwapVocab = (vocab) => {
@@ -1160,8 +1201,29 @@ function VocabCards({
 
   const handleFinishPrestudy = () => {
     if (!allRead || sessionSaved) return;
-    onSessionComplete?.(vocabList);
+    onSessionComplete?.(cardSourceList);
     setSessionSaved(true);
+  };
+
+  /** 字卡標題 — 固定綁定 item.word */
+  const renderCardWord = (item) => {
+    const word = resolveIdiomCardWord(item);
+    if (!word) return '—';
+    return getVocabChar({ ...item, word, tc: word }, { language, studentType });
+  };
+
+  /** 字卡解釋 — 固定綁定 options[correctAnswerIndex] 或 meaning */
+  const renderCardMeaning = (item) => {
+    if (Array.isArray(item?.options) && item.options.length) {
+      const idx = Math.min(
+        item.options.length - 1,
+        Math.max(0, Number(item.correctAnswerIndex ?? 0)),
+      );
+      const fromOpt = String(item.options[idx] ?? '').trim();
+      if (fromOpt && !fromOpt.includes('"id"')) return fromOpt.replace(/^提示：/, '');
+    }
+    const meaning = resolveIdiomCardMeaning(item);
+    return meaning || `校本詞語「${resolveIdiomCardWord(item) || '—'}」— 請熟讀字形與讀音`;
   };
 
   return (
@@ -1174,9 +1236,9 @@ function VocabCards({
           className={`font-bold ${getMutedTextClass(isNight, isSEN ? 'text-sm' : 'text-xs')}`}
         />
       )}
-      {vocabList.map((vocab) => {
-        const displayWord = getPrestudyCardWord(vocab, { language, studentType, getVocabChar });
-        const displayMeaning = getPrestudyCardMeaning(vocab);
+      {cardSourceList.map((vocab) => {
+        const displayWord = renderCardWord(vocab);
+        const displayMeaning = renderCardMeaning(vocab);
         const meaning = getVocabMeaning(vocab, { voiceLang: meaningVoiceLang, studentType, language });
         const decomp = getVocabDecomposition(vocab);
         const isRead = readIds.has(String(vocab.id));

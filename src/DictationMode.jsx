@@ -14,6 +14,8 @@ import { COIN_REWARD } from './aiEngine';
 import SpeechPlayButton from './SpeechPlayButton';
 import { getMutedTextClass } from './readableStyles';
 import { useColorMode } from './colorMode';
+import { STUDIED_WORDS_STORAGE_KEY } from './prestudyDictationBridge';
+import { parseStudiedWordsJson } from './previewWordFormat';
 
 /**
  * 默書特訓 — 語音讀詞 + 字義提示 + 紙上默寫
@@ -48,6 +50,22 @@ export default function DictationMode({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [completedIds, setCompletedIds] = useState(new Set());
+  /** 默書詞語純文字陣列 — 供 Web Speech 廣東話朗讀 */
+  const [dictationWords, setDictationWords] = useState([]);
+
+  useEffect(() => {
+    const rawData = localStorage.getItem(STUDIED_WORDS_STORAGE_KEY);
+    if (!rawData) {
+      setDictationWords([]);
+      return;
+    }
+    try {
+      setDictationWords(parseStudiedWordsJson(rawData));
+    } catch (e) {
+      console.error('解析默書詞彙失敗:', e);
+      setDictationWords([]);
+    }
+  }, [vocabList]);
 
   const { isNight } = useColorMode();
   const dt = useMemo(() => makeDisplayText(language, studentType), [language, studentType]);
@@ -65,19 +83,20 @@ export default function DictationMode({
 
   const playWordAndMeaning = useCallback(() => {
     if (!current) return;
-    const wordText = getWordSpeakText(current, wordVoiceLang);
+    const wordText = dictationWords[currentIndex] || getWordSpeakText(current, wordVoiceLang);
     const m = getVocabMeaning(current, { voiceLang: meaningVoiceLang, studentType, language, forDictation: true });
 
     speakSequence([
       { text: wordText, lang: wordVoiceLang, kind: 'word' },
       { text: m.text, lang: m.lang, kind: 'meaning' },
     ]);
-  }, [current, speakSequence, studentType, language, wordVoiceLang, meaningVoiceLang]);
+  }, [current, currentIndex, dictationWords, speakSequence, studentType, language, wordVoiceLang, meaningVoiceLang]);
 
   const playWordOnly = useCallback(() => {
     if (!current) return;
-    speak(getWordSpeakText(current, wordVoiceLang), { lang: wordVoiceLang, kind: 'word' });
-  }, [current, speak, wordVoiceLang]);
+    const wordText = dictationWords[currentIndex] || getWordSpeakText(current, wordVoiceLang);
+    speak(wordText, { lang: wordVoiceLang, kind: 'word' });
+  }, [current, currentIndex, dictationWords, speak, wordVoiceLang]);
 
   const playMeaningOnly = useCallback(() => {
     if (!current || !meaning) return;

@@ -16,6 +16,7 @@ import {
   parsePreviewWordsJson,
   sanitizeDisplayText,
   normalizePreviewStorageItem,
+  parseStudiedWordsJson,
 } from './previewWordFormat.js';
 
 export {
@@ -23,6 +24,9 @@ export {
   getPrestudyCardMeaning,
   normalizePreviewStorageItem,
   parsePreviewWordsStorage,
+  resolveIdiomCardWord,
+  resolveIdiomCardMeaning,
+  parseStudiedWordsJson,
 } from './previewWordFormat.js';
 
 /** 最近一次溫習完成的詞語（純文字陣列）— 默書特訓直接讀取 */
@@ -83,6 +87,12 @@ export function previewWordToVocabItem(item, index = 0) {
     source: normalized.source ?? 'ocr_vocab_upload',
     idiomWord: word,
     isAiExtracted: Boolean(normalized.isAiExtracted ?? item?.isAiExtracted),
+    ...(Array.isArray(item?.options) && item.options.length
+      ? {
+        options: item.options,
+        correctAnswerIndex: Number(item.correctAnswerIndex ?? 0),
+      }
+      : {}),
   }));
 }
 
@@ -166,6 +176,12 @@ export function idiomItemToVocabItem(item) {
     idiomWord: word,
     isCommunityShared: Boolean(item.isCommunityShared),
     sharedPoolId: item.sharedPoolId ?? `idiom:${word}`,
+    ...(Array.isArray(item.options) && item.options.length
+      ? {
+        options: item.options,
+        correctAnswerIndex: correctIdx,
+      }
+      : {}),
   }));
 }
 
@@ -272,16 +288,13 @@ export function saveStudiedWords(vocabItems) {
   }
 }
 
-/** 默書端讀取 — 回傳詞語純文字陣列或 null */
+/** 默書端讀取 — 回傳詞語純文字陣列或 null（支援雙重 JSON 編碼） */
 export function loadStudiedWords() {
   try {
     const raw = localStorage.getItem(STUDIED_WORDS_STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || !parsed.length) return null;
-    return parsed
-      .map((w) => sanitizeDisplayText(w, 8).replace(/\s/g, ''))
-      .filter((w) => /^[\u4e00-\u9fff]{2,8}$/.test(w));
+    const words = parseStudiedWordsJson(raw);
+    return words.length ? words : null;
   } catch {
     return null;
   }
