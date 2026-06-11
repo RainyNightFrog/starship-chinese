@@ -4,7 +4,8 @@
  */
 
 import { analyzeReadingImageWithVision } from './readingVisionClient.js';
-import { resolveCustomVocabFromInput } from './customVocabMatcher.js';
+import { denoiseOcrText } from './generateQuestionsFromOcr.js';
+import { parseVocabFromOcrText } from './vocabOcrParser.js';
 
 function packVocabOcrResult(matchedQuestions, extra = {}) {
   const customWordsInput = matchedQuestions.map((q) => q.word);
