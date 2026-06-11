@@ -20,6 +20,8 @@ export const WORKSHEET_TECHNIQUE_TAGS = {
   NARRATOR_FEELING: 'narrator_feeling',
   EMAIL_PURPOSE: 'email_purpose',
   EXPRESS_FEELINGS: 'express_feelings',
+  HUMAN_CONTRIBUTION: 'human_contribution',
+  FRUIT_LOCATION: 'fruit_location',
 };
 
 /** 參考文章《米》— 對標 beasmartc9 小五閱讀理解(43) 上文 */
@@ -647,21 +649,197 @@ export const WORKSHEET_ZHENGPING_TEMPLATE_IDS = [
   ...WORKSHEET_ZHENGPING_DYNAMIC_TEMPLATES.map((t) => t.id),
 ];
 
+/** 參考文章《奇怪的樹》— beasmartc9 閱讀理解(47) 上文 */
+export const STRANGE_TREES_EXPOSITORY_PASSAGE = [
+  '大自然有許多稀奇古怪的植物，你有沒有見過？現在讓我向大家逐一介紹。',
+  '在非洲的安哥拉，長著一種四季常綠的梓柯樹。如果有人在樹下點火弄出煙霧，或者點燃一堆火，樹上就會噴出大量汁液，把火撲熄。所以人們叫它做「滅火樹」。這究竟是怎麼一回事呢？原來，梓柯樹枝葉茂密，藏有許多饅頭般大小的節苞，節苞上密佈著網眼小孔，一旦有火光照耀，節苞裏的汁液就會噴出來。',
+  '在菲律賓有一種會做「米」的樹，叫「西穀米樹」。它的樹幹粗直，有三五層樓高，開花後就會死去。人們在它開花之前將樹砍倒，把莖裏的澱粉刮出來，加工成像大米一樣的顆粒，這叫「西穀米」。用這種米煮出來的飯跟大米煮出來的飯沒有甚麼大的區別，所以可以代替大米。現在，中國南方也有這種樹了。',
+  '在熱帶地方，還有種樹，能結出像麵包一樣的果實。每個果實有三至四斤重。把這種果實摘下來放到火上烤一烤，就會散發出陣陣香味，吃在口裏，酸中帶甜，很像麵包的味道，所以人們叫它「麵包樹」。一棵麵包樹一年裏有九個月能結果。在結果的季節，樹枝、樹幹、樹根上都會長出像足球一樣大小的果實來。通常是一批成熟了，另一批果實又結出來了。可不要小看它的結果量，一棵麵包樹能夠養活一至兩個人呢！或許可以解決全球糧食不足。',
+  '世界上還有很多其他奇怪的樹，你有興趣知道嗎？',
+];
+
+/** 固定參考選擇題（附 read-22 文章）— 對標真題 Q2–Q5 */
+export const WORKSHEET47_TREES_READING_FIXED_TEMPLATES = [
+  {
+    id: 'read_fixed_trees_zike_not',
+    passageId: 'read-22',
+    technique: WORKSHEET_TECHNIQUE_TAGS.NEGATIVE_FACT,
+    questionText: '【奇怪的樹】下列哪項不是梓柯樹的特徵？',
+    options: [
+      '有許多節苞',
+      '果實有三至四斤重',
+      '有汁液噴出來',
+      '節苞上有網眼小孔',
+    ],
+    correctAnswerIndex: 1,
+    hint: '提示：「三至四斤重」是麵包樹果實的特徵，勿與滅火樹混淆。',
+    trapProfile: 'vocab',
+    source: 'worksheet_ref_47',
+  },
+  {
+    id: 'read_fixed_trees_breadfruit_location',
+    passageId: 'read-22',
+    technique: WORKSHEET_TECHNIQUE_TAGS.FRUIT_LOCATION,
+    questionText: '【奇怪的樹】麵包樹的果實會長在甚麼地方？',
+    options: [
+      '樹枝和樹幹上',
+      '只在樹頂',
+      '只在樹幹內部',
+      '只在樹葉之間',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：文中寫結果季節時，果實可長在樹枝、樹幹及樹根上。',
+    trapProfile: 'line_detail',
+    source: 'worksheet_ref_47',
+  },
+  {
+    id: 'read_fixed_trees_human_contribution',
+    passageId: 'read-22',
+    technique: WORKSHEET_TECHNIQUE_TAGS.HUMAN_CONTRIBUTION,
+    questionText: '【奇怪的樹】下列哪一項是西穀米樹及麵包樹對人類的貢獻？',
+    options: [
+      '可供人類食用',
+      '為人類製造麵包',
+      '提供建築的材料',
+      '可以撲滅森林大火',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：西穀米可代替大米，麵包樹果實可烤食；勿被「麵包樹」名稱誤導。',
+    trapProfile: 'cause',
+    source: 'worksheet_ref_47',
+  },
+  {
+    id: 'read_fixed_trees_main_purpose',
+    passageId: 'read-22',
+    technique: WORKSHEET_TECHNIQUE_TAGS.MAIN_THEME,
+    questionText: '【奇怪的樹】下列哪一項是作者寫這篇文章的主要目的？',
+    options: [
+      '記述作者認識的樹木',
+      '描寫樹木的特徵',
+      '介紹世界上一些奇怪的樹木',
+      '說明樹木不同的生長情況',
+    ],
+    correctAnswerIndex: 2,
+    hint: '提示：全文逐一介紹滅火樹、西穀米樹、麵包樹等奇特植物，目的須概括全篇。',
+    trapProfile: 'intent',
+    source: 'worksheet_ref_47',
+  },
+];
+
+/** 動態 OCR 樣版 — 說明文／奇特植物類 */
+export const WORKSHEET47_TREES_DYNAMIC_TEMPLATES = [
+  {
+    id: 'ws47_trees_zike_negative',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.NEGATIVE_FACT,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/梓柯樹|滅火樹/.test(text) || !/節苞/.test(text)) return null;
+      const built = structured(
+        '果實有三至四斤重',
+        ['有許多節苞', '有汁液噴出來', '節苞上有網眼小孔'],
+        0,
+      );
+      return {
+        questionText: '下列哪項不是梓柯樹的特徵？',
+        ...built,
+        hint: '提示：逐項對照各段，找出屬於其他樹木的特徵。',
+        trapProfile: 'vocab',
+        worksheetRef: 'worksheet_ref_47',
+      };
+    },
+  },
+  {
+    id: 'ws47_trees_breadfruit_location',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.FRUIT_LOCATION,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/麵包樹/.test(text) || !/樹枝.*樹幹|樹根/.test(text)) return null;
+      const built = structured(
+        '樹枝和樹幹上',
+        ['只在樹頂', '只在樹幹內部', '只在樹葉之間'],
+      );
+      return {
+        questionText: '麵包樹的果實會長在甚麼地方？',
+        ...built,
+        hint: '提示：找出描述麵包樹結果位置的句子。',
+        trapProfile: 'line_detail',
+        worksheetRef: 'worksheet_ref_47',
+      };
+    },
+  },
+  {
+    id: 'ws47_trees_food_contribution',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.HUMAN_CONTRIBUTION,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/西穀米樹/.test(text) || !/麵包樹/.test(text)) return null;
+      const built = structured(
+        '可供人類食用',
+        ['為人類製造麵包', '提供建築的材料', '可以撲滅森林大火'],
+      );
+      return {
+        questionText: '下列哪一項是西穀米樹及麵包樹對人類的貢獻？',
+        ...built,
+        hint: '提示：兩種樹的果實或澱粉均可作為食糧，勿選名稱字面意思。',
+        trapProfile: 'cause',
+        worksheetRef: 'worksheet_ref_47',
+      };
+    },
+  },
+  {
+    id: 'ws47_trees_expository_purpose',
+    category: 'main_theme',
+    technique: WORKSHEET_TECHNIQUE_TAGS.MAIN_THEME,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/樹|植物/.test(text) || !/稀奇|奇怪|介紹/.test(text)) return null;
+      if (!/梓柯|西穀米|麵包樹|滅火樹/.test(text)) return null;
+      const built = structured(
+        '介紹世界上一些奇怪的樹木',
+        [
+          '記述作者認識的樹木',
+          '描寫樹木的特徵',
+          '說明樹木不同的生長情況',
+        ],
+        0,
+      );
+      return {
+        questionText: '下列哪一項是作者寫這篇文章的主要目的？',
+        ...built,
+        hint: '提示：說明文若逐一介紹多種事物，目的應能概括全文而非只寫其中一種。',
+        trapProfile: 'intent',
+        worksheetRef: 'worksheet_ref_47',
+      };
+    },
+  },
+];
+
+export const WORKSHEET47_TREES_TEMPLATE_IDS = [
+  ...WORKSHEET47_TREES_READING_FIXED_TEMPLATES.map((t) => t.id),
+  ...WORKSHEET47_TREES_DYNAMIC_TEMPLATES.map((t) => t.id),
+];
+
 /** 全部試卷參考樣版（固定附文 + 動態 OCR） */
 export const WORKSHEET_READING_FIXED_TEMPLATES = [
   ...WORKSHEET43_READING_FIXED_TEMPLATES,
   ...WORKSHEET_DUANWU_READING_FIXED_TEMPLATES,
   ...WORKSHEET_ZHENGPING_READING_FIXED_TEMPLATES,
+  ...WORKSHEET47_TREES_READING_FIXED_TEMPLATES,
 ];
 
 export const WORKSHEET_DYNAMIC_TEMPLATES = [
   ...WORKSHEET43_DYNAMIC_TEMPLATES,
   ...WORKSHEET_DUANWU_DYNAMIC_TEMPLATES,
   ...WORKSHEET_ZHENGPING_DYNAMIC_TEMPLATES,
+  ...WORKSHEET47_TREES_DYNAMIC_TEMPLATES,
 ];
 
 export const WORKSHEET_TEMPLATE_IDS = [
   ...WORKSHEET43_TEMPLATE_IDS,
   ...WORKSHEET_DUANWU_TEMPLATE_IDS,
   ...WORKSHEET_ZHENGPING_TEMPLATE_IDS,
+  ...WORKSHEET47_TREES_TEMPLATE_IDS,
 ];

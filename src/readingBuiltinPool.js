@@ -3,7 +3,7 @@
  * 由 mockDatabase READING_POOL 匯入使用
  */
 
-import { RICE_EXPOSITORY_PASSAGE, DUANWU_EXPOSITORY_PASSAGE, ZHENGPING_NARRATIVE_PASSAGE } from './readingWorksheetReferencePool.js';
+import { RICE_EXPOSITORY_PASSAGE, DUANWU_EXPOSITORY_PASSAGE, ZHENGPING_NARRATIVE_PASSAGE, STRANGE_TREES_EXPOSITORY_PASSAGE } from './readingWorksheetReferencePool.js';
 
 /** @typedef {{ question: string, options: string[], correctIndex: number, explanation: string }} ReadingQuestionDef */
 
@@ -723,6 +723,43 @@ export const READING_PASSAGE_PACKS = [
       },
     ],
   },
+  {
+    passageId: 'read-22',
+    passageTitle: '說明文：奇怪的樹',
+    genre: '說明文',
+    passage: [...STRANGE_TREES_EXPOSITORY_PASSAGE],
+    questions: [
+      {
+        question: 'Q1. 下列哪項不是梓柯樹的特徵？',
+        options: ['有許多節苞', '果實有三至四斤重', '有汁液噴出來', '節苞上有網眼小孔'],
+        correctIndex: 1,
+        explanation: '「三至四斤重」是麵包樹果實的特徵。',
+      },
+      {
+        question: 'Q2. 麵包樹的果實會長在甚麼地方？',
+        options: ['樹枝和樹幹上', '只在樹頂', '只在樹幹內部', '只在樹葉之間'],
+        correctIndex: 0,
+        explanation: '文中寫果實可長在樹枝、樹幹及樹根上。',
+      },
+      {
+        question: 'Q3. 下列哪一項是西穀米樹及麵包樹對人類的貢獻？',
+        options: ['可供人類食用', '為人類製造麵包', '提供建築的材料', '可以撲滅森林大火'],
+        correctIndex: 0,
+        explanation: '西穀米可食，麵包樹果實可烤食；滅火是梓柯樹的功能。',
+      },
+      {
+        question: 'Q4. 下列哪一項是作者寫這篇文章的主要目的？',
+        options: [
+          '記述作者認識的樹木',
+          '描寫樹木的特徵',
+          '介紹世界上一些奇怪的樹木',
+          '說明樹木不同的生長情況',
+        ],
+        correctIndex: 2,
+        explanation: '全文逐一介紹多種奇特樹木，目的在於介紹。',
+      },
+    ],
+  },
 ];
 
 /**
@@ -751,5 +788,5 @@ export function buildReadingPoolFromPacks(packs = READING_PASSAGE_PACKS) {
   return items;
 }
 
-/** 內建閱讀理解完整題池（21 篇 × 3–5 題） */
+/** 內建閱讀理解完整題池（22 篇 × 3–5 題） */
 export const BUILTIN_READING_POOL = buildReadingPoolFromPacks();

@@ -189,6 +189,10 @@ export const PRIORITY_TEMPLATE_IDS = [
   'ws_zhengping_email_not_reason',
   'ws_zhengping_happiest_day',
   'ws_zhengping_narrative_purpose',
+  'ws47_trees_zike_negative',
+  'ws47_trees_breadfruit_location',
+  'ws47_trees_food_contribution',
+  'ws47_trees_expository_purpose',
 ];
 
 /** 依文體判斷寫作手法題是否適用（說明文不宜出借物抒情） */
