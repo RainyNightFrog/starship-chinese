@@ -16,6 +16,7 @@ import {
   WORKSHEET_ORDERED_WORDS,
   WORKSHEET_PAGES,
   WORKSHEET_PINYIN_PAIRS,
+  WORKSHEET_PINYIN_COLLISIONS,
 } from './worksheetVocabLexicon.js';
 
 const VOCAB_SHEET_SIGNALS = /默書|默写|詞表|词表|詞語|词语|聽寫|听写|生字|默寫|新詞|新词|成語|成语|詞彙|词汇|校本詞|校本词|範文詞|范文词|溫習詞|温习词|字詞表/;
@@ -521,10 +522,20 @@ function extractPinyinLinePairs(rawText = '', activePage = null) {
   const hits = [];
   const seen = new Set();
 
+  const resolvePinyinPair = (pairKey) => {
+    const direct = WORKSHEET_PINYIN_PAIRS[pairKey];
+    if (direct && allowed.has(direct)) return direct;
+    const collision = WORKSHEET_PINYIN_COLLISIONS[pairKey];
+    if (Array.isArray(collision)) {
+      return collision.find((w) => allowed.has(w)) ?? null;
+    }
+    return direct ?? null;
+  };
+
   for (let i = 0; i + 1 < latinTokens.length; i += 1) {
     const pairKey = latinTokens[i] + latinTokens[i + 1];
-    const word = WORKSHEET_PINYIN_PAIRS[pairKey];
-    if (!word || !allowed.has(word) || seen.has(word)) continue;
+    const word = resolvePinyinPair(pairKey);
+    if (!word || seen.has(word)) continue;
     seen.add(word);
     hits.push({ word, pos: i });
   }
@@ -548,7 +559,7 @@ function detectWorksheetPage(plainHan = '') {
   return bestScore >= 2 ? bestPage : null;
 }
 
-/** 鎖定詞表頁後 — 依頁內順序找回所有可辨識詞（容忍 OCR 錯字） */
+/** 鎖定詞表頁後 — 依頁內順序找回所有可辨識詞（容忍 OCR 錯字 + 拼音配對） */
 function extractDetectedPageWords(plainHan = '', rawText = '') {
   const page = detectWorksheetPage(plainHan);
   if (!page) return [];
@@ -571,6 +582,24 @@ function extractDetectedPageWords(plainHan = '', rawText = '') {
   return [...byWord.entries()]
     .sort((a, b) => a[1] - b[1])
     .map(([word, pos]) => ({ word, pos }));
+}
+
+/**
+ * 鎖定校本詞表頁 — 只輸出該頁命中詞（拼音 + 模糊），禁止盲切亂碼雙字
+ */
+function extractLockedPageWordList(plainHan = '', rawText = '', minWords = 3) {
+  const page = detectWorksheetPage(plainHan);
+  if (!page) return null;
+
+  const anchorHits = page.anchors.filter((anchor) => fuzzyFindWord(plainHan, anchor, 0) >= 0).length;
+  if (anchorHits < 2) return null;
+
+  const hits = extractDetectedPageWords(plainHan, rawText);
+  if (hits.length < minWords) return null;
+
+  return hits
+    .sort((a, b) => a.pos - b.pos)
+    .map((h) => h.word);
 }
 
 /** 在校本詞表固定順序中，掃描 OCR 全文是否含該詞（含模糊匹配） */
@@ -688,14 +717,25 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
   }
 
   const plainFull = toPlainHan(rawText);
+  const lockedPageWords = extractLockedPageWordList(plainFull, rawText, minWords);
   const pageHits = extractDetectedPageWords(plainFull, rawText);
 
-  /** 鎖定詞表頁 — 只輸出該頁命中詞（杜絕跨頁誤配如「落寞」「瞭解」） */
+  /** 鎖定詞表頁 — 只輸出該頁命中詞（杜絕跨頁誤配與 OCR 盲切亂碼） */
   let candidates;
-  if (pageHits.length >= minWords) {
+  if (lockedPageWords?.length >= minWords) {
+    candidates = lockedPageWords;
+  } else if (pageHits.length >= minWords) {
     candidates = pageHits
       .sort((a, b) => a.pos - b.pos)
       .map((h) => h.word);
+  } else if (isWorksheetUpload(rawText)) {
+    /** 字詞表 OCR 失敗時 — 僅用詞表順序掃描與拼音，禁止滑窗盲抽舊庫詞 */
+    candidates = mergeWordHits(
+      recoverOrderedWorksheetWords(plainFull),
+      extractDetectedPageWords(plainFull, rawText),
+      scanWorksheetLexiconPresence(plainFull),
+      extractPinyinLinePairs(rawText, detectWorksheetPage(plainFull)),
+    );
   } else {
     candidates = extractWorksheetWordsHybrid(rawText);
   }
@@ -727,16 +767,6 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
 
   candidates = candidates.filter((w) => isValidExtractedWord(w) && isKnownWord(w));
   candidates = dedupeVocabWords(candidates);
-
-  /** 校本字詞表 — 詞庫外新詞亦納入（避免只命中零星舊庫詞如「珍貴」） */
-  if (isWorksheetUpload(rawText)) {
-    const rawGrid = mergeRawWordHits(extractRawGridWordPairs(rawText));
-    if (rawGrid.length > candidates.length) {
-      candidates = rawGrid;
-    }
-  }
-
-  candidates = dedupeVocabWords(candidates.filter(isValidExtractedWord));
 
   if (candidates.length < minWords) {
     return [];

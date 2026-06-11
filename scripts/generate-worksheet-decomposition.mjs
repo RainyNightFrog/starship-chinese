@@ -6,7 +6,8 @@ import ccd from 'chinese-characters-decomposition';
 import { WORKSHEET_ORDERED_WORDS } from '../src/worksheetVocabLexicon.js';
 import { writeFileSync } from 'fs';
 
-const ccdMap = new Map(ccd.rows.map((r) => [r[0], r]));
+const ccdRows = Array.isArray(ccd) ? ccd : (ccd.rows ?? []);
+const ccdMap = new Map(ccdRows.map((r) => [r.component ?? r[0], r]));
 const chars = new Set();
 for (const w of WORKSHEET_ORDERED_WORDS) {
   for (const c of w) chars.add(c);
@@ -19,14 +20,18 @@ function cleanPart(s) {
 
 /** CCD 列 → 部首 + 部件（對齊課堂「偏旁 + 形旁」展示） */
 export function ccdRowToDecomposition(row) {
-  const [, , type, left, , right, , , , section] = row;
+  const component = row.component ?? row[0];
+  const type = row.compositionType ?? row[2];
+  const left = row.leftComponent ?? row[3];
+  const right = row.rightComponent ?? row[5];
+  const section = row.section ?? row[9];
   const L = cleanPart(left);
   const R = cleanPart(right);
-  if (!L && !R) return { radical: row[0], body: '—' };
-  if (!R) return { radical: L || row[0], body: '—' };
+  if (!L && !R) return { radical: component, body: '—' };
+  if (!R) return { radical: L || component, body: '—' };
 
   const sec = cleanPart(section);
-  if (sec && sec !== row[0]) {
+  if (sec && sec !== component) {
     if (R === sec) return { radical: sec, body: L };
     if (L === sec) return { radical: sec, body: R };
   }

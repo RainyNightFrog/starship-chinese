@@ -87,6 +87,32 @@ export const WORKSHEET_VOCAB_HINTS = {
   焦黃: { tc: '（顏色）黃而乾枯', sc: '焦黄', en: 'Scorched yellow' },
   滋補: { tc: '用有營養的食物補養身體', sc: '滋补', en: 'Nourishing; tonic' },
 
+  // ── 字詞表頁 5（雙字詞 · 鬱悶～威迫）──
+  鬱悶: { tc: '心情不暢、悶悶不樂', sc: '郁闷', en: 'Depressed; gloomy' },
+  逍遙: { tc: '悠閒自在、無拘無束', sc: '逍遥', en: 'Carefree; leisurely' },
+  拖拽: { tc: '用力拉、拖動', sc: '拖拽', en: 'To drag; pull' },
+  擺佈: { tc: '安排、處置', sc: '摆布', en: 'To arrange; manipulate' },
+  仰望: { tc: '抬頭向上看', sc: '仰望', en: 'To look up to' },
+  單調: { tc: '平淡、缺乏變化', sc: '单调', en: 'Monotonous; dull' },
+  暗淡: { tc: '光線微弱；不明亮', sc: '暗淡', en: 'Dim; gloomy' },
+  拉扯: { tc: '拉來拉去；牽扯', sc: '拉扯', en: 'To pull back and forth' },
+  承受: { tc: '接受並承擔', sc: '承受', en: 'To bear; endure' },
+  跟隨: { tc: '跟在後面；隨同', sc: '跟随', en: 'To follow' },
+  煩惱: { tc: '心中愁苦、憂慮的事', sc: '烦恼', en: 'Worry; vexation' },
+  艷麗: { tc: '鮮豔美麗', sc: '艳丽', en: 'Gorgeous; showy' },
+  內疚: { tc: '心中自責、慚愧', sc: '内疚', en: 'Guilt; remorse' },
+  沉靜: { tc: '安靜、沉穩', sc: '沉静', en: 'Calm; composed' },
+  彷徨: { tc: '猶豫不決、不知去向', sc: '彷徨', en: 'Hesitant; at a loss' },
+  處境: { tc: '所處的環境或狀況', sc: '处境', en: 'Situation; circumstances' },
+  推薦: { tc: '介紹、舉薦', sc: '推荐', en: 'To recommend' },
+  闖禍: { tc: '惹出禍患、闖下大禍', sc: '闯祸', en: 'To cause trouble' },
+  倒霉: { tc: '運氣不好、遭遇不幸', sc: '倒霉', en: 'Unlucky; jinxed' },
+  珍藏: { tc: '珍重收藏', sc: '珍藏', en: 'To treasure and keep' },
+  溶解: { tc: '（固體）化在液體中', sc: '溶解', en: 'To dissolve' },
+  驚喜: { tc: '又驚又喜', sc: '惊喜', en: 'Pleasant surprise' },
+  利誘: { tc: '用利益引誘', sc: '利诱', en: 'To lure with profit' },
+  威迫: { tc: '以威力逼迫', sc: '威迫', en: 'To coerce by threat' },
+
   // ── 字詞表頁 4（四字成語）──
   汗流浹背: { tc: '汗水流滿背部；形容非常辛勞或緊張', sc: '汗流浃背', en: 'Sweating profusely from hard work or stress' },
   鰥寡孤獨: { tc: '沒有配偶、沒有父母、沒有子女的人', sc: '鳏寡孤独', en: 'The widowed, lonely and childless' },
@@ -143,6 +169,17 @@ export const WORKSHEET_PINYIN_PAIRS = {
   shucong: '樹叢', shijin: '使勁', guxiang: '故鄉', shengkai: '盛開',
   wulun: '無論', xinxian: '新鮮', ganjin: '趕緊', shiyi: '適宜',
   qiyi: '奇異', yunxu: '允許', jiaohuang: '焦黃', zibu: '滋補',
+  yumen: '鬱悶', xiaoyao: '逍遙', tuozhuai: '拖拽', baibu: '擺佈',
+  yangwang: '仰望', dandiao: '單調', andan: '暗淡', lache: '拉扯',
+  chengshou: '承受', gensui: '跟隨', fannao: '煩惱', yanli: '艷麗',
+  neijiu: '內疚', chenjing: '沉靜', panghuang: '彷徨', chujing: '處境',
+  tuijian: '推薦', chuanghuo: '闖禍', daomei: '倒霉', zhencang: '珍藏',
+  rongjie: '溶解', liyou: '利誘', weipo: '威迫',
+};
+
+/** 同音拼音組合 — 依鎖定詞表頁 disambiguate（如 jingxi → 精細 / 驚喜） */
+export const WORKSHEET_PINYIN_COLLISIONS = {
+  jingxi: ['精細', '驚喜'],
 };
 
 export const WORKSHEET_PAGES = [
@@ -189,6 +226,15 @@ export const WORKSHEET_PAGES = [
       '奔流不息', '永無止境', '星羅棋佈', '星羅棋布', '興致勃勃', '連綿不斷', '夜以繼日',
     ],
   },
+  {
+    id: 'page5',
+    anchors: ['鬱悶', '逍遙', '拖拽', '擺佈', '仰望', '單調'],
+    words: [
+      '鬱悶', '逍遙', '拖拽', '擺佈', '仰望', '單調', '暗淡', '拉扯',
+      '承受', '跟隨', '煩惱', '艷麗', '內疚', '沉靜', '彷徨', '處境',
+      '推薦', '闖禍', '倒霉', '珍藏', '溶解', '驚喜', '利誘', '威迫',
+    ],
+  },
 ];
 
 /** 字詞表頁面順序 — 供 OCR 子串掃描（OCR 順序錯亂時仍能找回校本詞） */
@@ -202,6 +248,9 @@ export const WORKSHEET_ORDERED_WORDS = [
   '落後', '明確', '擅自', '氣餒', '勤奮', '濃重', '協調', '感悟',
   '安詳', '嘆息', '清理', '擦拭', '樹叢', '使勁', '故鄉', '盛開',
   '無論', '新鮮', '趕緊', '適宜', '奇異', '允許', '焦黃', '滋補',
+  '鬱悶', '逍遙', '拖拽', '擺佈', '仰望', '單調', '暗淡', '拉扯',
+  '承受', '跟隨', '煩惱', '艷麗', '內疚', '沉靜', '彷徨', '處境',
+  '推薦', '闖禍', '倒霉', '珍藏', '溶解', '驚喜', '利誘', '威迫',
   '汗流浹背', '鰥寡孤獨', '彬彬有禮', '微不足道', '語重心長', '百折不回',
   '百折不撓', '眾目睽睽', '形形色色', '不約而同', '恍然大悟', '自暴自棄',
   '大發雷霆', '風吹雨打', '憤憤不平', '目不暇接', '波瀾壯闊', '不知不覺',
