@@ -7,6 +7,7 @@ import { getUploadImageCount, getDisplayFileLabel, mergeUploadImagesIntoContent 
 import { buildOcrFallbackPack, buildReadingPackFromLines, buildReadingPackFromPage } from './readingQuestionBuilder';
 import { mapToReadingBankEntry } from './readingSchema';
 import { shieldReadingBank } from './readingMismatchShield';
+import { READING_MAX_QUESTIONS } from './readingConstants.js';
 
 export { parseReadingUploadItems } from './readingOcrService';
 
@@ -46,31 +47,29 @@ function buildPackForImage(meta, imageIndex) {
   return buildOcrFallbackPack(fileLabel, imageIndex, extracted?.qualityReason ?? parsed?.qualityReason);
 }
 
-/** 依上載生成閱讀題庫（多圖拼接 = 1 篇文章 × 3–5 題） */
+/** 依上載生成閱讀題庫 — 每次上載只出一篇文章，最多 5 題 */
 export function generateReadingVariantPack(meta = {}) {
   const seed = meta.seed ?? Date.now();
   const imageCount = getUploadImageCount(meta);
-  const isStitched = Boolean(meta.stitched || meta.extractedPassages?.[0]?.stitched);
-  const passageCount = isStitched ? 1 : imageCount;
   const readingBank = [];
 
-  for (let i = 0; i < passageCount; i += 1) {
-    const pack = buildPackForImage(meta, i);
+  /** 多圖已在 OCR 階段 stitch；否則只取第一篇，避免 8 題跨多篇 */
+  const pack = buildPackForImage(meta, 0);
+  const cappedQuestions = (pack.questions ?? []).slice(0, READING_MAX_QUESTIONS);
 
-    pack.questions.forEach((question, qi) => {
-      if (!question?.question || !question?.options?.length) return;
-      readingBank.push(mapToReadingBankEntry({
-        pack: { ...pack, questionsFromAi: pack.questionsFromAi },
-        question,
-        qi,
-        seed,
-        passageIndex: i,
-        genre: pack.genre,
-        ocrFailed: Boolean(pack.ocrFailed),
-        passageQuestionTotal: pack.questions.length,
-      }));
-    });
-  }
+  cappedQuestions.forEach((question, qi) => {
+    if (!question?.question || !question?.options?.length) return;
+    readingBank.push(mapToReadingBankEntry({
+      pack: { ...pack, questionsFromAi: pack.questionsFromAi },
+      question,
+      qi,
+      seed,
+      passageIndex: 0,
+      genre: pack.genre,
+      ocrFailed: Boolean(pack.ocrFailed),
+      passageQuestionTotal: cappedQuestions.length,
+    }));
+  });
 
   const shieldedBank = shieldReadingBank(readingBank);
 
@@ -79,8 +78,8 @@ export function generateReadingVariantPack(meta = {}) {
     passageTitle: shieldedBank[0]?.passageTitle ?? '校本閱讀',
     questionCount: shieldedBank.length,
     imageCount,
-    passageCount,
-    stitched: isStitched,
+    passageCount: 1,
+    stitched: Boolean(meta.stitched || meta.extractedPassages?.[0]?.stitched),
   };
 }
 

@@ -58,10 +58,14 @@ const WORKSHEET_SECTION_MARKERS = [
   /從第[一二三四五六七八九十\d]+段中找出/,
   /填在第\d+題/,
   /選出適當的答案/,
+  /從文中找出/,
+  /從文章找出/,
+  /填在下列句子/,
+  /適當的詞語/,
 ];
 
 /** 行內試題起始（用於切斷敘事與題目黏連） */
-const INLINE_WORKSHEET_SPLIT = /(?=根據文章內容)|(?=\d+[\.．、]\s*(?:根據|和|在|從|下列|上|下))|(?=\(第?\s*\d+\s*%\))|(?=回答第[一二三四五六七八九十\d]+[-–—]?\d*題)/;
+const INLINE_WORKSHEET_SPLIT = /(?=根據文章內容)|(?=從文中找出)|(?=從文章找出)|(?=\d+[\.．、]\s*(?:根據|和|在|從|下列|上|下))|(?=\(第?\s*\d+\s*%\))|(?=回答第[一二三四五六七八九十\d]+[-–—]?\d*題)/;
 
 /** 考卷雜訊：校名、大題指引、分數欄、OCR 亂碼等 */
 const NOISE_LINE_PATTERNS = [
@@ -108,6 +112,9 @@ export function isWorksheetQuestionLine(text = '') {
     return true;
   }
   if (/^[1-9１-９][\.．、].*邀請卡/.test(line) && /[？?]/.test(line)) {
+    return true;
+  }
+  if (/從文中找出|從文章找出|填在下列|橫線上|適當的詞語/.test(line)) {
     return true;
   }
   return false;

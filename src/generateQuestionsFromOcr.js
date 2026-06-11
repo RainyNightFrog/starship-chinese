@@ -39,7 +39,9 @@ import {
 import { generateQuestionsFromCustomWords } from './customVocabMatcher.js';
 import { saveUploadedPreviewWords } from './prestudyDictationBridge.js';
 
-const DEFAULT_QUESTION_COUNT = 5;
+import { READING_MAX_QUESTIONS } from './readingConstants.js';
+
+const DEFAULT_QUESTION_COUNT = READING_MAX_QUESTIONS;
 
 /** 校名 / 分數欄 / 試卷雜訊（行內清理用） */
 const SCHOOL_NOISE = /嗇色園|可信(?:小學|學校)?|保良局|聖公會|官立|津貼|band\s*[123]|小學|中學|學校|姓名|班別|學號|日期|滿分|得分|分數|___+|…{2,}|\.{4,}/gi;

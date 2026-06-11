@@ -15,6 +15,7 @@ import {
   isWorksheetQuestionLine,
   isValidPassageLine,
   sanitizeArticleLines,
+  truncateAtForeignSection,
   truncateLineBeforeWorksheet,
 } from './readingTextQuality.js';
 
@@ -101,7 +102,7 @@ export function advancedSanitizeOcrText(ocrText = '') {
   }
 
   return {
-    cleanArticleLines: sanitizeArticleLines(storyBuffer),
+    cleanArticleLines: sanitizeArticleLines(truncateAtForeignSection(storyBuffer)),
     rawLineCount: rawRows.length,
     droppedCount,
     hitWorksheet,

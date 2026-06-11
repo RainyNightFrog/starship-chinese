@@ -16,6 +16,7 @@ import {
   dynamicQuestionsToLegacyFormat,
 } from './readingDynamicQuestionEngine.js';
 import { generateQuestionsFromOcr } from './generateQuestionsFromOcr.js';
+import { READING_MAX_QUESTIONS } from './readingConstants.js';
 
 const TRANSITION_WORDS = [
   { word: '因此', meaning: '承上啟下，引出結果或結論' },
@@ -139,7 +140,7 @@ function buildProgrammaticQuestions(lines, seed) {
   const keywords = extractCoreKeywords(lines);
   const dynamic = generateDynamicQuestions(lines, {
     minCount: 3,
-    maxCount: 5,
+    maxCount: READING_MAX_QUESTIONS,
     seed,
     keywords,
   });
@@ -284,7 +285,7 @@ export function buildReadingPackFromPage(parsed = {}, fileLabel = '校本閱讀'
     articleLines,
     passageTitle: title.startsWith('校本') ? title : `校本閱讀：${title}`,
     genre,
-    questions,
+    questions: questions.slice(0, READING_MAX_QUESTIONS),
     lineCount: articleLines.length,
     contentTrack: dual.contentTrack,
     coreKeywords: dual.coreKeywords ?? [],
