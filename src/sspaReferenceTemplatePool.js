@@ -6,7 +6,7 @@
 import { getReadingReferencePassage } from './readingReferencePassages.js';
 import {
   WORKSHEET43_IDIOM_TRANSFER_TEMPLATE,
-  WORKSHEET43_READING_FIXED_TEMPLATES,
+  WORKSHEET_READING_FIXED_TEMPLATES,
 } from './readingWorksheetReferencePool.js';
 
 export const REFERENCE_CATEGORIES = {
@@ -339,7 +339,7 @@ export const READING_FIXED_REFERENCE_TEMPLATES = [
     trapProfile: 'technique',
     source: 'sspa_reference',
   },
-  ...WORKSHEET43_READING_FIXED_TEMPLATES.map((tpl) => ({
+  ...WORKSHEET_READING_FIXED_TEMPLATES.map((tpl) => ({
     category: REFERENCE_CATEGORIES.READING_FIXED,
     subType: '閱讀理解',
     ...tpl,

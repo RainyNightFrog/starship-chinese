@@ -1,5 +1,5 @@
 /**
- * 呈分試參考題庫 — 網上練習整理版「閱讀理解(43)・米」真題手法
+ * 呈分試參考題庫 — 網上練習整理版真題手法（米・端午節等）
  * 供固定樣版（單元測驗附文）、動態 OCR 出題、Admin 進階題庫共用
  */
 
@@ -13,6 +13,10 @@ export const WORKSHEET_TECHNIQUE_TAGS = {
   DETAIL_REASON: 'detail_reason',
   POEM_CITATION: 'poem_citation',
   AUTHOR_PURPOSE: 'author_purpose',
+  PARAGRAPH_DETAIL: 'paragraph_detail',
+  CUSTOM_ORIGIN: 'custom_origin',
+  NEGATIVE_FACT: 'negative_fact',
+  MAIN_THEME: 'main_theme',
 };
 
 /** 參考文章《米》— 對標 beasmartc9 小五閱讀理解(43) 上文 */
@@ -221,4 +225,205 @@ export const WORKSHEET43_TEMPLATE_IDS = [
   ...WORKSHEET43_READING_FIXED_TEMPLATES.map((t) => t.id),
   WORKSHEET43_IDIOM_TRANSFER_TEMPLATE.id,
   ...WORKSHEET43_DYNAMIC_TEMPLATES.map((t) => t.id),
+];
+
+/** 參考文章《端午節》— beasmartc9 閱讀理解真題上文 */
+export const DUANWU_EXPOSITORY_PASSAGE = [
+  '農曆五月初五是端午節，端午節的由來與傳說有很多，但流傳最廣的是紀念屈原的傳說。楚國大臣屈原主張聯合齊國對抗秦國，但他的主張遭到楚國貴族的反對。後來秦軍攻打楚國，楚國滅亡。屈原看到國家覆亡，便在五月初五投汨羅江自殺殉國。',
+  '傳說屈原死後，楚國百姓爭相划船打撈屈原，逐漸發展成龍舟競渡的習俗。有個百姓將米團、雞蛋等扔進江裏，說是讓魚蝦吃飽就不會糟蹋屈原的身體，後來發展成人們吃粽子的習俗。還有位老醫師拿來雄黃酒倒進江裏，說是要把蛟龍、水獸弄暈，免得牠們傷害屈原，後來就有了端午節喝雄黃酒的習俗。屈原的愛國精神深入人心，所以大部分人把端午節的習俗與紀念屈原聯繫在一起。',
+  '端午節除了以上習俗，還有佩戴香囊，在門口插艾草等習俗。總之，端午節的風俗有很多，因地區不同而截然不同。',
+  '在香港，除了吃粽子、龍舟競渡，還有獨具特色的「大澳龍舟遊涌」。相傳在一百多年前，大澳出現瘟疫，漁民用龍舟載着神像巡遊水道，使瘟疫得以消除。此後就有了「龍舟遊涌」的傳統。',
+  '每年端午節，大澳三個傳統漁業行會（扒艇行、鮮魚行和合心堂）都會舉辦「龍舟遊涌」的活動。行會成員前往大澳的四間廟宇請出小神像，接回各行會供奉祭祀。在五月初五的早上，扒艇行成員划龍舟採集青草後將草放進龍口，即「採青」。行會的長老又把雄雞血混到白酒裏，然後灑到龍頭、龍尾及船身上，這被稱為「喝龍」，有驅邪的意思。之後的活動就是「遊涌」，又被稱為「遊神」，由龍舟載着神像巡遊各水道，同時棚屋居民也朝着巡遊的龍舟焚香拜祭，祈求平安。「遊涌」完畢後，三條龍舟進行競渡表演，來娛樂神明。到了下午，各行會再「送神」，把神像送回各廟宇。',
+  '對於端午節，你是不是有了更多了解呢？',
+];
+
+/** 固定參考選擇題（附 read-20 文章）— 對標真題 Q3–Q6 */
+export const WORKSHEET_DUANWU_READING_FIXED_TEMPLATES = [
+  {
+    id: 'read_fixed_duanwu_zongzi_reason',
+    passageId: 'read-20',
+    technique: WORKSHEET_TECHNIQUE_TAGS.PARAGRAPH_DETAIL,
+    questionText: '【端午節】根據第二段，為甚麼百姓將米糰、雞蛋扔到江水中？',
+    options: [
+      '因為他們要飼養魚蝦。',
+      '因為他們不想讓魚蝦餓着。',
+      '因為他們想供奉水中的神獸。',
+      '因為他們想保護屈原的身體。',
+    ],
+    correctAnswerIndex: 3,
+    hint: '提示：文中說讓魚蝦吃飽，以免糟蹋屈原的身體。',
+    trapProfile: 'cause',
+    source: 'worksheet_ref_duanwu',
+  },
+  {
+    id: 'read_fixed_duanwu_tai_o_plague',
+    passageId: 'read-20',
+    technique: WORKSHEET_TECHNIQUE_TAGS.CUSTOM_ORIGIN,
+    questionText: '【端午節】一百多年前大澳漁民用龍舟載着神像巡遊水道的原因是',
+    options: [
+      '消除瘟疫。',
+      '供奉神明。',
+      '向市民展覽神像。',
+      '讓更多大澳居民認識神像。',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：第四段交代大澳遊涌起源與消除瘟疫有關。',
+    trapProfile: 'cause',
+    source: 'worksheet_ref_duanwu',
+  },
+  {
+    id: 'read_fixed_duanwu_negative_parade',
+    passageId: 'read-20',
+    technique: WORKSHEET_TECHNIQUE_TAGS.NEGATIVE_FACT,
+    questionText: '【端午節】根據第五段，下列哪一項不符合對「龍舟遊涌」的描述？',
+    options: [
+      '龍舟載着神像巡遊各水道。',
+      '五條龍舟進行競渡表演娛樂神明。',
+      '行會成員前往大澳四間廟宇請出小神像。',
+      '行會長老把雄雞血混到白酒灑到龍頭、龍尾及船身上。',
+    ],
+    correctAnswerIndex: 1,
+    hint: '提示：文中寫「三條龍舟」競渡，並非五條；其餘選項均可在第五段找到。',
+    trapProfile: 'vocab',
+    source: 'worksheet_ref_duanwu',
+  },
+  {
+    id: 'read_fixed_duanwu_main_theme',
+    passageId: 'read-20',
+    technique: WORKSHEET_TECHNIQUE_TAGS.MAIN_THEME,
+    questionText: '【端午節】這篇文章的主旨是',
+    options: [
+      '介紹端午節的由來和各種習俗。',
+      '記述屈原以身殉國的經過。',
+      '記述「龍舟遊涌」的經過。',
+      '描寫大澳不同的神像。',
+    ],
+    correctAnswerIndex: 0,
+    hint: '提示：全文由屈原傳說、一般習俗寫到大澳特色，主旨須概括全篇。',
+    trapProfile: 'theme',
+    source: 'worksheet_ref_duanwu',
+  },
+];
+
+/** 動態 OCR 樣版 — 端午節／習俗說明文 */
+export const WORKSHEET_DUANWU_DYNAMIC_TEMPLATES = [
+  {
+    id: 'ws_duanwu_zongzi_throw_reason',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.PARAGRAPH_DETAIL,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/屈原/.test(text) || !/米[團糰]|粽子|雞蛋/.test(text)) return null;
+      const built = structured(
+        '因為他們想保護屈原的身體。',
+        [
+          '因為他們要飼養魚蝦。',
+          '因為他們不想讓魚蝦餓着。',
+          '因為他們想供奉水中的神獸。',
+        ],
+        0,
+      );
+      return {
+        questionText: '根據文章，為甚麼百姓將米糰、雞蛋扔到江水中？',
+        ...built,
+        hint: '提示：找出文中說明投擲米糰、雞蛋目的的句子，留意因果關係。',
+        trapProfile: 'cause',
+        worksheetRef: 'worksheet_ref_duanwu',
+      };
+    },
+  },
+  {
+    id: 'ws_duanwu_tai_o_origin',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.CUSTOM_ORIGIN,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/大澳/.test(text) || !/瘟疫|遊涌/.test(text)) return null;
+      const built = structured(
+        '消除瘟疫。',
+        ['供奉神明。', '向市民展覽神像。', '讓更多大澳居民認識神像。'],
+      );
+      return {
+        questionText: '一百多年前大澳漁民用龍舟載着神像巡遊水道的原因是',
+        ...built,
+        hint: '提示：找出交代「龍舟遊涌」起源的段落，區分「原因」與「後來的習俗」。',
+        trapProfile: 'cause',
+        worksheetRef: 'worksheet_ref_duanwu',
+      };
+    },
+  },
+  {
+    id: 'ws_duanwu_negative_parade_fact',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.NEGATIVE_FACT,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/龍舟遊涌|大澳/.test(text)) return null;
+      const countMatch = text.match(/([三四五六])條龍舟進行競渡/);
+      if (!countMatch) return null;
+      const correctCount = countMatch[1];
+      const wrongCount = ['三', '四', '五', '六'].find((c) => c !== correctCount) ?? '五';
+      const built = structured(
+        `${wrongCount}條龍舟進行競渡表演娛樂神明。`,
+        [
+          '龍舟載着神像巡遊各水道。',
+          '行會成員前往大澳四間廟宇請出小神像。',
+          '行會長老把雄雞血混到白酒灑到龍頭、龍尾及船身上。',
+        ],
+        0,
+      );
+      return {
+        questionText: '下列哪一項不符合對「龍舟遊涌」的描述？',
+        ...built,
+        hint: '提示：逐項對照原文數字、步驟與用語，找出與文章不符的選項。',
+        trapProfile: 'vocab',
+        worksheetRef: 'worksheet_ref_duanwu',
+      };
+    },
+  },
+  {
+    id: 'ws_duanwu_main_theme',
+    category: 'main_theme',
+    technique: WORKSHEET_TECHNIQUE_TAGS.MAIN_THEME,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/端午節/.test(text) || !/屈原|龍舟|粽子/.test(text)) return null;
+      const built = structured(
+        '介紹端午節的由來和各種習俗。',
+        [
+          '記述屈原以身殉國的經過。',
+          '記述「龍舟遊涌」的經過。',
+          '描寫大澳不同的神像。',
+        ],
+      );
+      return {
+        questionText: '這篇文章的主旨是',
+        ...built,
+        hint: '提示：主旨須概括全文（由來、習俗、地方特色），勿只取其中一段。',
+        trapProfile: 'theme',
+        worksheetRef: 'worksheet_ref_duanwu',
+      };
+    },
+  },
+];
+
+export const WORKSHEET_DUANWU_TEMPLATE_IDS = [
+  ...WORKSHEET_DUANWU_READING_FIXED_TEMPLATES.map((t) => t.id),
+  ...WORKSHEET_DUANWU_DYNAMIC_TEMPLATES.map((t) => t.id),
+];
+
+/** 全部試卷參考樣版（固定附文 + 動態 OCR） */
+export const WORKSHEET_READING_FIXED_TEMPLATES = [
+  ...WORKSHEET43_READING_FIXED_TEMPLATES,
+  ...WORKSHEET_DUANWU_READING_FIXED_TEMPLATES,
+];
+
+export const WORKSHEET_DYNAMIC_TEMPLATES = [
+  ...WORKSHEET43_DYNAMIC_TEMPLATES,
+  ...WORKSHEET_DUANWU_DYNAMIC_TEMPLATES,
+];
+
+export const WORKSHEET_TEMPLATE_IDS = [
+  ...WORKSHEET43_TEMPLATE_IDS,
+  ...WORKSHEET_DUANWU_TEMPLATE_IDS,
 ];

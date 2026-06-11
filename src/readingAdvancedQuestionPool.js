@@ -32,8 +32,9 @@ export {
 export { SSPA_EXAM_TEMPLATES, SSPA_EXAM_TEMPLATE_IDS } from './readingSspaExamTemplates.js';
 export {
   WORKSHEET_TECHNIQUE_TAGS,
-  WORKSHEET43_TEMPLATE_IDS,
+  WORKSHEET_TEMPLATE_IDS,
   RICE_EXPOSITORY_PASSAGE,
+  DUANWU_EXPOSITORY_PASSAGE,
 } from './readingWorksheetReferencePool.js';
 
 export const QUESTION_CATEGORIES = {

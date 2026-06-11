@@ -180,6 +180,10 @@ export const PRIORITY_TEMPLATE_IDS = [
   'ws43_quoted_term_reason',
   'ws43_poem_citation_purpose',
   'ws43_author_purpose_aspects',
+  'ws_duanwu_zongzi_throw_reason',
+  'ws_duanwu_tai_o_origin',
+  'ws_duanwu_negative_parade_fact',
+  'ws_duanwu_main_theme',
 ];
 
 /** 依文體判斷寫作手法題是否適用（說明文不宜出借物抒情） */

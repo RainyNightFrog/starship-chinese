@@ -3,7 +3,7 @@
  * 由 mockDatabase READING_POOL 匯入使用
  */
 
-import { RICE_EXPOSITORY_PASSAGE } from './readingWorksheetReferencePool.js';
+import { RICE_EXPOSITORY_PASSAGE, DUANWU_EXPOSITORY_PASSAGE } from './readingWorksheetReferencePool.js';
 
 /** @typedef {{ question: string, options: string[], correctIndex: number, explanation: string }} ReadingQuestionDef */
 
@@ -624,6 +624,53 @@ export const READING_PASSAGE_PACKS = [
       },
     ],
   },
+  {
+    passageId: 'read-20',
+    passageTitle: '說明文：端午節',
+    genre: '說明文',
+    passage: [...DUANWU_EXPOSITORY_PASSAGE],
+    questions: [
+      {
+        question: 'Q1. 根據第二段，為甚麼百姓將米糰、雞蛋扔到江水中？',
+        options: [
+          '因為他們要飼養魚蝦。',
+          '因為他們不想讓魚蝦餓着。',
+          '因為他們想供奉水中的神獸。',
+          '因為他們想保護屈原的身體。',
+        ],
+        correctIndex: 3,
+        explanation: '第二段指出讓魚蝦吃飽，以免糟蹋屈原的身體。',
+      },
+      {
+        question: 'Q2. 一百多年前大澳漁民用龍舟載着神像巡遊水道的原因是',
+        options: ['消除瘟疫。', '供奉神明。', '向市民展覽神像。', '讓更多大澳居民認識神像。'],
+        correctIndex: 0,
+        explanation: '第四段交代遊涌起源與消除瘟疫有關。',
+      },
+      {
+        question: 'Q3. 下列哪一項不符合對「龍舟遊涌」的描述？',
+        options: [
+          '龍舟載着神像巡遊各水道。',
+          '五條龍舟進行競渡表演娛樂神明。',
+          '行會成員前往大澳四間廟宇請出小神像。',
+          '行會長老把雄雞血混到白酒灑到龍頭、龍尾及船身上。',
+        ],
+        correctIndex: 1,
+        explanation: '第五段寫「三條龍舟」競渡，並非五條。',
+      },
+      {
+        question: 'Q4. 這篇文章的主旨是',
+        options: [
+          '介紹端午節的由來和各種習俗。',
+          '記述屈原以身殉國的經過。',
+          '記述「龍舟遊涌」的經過。',
+          '描寫大澳不同的神像。',
+        ],
+        correctIndex: 0,
+        explanation: '全文由屈原傳說、一般習俗寫到大澳特色，須概括全篇。',
+      },
+    ],
+  },
 ];
 
 /**
@@ -652,5 +699,5 @@ export function buildReadingPoolFromPacks(packs = READING_PASSAGE_PACKS) {
   return items;
 }
 
-/** 內建閱讀理解完整題池（19 篇 × 3–4 題） */
+/** 內建閱讀理解完整題池（20 篇 × 3–4 題） */
 export const BUILTIN_READING_POOL = buildReadingPoolFromPacks();

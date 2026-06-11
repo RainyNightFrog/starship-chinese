@@ -11,7 +11,7 @@ import {
   paragraphLabelOptions,
   lineToParagraphIndex,
 } from './readingArticleProfiler.js';
-import { WORKSHEET43_DYNAMIC_TEMPLATES } from './readingWorksheetReferencePool.js';
+import { WORKSHEET_DYNAMIC_TEMPLATES } from './readingWorksheetReferencePool.js';
 
 function pickAnchor(ctx, offset = 0) {
   const anchors = ctx.anchors ?? [];
@@ -237,8 +237,8 @@ export const SSPA_EXAM_TEMPLATES = [
     },
   },
 
-  // ── beasmartc9 閱讀理解(43)「米」真題手法（動態 OCR）──
-  ...WORKSHEET43_DYNAMIC_TEMPLATES,
+  // ── beasmartc9 真題手法（米・端午節等，動態 OCR）──
+  ...WORKSHEET_DYNAMIC_TEMPLATES,
 ];
 
 export const SSPA_EXAM_TEMPLATE_IDS = SSPA_EXAM_TEMPLATES.map((t) => t.id);
