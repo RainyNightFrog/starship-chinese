@@ -199,10 +199,9 @@ export const SSPA_EXAM_TEMPLATES = [
     category: 'rhetoric',
     build(ctx) {
       const text = (ctx.lines ?? []).join('');
-      const hasContrast = /雖然|但是|然而|卻|而|前.*後|一方面.*另一方面/.test(text);
-      const correct = hasContrast
-        ? '透過前後情境或心態的反差，突出人物成長或文章中心思想'
-        : '文中並無明顯的對比，不宜強行套用對比手法';
+      const hasContrast = /雖然|但是|然而|卻|前.*後|一方面.*另一方面/.test(text);
+      if (!hasContrast) return null;
+      const correct = '透過前後情境或心態的反差，突出人物成長或文章中心思想';
       const built = structured(correct, [
         '故意混淆讀者視聽，使情節模糊不清',
         '為了增加字數，使內容看起來更豐富',

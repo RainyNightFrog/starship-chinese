@@ -45,10 +45,10 @@ export function isQuestionLine(text = '') {
   const line = cleanLineText(text);
   if (isOptionLine(line)) return false;
   if (isWorksheetQuestionLine(line) || isWorksheetSectionStart(line)) return true;
-  if (/[？?]$/.test(line) && /根據|下列|本文|作者|為什麼|什麼|哪一|哪項|是否|怎樣|如何|試解釋|解釋|說明|愛吃|舉辦/.test(line)) {
+  if (/[？?]$/.test(line) && /根據|下列|本文|作者|為什麼|什麼|哪一|哪項|是否|怎樣|如何|試解釋|解釋|說明|愛吃|舉辦|文中哪|詞語是形容/.test(line)) {
     return true;
   }
-  if (QUESTION_NUM_RE.test(line) && line.length >= 12 && /根據|下列|本文|作者|為什麼|什麼|哪一|哪項|是否|怎樣|如何|愛吃|舉辦/.test(line)) {
+  if (QUESTION_NUM_RE.test(line) && line.length >= 12 && /根據|下列|本文|作者|為什麼|什麼|哪一|哪項|是否|怎樣|如何|愛吃|舉辦|文中哪|詞語是形容/.test(line)) {
     return true;
   }
   return false;

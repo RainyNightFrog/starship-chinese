@@ -995,6 +995,71 @@ export const WORKSHEET_LIANG_LETTER_TEMPLATE_IDS = [
   ...WORKSHEET_LIANG_LETTER_DYNAMIC_TEMPLATES.map((t) => t.id),
 ];
 
+/** 動態 OCR 樣版 — 《孔子》傳記（詞語理解 + 貢獻辨析） */
+export const WORKSHEET_CONFUCIUS_DYNAMIC_TEMPLATES = [
+  {
+    id: 'ws_confucius_harmony_word',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.FOUR_CHAR_MEANING,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/和諧融洽/.test(text)) return null;
+      const built = structured('和諧融洽', ['精神象徵', '萬世師表', '有教無類']);
+      return {
+        questionText: '文中哪一個詞語是形容彼此間的感情和睦？',
+        ...built,
+        hint: '提示：留意描述「仁」與「禮」如何令社會相處的句子。',
+        trapProfile: 'vocab',
+        worksheetRef: 'worksheet_ref_confucius',
+      };
+    },
+  },
+  {
+    id: 'ws_confucius_symbol_word',
+    category: 'vocab_inference',
+    technique: WORKSHEET_TECHNIQUE_TAGS.FOUR_CHAR_MEANING,
+    build(ctx) {
+      const text = (ctx.lines ?? []).join('');
+      if (!/精神象徵|象徵/.test(text)) return null;
+      const built = structured('象徵', ['代表', '和諧融洽', '萬世師表']);
+      return {
+        questionText: '奧運會開幕式中放飛的鴿子「________」着世界和平。橫線應填入文中哪個詞語的核心用字？',
+        ...built,
+        hint: '提示：鴿子代表和平，應選與「代表／寓意」相關的動詞用字。',
+        trapProfile: 'vocab',
+        worksheetRef: 'worksheet_ref_confucius',
+      };
+    },
+  },
+  {
+    id: 'ws_confucius_contribution',
+    category: 'main_theme',
+    technique: WORKSHEET_TECHNIQUE_TAGS.HUMAN_CONTRIBUTION,
+    build(ctx) {
+      const p = inferArticleProfile(ctx);
+      if (p.subject !== '孔子' || !p.contributionOptions) return null;
+      const correct = p.notContribution ?? '在世界各地興建孔廟';
+      const opts = [...p.contributionOptions];
+      const fixedCorrectIndex = opts.indexOf(correct);
+      if (fixedCorrectIndex < 0) return null;
+      return {
+        questionText: '下列哪一項不是孔子的貢獻？',
+        correct,
+        structuredOptions: opts,
+        fixedCorrectIndex,
+        optionMode: OPTION_MODES.STRUCTURED_CHOICE,
+        hint: '提示：興建孔廟是後人紀念，非孔子本人貢獻。',
+        trapProfile: 'vocab',
+        worksheetRef: 'worksheet_ref_confucius',
+      };
+    },
+  },
+];
+
+export const WORKSHEET_CONFUCIUS_TEMPLATE_IDS = [
+  ...WORKSHEET_CONFUCIUS_DYNAMIC_TEMPLATES.map((t) => t.id),
+];
+
 /** 全部試卷參考樣版（固定附文 + 動態 OCR） */
 export const WORKSHEET_READING_FIXED_TEMPLATES = [
   ...WORKSHEET43_READING_FIXED_TEMPLATES,
@@ -1010,6 +1075,7 @@ export const WORKSHEET_DYNAMIC_TEMPLATES = [
   ...WORKSHEET_ZHENGPING_DYNAMIC_TEMPLATES,
   ...WORKSHEET47_TREES_DYNAMIC_TEMPLATES,
   ...WORKSHEET_LIANG_LETTER_DYNAMIC_TEMPLATES,
+  ...WORKSHEET_CONFUCIUS_DYNAMIC_TEMPLATES,
 ];
 
 export const WORKSHEET_TEMPLATE_IDS = [
@@ -1018,4 +1084,5 @@ export const WORKSHEET_TEMPLATE_IDS = [
   ...WORKSHEET_ZHENGPING_TEMPLATE_IDS,
   ...WORKSHEET47_TREES_TEMPLATE_IDS,
   ...WORKSHEET_LIANG_LETTER_TEMPLATE_IDS,
+  ...WORKSHEET_CONFUCIUS_TEMPLATE_IDS,
 ];

@@ -22,7 +22,7 @@ import {
   EXAM_METHOD_ENGINE_TEMPLATES,
 } from './readingGoldenTechniquePool.js';
 import { SSPA_EXAM_TEMPLATES } from './readingSspaExamTemplates.js';
-import { inferArticleProfile } from './readingArticleProfiler.js';
+import { inferArticleProfile, inferParagraphIdeaAtIndex, buildParagraphIdeaOptions } from './readingArticleProfiler.js';
 
 export {
   EXAM_METHOD_TEMPLATES,
@@ -229,7 +229,22 @@ export const ADVANCED_QUESTION_TEMPLATES = [
     id: 'logic_plot_function',
     category: QUESTION_CATEGORIES.PARAGRAPH_LOGIC,
     build(ctx) {
+      const p = inferArticleProfile(ctx);
       const anchor = pickAnchor(ctx);
+      if (p.genre === 'expository' || p.genre === 'biography') {
+        const correct = inferParagraphIdeaAtIndex(p, ctx, anchor.lineIndex);
+        const opts = buildParagraphIdeaOptions(p, correct, ctx, anchor.lineIndex);
+        const fixedCorrectIndex = opts.indexOf(correct);
+        return {
+          questionText: `文中第${anchor.lineIndex + 1}段主要是？`,
+          correct,
+          structuredOptions: opts.slice(0, 4),
+          fixedCorrectIndex: fixedCorrectIndex >= 0 ? fixedCorrectIndex : 0,
+          optionMode: OPTION_MODES.STRUCTURED_CHOICE,
+          hint: '段意須能概括該段核心內容，勿與其他段落或全文主旨混淆。',
+          trapProfile: 'summary',
+        };
+      }
       const correct = `為後文鋪墊，引出人物面對困難後的反思與成長（第${anchor.lineIndex + 1}行）`;
       return {
         questionText: `文中第${anchor.lineIndex + 1}行提及的情節，在結構上起到了什麼作用？`,
@@ -375,6 +390,8 @@ export const ADVANCED_QUESTION_TEMPLATES = [
     id: 'vocab_character_trait',
     category: QUESTION_CATEGORIES.VOCAB_INFERENCE,
     build(ctx) {
+      const p = inferArticleProfile(ctx);
+      if (p.genre === 'expository' || p.genre === 'biography') return null;
       const anchor = pickAnchor(ctx, 1);
       const correct = '面對挫折仍願反省、主動求助，具堅毅與虛心特質';
       return {

@@ -69,7 +69,7 @@ const WORKSHEET_SECTION_MARKERS = [
 ];
 
 /** 行內試題起始（用於切斷敘事與題目黏連） */
-const INLINE_WORKSHEET_SPLIT = /(?=根據文章內容)|(?=從文中找出)|(?=從文章找出)|(?=\d+[\.．、]\s*(?:根據|和|在|從|下列|上|下))|(?=\(第?\s*\d+\s*%\))|(?=回答第[一二三四五六七八九十\d]+[-–—]?\d*題)/;
+const INLINE_WORKSHEET_SPLIT = /(?=根據文章內容)|(?=從文中找出)|(?=從文章找出)|(?=[1-9１-９][\.．、]\s*(?:根據|和|在|從|下列|文中|奧運|從文|填在))|(?=\d+[\.．、]\s*(?:根據|和|在|從|下列))|(?=\(第?\s*\d+\s*%\))|(?=回答第[一二三四五六七八九十\d]+[-–—]?\d*題)/;
 
 /** 考卷雜訊：校名、大題指引、分數欄、OCR 亂碼等 */
 const NOISE_LINE_PATTERNS = [
@@ -113,6 +113,13 @@ export function isWorksheetQuestionLine(text = '') {
   const line = cleanReadingLine(text);
   if (!line) return false;
   if (WORKSHEET_SECTION_MARKERS.some((p) => p.test(line))) return true;
+  if (/文中哪一(?:個|项|項)?詞語|文中哪個詞語|哪一個詞語是形容|形容.*(?:感情|心情|和睦)/.test(line)) {
+    return true;
+  }
+  if (/^[1-9１-９][\.．、]/.test(line)) {
+    if (/橫線|___+|…{2,}|填在|適當的詞語|開幕|放飛|奧運|夾道|從文中|適當的答案/.test(line)) return true;
+    if (/文中哪|哪一個詞語|哪個詞語|形容.*感情|[？?]$/.test(line)) return true;
+  }
   if (/^[1-9１-９][\.．、]/.test(line) && /甚麼|哪[裏里裡]|誰|為何|為什麼|怎樣|如何|找出|填|舉辦|愛吃/.test(line)) {
     return true;
   }
@@ -133,6 +140,7 @@ export function isWorksheetSectionStart(text = '') {
   const line = cleanReadingLine(text);
   if (!line) return false;
   if (/^[一二三四五六七八九十][、\.．]/.test(line)) return false;
+  if (/從文中找出.*適當的詞語|填在下列.*橫線|使句子的意思完整/.test(line)) return true;
   if (/根據文章內容[，,]?回答第/.test(line)) return true;
   if (/^\d+[\.．、]\s*(?:根據|和|在|從|下列)/.test(line)) return true;
   if (/\(\s*\d+\s*%\s*\)/.test(line) && /根據|回答|選出|填在/.test(line)) return true;
@@ -176,7 +184,7 @@ export function isQuestionFragmentLine(text = '') {
   const line = cleanReadingLine(text);
   if (!line) return true;
   if (isWorksheetQuestionLine(line)) return true;
-  if (/[？?]$/.test(line) && /根據|下列|本文|作者|哪一|哪項|是否|為什麼|怎樣|試解釋|解釋下面/.test(line)) {
+  if (/[？?]$/.test(line) && /根據|下列|本文|作者|哪一|哪項|是否|為什麼|怎樣|試解釋|解釋|說明|文中哪|詞語是形容/.test(line)) {
     return true;
   }
   return /^(?:根據第|從第|下列哪|哪一項|上面一句|下面一句|上一句|下一句|主要寫|主要說)/.test(line)
@@ -327,7 +335,7 @@ function splitOcrTextToCandidateLines(rawText = '') {
 
   // 無換行：按句號 + 試題標記切分
   return text
-    .split(/(?<=[。！？；;])|(?=根據文章內容)|(?=\d+[\.．、]\s*(?:根據|和|在|從|下列))/)
+    .split(/(?<=[。！？；;])|(?=根據文章內容)|(?=從文中找出)|(?=[1-9１-９][\.．、])|(?=\d+[\.．、]\s*(?:根據|和|在|從|下列|文中))/)
     .map((l) => truncateLineBeforeWorksheet(cleanReadingLine(l)))
     .filter((l) => l.length >= 6);
 }

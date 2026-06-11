@@ -26,7 +26,7 @@ function splitOcrIntoRows(text = '') {
 
   return rows[0]
     .split(
-      /(?<=[。！？；;])|(?=[一二三四五六七八九十][、\.．])|(?=\d+[\.．、]\s*(?:根據|和|在|從|下列))|(?=根據文章內容)|(?=[A-DＡ-Ｄa-d][\.．、])/,
+      /(?<=[。！？；;])|(?=[一二三四五六七八九十][、\.．])|(?=[1-9１-９][\.．、])|(?=\d+[\.．、]\s*(?:根據|和|在|從|下列|文中|奧運|填在))|(?=根據文章內容)|(?=從文中找出)|(?=[A-DＡ-Ｄa-d][\.．、])/,
     )
     .map((l) => cleanReadingLine(l))
     .filter((l) => l.length >= 2);
@@ -113,5 +113,8 @@ export function advancedSanitizeOcrText(ocrText = '') {
 export function assertCleanArticleLines(lines = []) {
   return lines
     .map((line) => normalizePassageLine(line))
-    .filter((line) => line.length >= 6 && isValidPassageLine(line) && !shouldDropOcrLine(line));
+    .filter((line) => line.length >= 6
+      && isValidPassageLine(line)
+      && !shouldDropOcrLine(line)
+      && !isExamStructuralLine(line));
 }

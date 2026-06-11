@@ -66,9 +66,14 @@ import {
   ADVANCED_QUESTION_TEMPLATES,
   QUESTION_CATEGORIES,
   PRIORITY_TEMPLATE_IDS,
+  EXAM_METHOD_IDS,
 } from './readingAdvancedQuestionPool.js';
 import { buildTypeSafeOptions } from './readingTypeSafeOptions.js';
 import { getGlobalSharedMethods } from './globalSharedPool.js';
+import { inferArticleProfile } from './readingArticleProfiler.js';
+
+const EXAM_METHOD_ID_SET = new Set(EXAM_METHOD_IDS);
+const NARRATIVE_GENRES = new Set(['narrative', 'nostalgic', 'inspirational']);
 
 /** 將樣版實例化為標準 schema 題目（題型-選項強綁定） */
 function instantiateTemplate(template, ctx) {
@@ -449,6 +454,18 @@ export function generateDynamicQuestions(articleLines = [], options = {}) {
     randInt,
   };
 
+  const profile = inferArticleProfile(ctx);
+  const allowWritingTechnique = NARRATIVE_GENRES.has(profile.genre);
+
+  let priorityIds = PRIORITY_TEMPLATE_IDS.filter((id) => (
+    allowWritingTechnique || !EXAM_METHOD_ID_SET.has(id)
+  ));
+  if (!allowWritingTechnique) {
+    const contentFirst = priorityIds.filter((id) => id.startsWith('ws_') || id.startsWith('sspa_'));
+    const rest = priorityIds.filter((id) => !contentFirst.includes(id));
+    priorityIds = [...contentFirst, ...rest];
+  }
+
   const templateById = Object.fromEntries(
     ADVANCED_QUESTION_TEMPLATES.map((tpl) => [tpl.id, tpl]),
   );
@@ -489,11 +506,13 @@ export function generateDynamicQuestions(articleLines = [], options = {}) {
     return true;
   };
 
-  // 階段 1：高級優先池（四大黃金 + 修辭 + 心態）Fisher-Yates 洗牌注入
-  const priorityPool = fisherYatesShuffle(
-    PRIORITY_TEMPLATE_IDS.map((id) => templateById[id]).filter(Boolean),
-    randInt,
-  );
+  // 階段 1：高級優先池（說明文／傳記優先真題風格，敘事文才注入寫作手法）
+  const priorityTemplates = priorityIds
+    .map((id) => templateById[id])
+    .filter(Boolean);
+  const priorityPool = allowWritingTechnique
+    ? fisherYatesShuffle(priorityTemplates, randInt)
+    : priorityTemplates;
   const priorityTarget = Math.min(
     questionCount - 1,
     Math.max(2, 1 + randInt(2)),
@@ -503,11 +522,13 @@ export function generateDynamicQuestions(articleLines = [], options = {}) {
     tryPick(tpl);
   }
 
-  // 階段 1b：中央共享寫作手法池 — 全港家長 UGC 滾雪球題目
-  const sharedMethodPool = fisherYatesShuffle(getGlobalSharedMethods(), randInt);
-  for (const tpl of sharedMethodPool) {
-    if (picked.length >= priorityTarget + 1) break;
-    tryPickSharedMethod(tpl);
+  // 階段 1b：中央共享寫作手法池 — 僅敘事文體
+  if (allowWritingTechnique) {
+    const sharedMethodPool = fisherYatesShuffle(getGlobalSharedMethods(), randInt);
+    for (const tpl of sharedMethodPool) {
+      if (picked.length >= priorityTarget + 1) break;
+      tryPickSharedMethod(tpl);
+    }
   }
 
   // 階段 2：每大類至少 1 題，確保維度多元

@@ -21,6 +21,7 @@ import {
   advancedSanitizeOcrText,
   assertCleanArticleLines,
 } from './readingAdvancedTextSanitizer.js';
+import { inferArticleProfile } from './readingArticleProfiler.js';
 import { normalizeReadingPayload } from './readingSchema.js';
 import {
   createRng,
@@ -132,8 +133,12 @@ function fisherYatesShuffleQuestions(questions, seed) {
   return arr;
 }
 
-function mergeSharedPoolQuestions(questions = [], seed, targetCount) {
+function mergeSharedPoolQuestions(questions = [], seed, targetCount, articleLines = []) {
   ensureSeedMethodsInPool();
+
+  const profile = inferArticleProfile({ lines: articleLines, keywords: [] });
+  const narrativeGenres = new Set(['narrative', 'nostalgic', 'inspirational']);
+  const methodInjectCount = narrativeGenres.has(profile.genre) ? SHARED_METHOD_INJECT_COUNT : 0;
 
   const seen = new Set();
   const merged = [];
@@ -147,11 +152,16 @@ function mergeSharedPoolQuestions(questions = [], seed, targetCount) {
     merged.push({ ...q, ...normalized });
   };
 
-  // ① 名校呈分試共享池：Fisher-Yates 洗牌後抽 3 種不同 type（10 維度矩陣）
-  pickDistinctSharedMethodQuestions(SHARED_METHOD_INJECT_COUNT, seed + 17).forEach(pushQuestion);
-
-  // ② 動態引擎：依正文語境補足
+  // ① 動態引擎：依正文語境優先（避免說明文被寫作手法模板搶佔第一題）
   questions.forEach(pushQuestion);
+
+  // ② 名校呈分試共享池：僅敘事文體才注入「對比／借物抒情」等寫作手法題
+  if (methodInjectCount > 0 && merged.length < targetCount) {
+    pickDistinctSharedMethodQuestions(
+      Math.min(methodInjectCount, targetCount - merged.length),
+      seed + 17,
+    ).forEach(pushQuestion);
+  }
 
   // ③ 中央共享四字詞語 UGC 補位
   if (merged.length < targetCount) {
@@ -167,16 +177,14 @@ function mergeSharedPoolQuestions(questions = [], seed, targetCount) {
 }
 
 function ensureQuestionCount(articleLines = [], keywords = [], seed, targetCount = DEFAULT_QUESTION_COUNT) {
-  const dynamicTarget = Math.max(1, targetCount - SHARED_METHOD_INJECT_COUNT);
-
   let dynamic = dedupeQuestions(generateDynamicQuestions(articleLines, {
-    minCount: dynamicTarget,
+    minCount: targetCount,
     maxCount: targetCount,
     seed: seed != null ? Number(seed) : undefined,
     keywords,
   }));
 
-  if (dynamic.length < dynamicTarget) {
+  if (dynamic.length < targetCount) {
     const extra = generateDynamicQuestions(articleLines, {
       minCount: targetCount,
       maxCount: targetCount,
@@ -186,7 +194,7 @@ function ensureQuestionCount(articleLines = [], keywords = [], seed, targetCount
     dynamic = dedupeQuestions([...dynamic, ...extra]);
   }
 
-  return mergeSharedPoolQuestions(dynamic, seed, targetCount);
+  return mergeSharedPoolQuestions(dynamic, seed, targetCount, articleLines);
 }
 
 function resolveArticleFromOcr(cleanedText, cleanArticleLines, coreKeywords) {

@@ -197,6 +197,9 @@ export const PRIORITY_TEMPLATE_IDS = [
   'ws_liang_character_trait',
   'ws_liang_travel_gifts',
   'ws_liang_letter_purpose',
+  'ws_confucius_harmony_word',
+  'ws_confucius_symbol_word',
+  'ws_confucius_contribution',
 ];
 
 /** 依文體判斷寫作手法題是否適用（說明文不宜出借物抒情） */
@@ -208,11 +211,13 @@ function isMethodApplicable(templateId, ctx) {
       return ['narrative', 'nostalgic', 'inspirational'].includes(p.genre)
         || /足球|蛋糕|邀請卡|義肢|望遠鏡|照片|信/.test(text);
     case 'method_contrast':
-      return /雖然|但是|然而|卻|前.*後|一方面|另一方面/.test(text);
+      return ['narrative', 'inspirational', 'nostalgic'].includes(p.genre)
+        && /雖然|但是|然而|卻|前.*後|一方面|另一方面/.test(text);
     case 'method_foil':
       return /環境|風景|同學|配角|襯|烘托/.test(text) || p.genre !== 'expository';
     case 'method_transition':
-      return (ctx.lines?.length ?? 0) >= 3;
+      return ['narrative', 'nostalgic', 'inspirational'].includes(p.genre)
+        && (ctx.lines?.length ?? 0) >= 3;
     case 'type_paragraph_summary':
       return (ctx.lines?.length ?? 0) >= 3;
     case 'type_punctuation_effect':
