@@ -282,6 +282,8 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
               ? (err.message || '【後端未連接】請執行 npm run dev:stop 後再 npm run dev。')
             : err?.code === 'image_too_blurry'
               ? err.message
+              : err?.code === 'vocab_worksheet_misroute'
+                ? err.message
               : (err?.message || '解析失敗，請重試或改用較清晰的圖片。');
           setParseError(msg);
           setPhase('gallery');

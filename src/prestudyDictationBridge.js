@@ -8,10 +8,13 @@
 import { getGlobalSharedIdioms, shuffleGlobalIdiomPool } from './globalSharedPool.js';
 import { fisherYatesShuffle } from './questionEngineCore.js';
 import { applyVocabDecomposition } from './vocabDecomposition.js';
-import { withHints, getVocabHintEn } from './vocabHints.js';
+import { withHints, getVocabHintEn, enrichVocabList } from './vocabHints.js';
 
-/** 最近一次溫習完成的詞語（純文字陣列） */
+/** 最近一次溫習完成的詞語（純文字陣列）— 默書特訓直接讀取 */
 export const STUDIED_WORDS_STORAGE_KEY = 'starship_last_studied_words';
+
+/** 家長 OCR 上載的詞彙清單（含字卡、拼音、意思）— 課文預習優先讀取 */
+export const PREVIEW_WORDS_STORAGE_KEY = 'starship_preview_words';
 
 /** 本次預習 session 的 15 詞（避免刷新重新洗牌） */
 const PRESTUDY_SESSION_KEY = 'starship_prestudy_idiom_session';
@@ -20,6 +23,102 @@ export const PRESTUDY_IDIOM_COUNT = 15;
 
 function stripHintPrefix(hint) {
   return String(hint ?? '').replace(/^提示：/, '').trim();
+}
+
+function vocabItemWordKey(item) {
+  return String(item?.word || item?.idiomWord || item?.tc || '').trim();
+}
+
+/** 標準化 OCR 上載詞彙 → 課文預習字卡格式 */
+export function previewWordToVocabItem(item, index = 0) {
+  const word = vocabItemWordKey(item);
+  const meaning = stripHintPrefix(item.meaning ?? item.hintTc ?? item.hint ?? '');
+  return withHints(applyVocabDecomposition({
+    id: item.id ?? `preview-${word}-${index}`,
+    word,
+    tc: item.tc ?? word,
+    sc: item.sc ?? word,
+    py: item.py ?? '',
+    jp: item.jp ?? '',
+    en: item.en ?? '',
+    radical: item.radical,
+    body: item.body,
+    hintTc: meaning,
+    hintSc: item.hintSc ?? meaning,
+    meaning,
+    source: item.source ?? 'ocr_vocab_upload',
+    idiomWord: word,
+    isAiExtracted: Boolean(item.isAiExtracted),
+  }));
+}
+
+/**
+ * 家長 OCR 上載完成 — 寫入課文預習 + 默書專用 localStorage
+ * starship_preview_words：完整詞彙清單（字卡、拼音、意思）
+ * starship_last_studied_words：純文字陣列（默書 Web Speech 朗讀）
+ */
+export function saveUploadedPreviewWords(vocabItems = []) {
+  if (!Array.isArray(vocabItems) || !vocabItems.length) return false;
+
+  const extractedNewWords = vocabItems.map((item, index) => {
+    const word = vocabItemWordKey(item);
+    const meaning = stripHintPrefix(item.meaning ?? item.hintTc ?? item.hint ?? '');
+    return {
+      word,
+      tc: item.tc ?? word,
+      sc: item.sc ?? word,
+      meaning,
+      py: item.py ?? '',
+      jp: item.jp ?? '',
+      en: item.en ?? '',
+      radical: item.radical,
+      body: item.body,
+      source: item.source ?? 'ocr_vocab_upload',
+      id: item.id ?? `upload-${word}-${index}`,
+    };
+  });
+
+  const cardList = extractedNewWords.map((item, index) => previewWordToVocabItem(item, index));
+
+  try {
+    localStorage.setItem(PREVIEW_WORDS_STORAGE_KEY, JSON.stringify(extractedNewWords));
+    localStorage.setItem(
+      STUDIED_WORDS_STORAGE_KEY,
+      JSON.stringify(extractedNewWords.map((item) => item.word)),
+    );
+    sessionStorage.setItem(PRESTUDY_SESSION_KEY, JSON.stringify(cardList));
+    try {
+      window.dispatchEvent(new CustomEvent('starship-vocab-uploaded'));
+    } catch {
+      /* ignore */
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 課文預習初始化 — 優先讀取家長剛上載的新詞 */
+export function loadPreviewWords() {
+  try {
+    const raw = localStorage.getItem(PREVIEW_WORDS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.length) return null;
+    return enrichVocabList(parsed.map((item, index) => previewWordToVocabItem(item, index)));
+  } catch {
+    return null;
+  }
+}
+
+/** 清除上載詞彙快取（可選） */
+export function clearUploadedPreviewWords() {
+  try {
+    localStorage.removeItem(PREVIEW_WORDS_STORAGE_KEY);
+    sessionStorage.removeItem(PRESTUDY_SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** 成語池項目 → 課文預習詞卡格式（預習階段可顯示正確語意） */
@@ -78,10 +177,6 @@ export function resetPrestudyIdiomSession() {
   }
 }
 
-function vocabItemWordKey(item) {
-  return String(item?.idiomWord || item?.tc || item?.word || '').trim();
-}
-
 function persistPrestudySession(list) {
   try {
     sessionStorage.setItem(PRESTUDY_SESSION_KEY, JSON.stringify(list));
@@ -129,10 +224,10 @@ export function swapPrestudyVocab(vocabId, currentList, { persistSession = true 
   };
 }
 
-/** 預習完成 — 存入剛溫習的詞語純文字陣列 */
+/** 預習完成 — 更新默書專用詞語純文字陣列（鎖定剛溫習詞語） */
 export function saveStudiedWords(vocabItems) {
   const studiedWords = (vocabItems ?? [])
-    .map((item) => item?.idiomWord || item?.tc || item?.word)
+    .map((item) => vocabItemWordKey(item))
     .filter(Boolean);
 
   if (!studiedWords.length) return false;
@@ -162,11 +257,28 @@ export function loadStudiedWords() {
 export function buildDictationListFromStudiedWords(words) {
   const byWord = new Map(getGlobalSharedIdioms().map((item) => [item.word, item]));
 
+  try {
+    const previewRaw = localStorage.getItem(PREVIEW_WORDS_STORAGE_KEY);
+    if (previewRaw) {
+      const parsed = JSON.parse(previewRaw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item) => {
+          const key = item?.word || item?.tc;
+          if (key && !byWord.has(key)) byWord.set(key, item);
+        });
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
   const items = words.map((word, index) => {
     const idiom = byWord.get(word);
-    if (idiom) return idiomItemToVocabItem(idiom);
+    if (idiom?.word && idiom?.options) return idiomItemToVocabItem(idiom);
+    if (idiom?.tc || idiom?.word) return previewWordToVocabItem(idiom, index);
     return withHints({
       id: `linked-dict-${index}`,
+      word,
       tc: word,
       sc: word,
       hintTc: word,

@@ -36,9 +36,12 @@ import {
   getPrestudyIdiomVocabList,
   saveStudiedWords,
   loadStudiedWords,
+  loadPreviewWords,
   buildDictationListFromStudiedWords,
   swapPrestudyVocab,
   PRESTUDY_IDIOM_COUNT,
+  PREVIEW_WORDS_STORAGE_KEY,
+  STUDIED_WORDS_STORAGE_KEY,
 } from './prestudyDictationBridge';
 import ContributorHonorBadge from './ContributorHonorBadge';
 import { useContributorBadge } from './useContributorBadge';
@@ -276,17 +279,35 @@ export default function StudentWorkspace({
 
   const vocabList = vocabDeck;
 
-  /** 課文預習 — 優先家長上載；否則從中央共享 GLOBAL_SHARED_IDIOMS 隨機 15 詞 */
+  /** 監聽家長 OCR 上載寫入的 localStorage，即時刷新預習／默書詞表 */
+  const [vocabStorageRevision, setVocabStorageRevision] = useState(0);
+  useEffect(() => {
+    const bump = () => setVocabStorageRevision((n) => n + 1);
+    const onStorage = (e) => {
+      if (e.key === PREVIEW_WORDS_STORAGE_KEY || e.key === STUDIED_WORDS_STORAGE_KEY) bump();
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('starship-vocab-uploaded', bump);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('starship-vocab-uploaded', bump);
+    };
+  }, []);
+
+  /** 課文預習 — 優先 localStorage 上載新詞 → 家長 config → 共享池 */
   const basePrestudyVocabList = useMemo(() => {
+    const fromStorage = loadPreviewWords();
+    if (fromStorage?.length) return fromStorage;
     const uploaded = assignedContent.vocabByTask?.prestudy;
     if (uploaded?.length) return uploaded;
     return getPrestudyIdiomVocabList(PRESTUDY_IDIOM_COUNT);
-  }, [assignedContent.vocabByTask?.prestudy]);
+  }, [assignedContent.vocabByTask?.prestudy, vocabStorageRevision]);
 
   const basePrestudyListKey = basePrestudyVocabList.map((v) => v.id).join('|');
   const [prestudyListOverride, setPrestudyListOverride] = useState(null);
   const prestudyVocabList = prestudyListOverride ?? basePrestudyVocabList;
-  const prestudyUsesSessionPool = !assignedContent.vocabByTask?.prestudy?.length;
+  const prestudyUsesSessionPool = !loadPreviewWords()?.length
+    && !assignedContent.vocabByTask?.prestudy?.length;
 
   useEffect(() => {
     setPrestudyListOverride(null);
@@ -301,10 +322,10 @@ export default function StudentWorkspace({
     setPrestudyListOverride(result.list);
   }, [prestudyVocabList, prestudyUsesSessionPool]);
 
-  /** 默書特訓 — 優先讀取預習完成快取，100% 鎖定剛溫習詞語 */
+  /** 默書特訓 — 讀取 starship_last_studied_words（上載或預習完成後寫入） */
   const linkedStudiedWords = useMemo(
     () => (activeTask === 'dictation' ? loadStudiedWords() : null),
-    [activeTask],
+    [activeTask, vocabStorageRevision],
   );
 
   const linkedDictationList = useMemo(() => {

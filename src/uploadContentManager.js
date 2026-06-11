@@ -8,6 +8,7 @@ import { applyVocabListUpload } from './vocabListGenerator';
 import { applyReadingPaperUpload, parseReadingUploadItems } from './readingPaperGenerator';
 import { clearTrackBCache } from './readingTrackBCache';
 import { buildUploadSummaryName } from './uploadMetaUtils';
+import { clearUploadedPreviewWords } from './prestudyDictationBridge';
 
 export function buildUploadMetaFromImages(images = []) {
   return {
@@ -24,6 +25,7 @@ export function buildUploadMetaFromImages(images = []) {
 /** 清除所有 AI 上載紀錄與生成內容，恢復預設題庫 */
 export function clearAllUploads(config) {
   clearTrackBCache();
+  clearUploadedPreviewWords();
   const defaults = createDefaultParentConfig();
   return {
     ...config,
