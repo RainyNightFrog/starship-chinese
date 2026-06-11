@@ -244,41 +244,42 @@ export default function ReadingComprehensionPanel({
     );
   }
 
-  /** 第 3 題完成 — 完成特訓結算畫面 */
+  /** 全部完成 — 完成特訓結算畫面 */
   if (passageFinished) {
     return (
-      <div className="space-y-5 animate-[fadeSlideIn_0.4s_ease-out]">
+      <div className="space-y-5 pb-4 animate-[fadeSlideIn_0.4s_ease-out]">
         {taskHeader}
-        <div className={`rounded-2xl border-2 text-center space-y-4 py-8 px-5
+        <div className={`rounded-2xl border-2 flex flex-col items-center gap-4 py-8 px-5 w-full
           ${isNight ? 'border-emerald-600 bg-emerald-950/40' : 'border-emerald-400 bg-emerald-50'}`}>
-          <span className="text-5xl block" aria-hidden>🏆</span>
+          <span className="text-5xl shrink-0" aria-hidden>🏆</span>
           <BilingualLabel
             zh="完成特訓！"
             en="Training Complete!"
             size={isSEN ? 'lg' : 'md'}
             center
-            className={`font-black ${isNight ? '[&_span:first-child]:text-emerald-100' : '[&_span:first-child]:text-emerald-800'}`}
+            className={`font-black w-full ${isNight ? '[&_span:first-child]:text-emerald-100' : '[&_span:first-child]:text-emerald-800'}`}
           />
           <BilingualLabel
             zh={`本次閱讀理解共完成 ${totalQuestions} 題`}
             en={`You finished all ${totalQuestions} reading questions`}
             size={isSEN ? 'md' : 'sm'}
             center
-            className="font-bold"
+            className="font-bold w-full"
           />
-          <div className={`inline-flex items-center gap-2 font-black text-lg
+          <div className={`flex flex-col items-center gap-2 w-full font-black text-lg
             ${isNight ? 'text-amber-300' : 'text-amber-700'}`}>
             <CoinIcon size={isSEN ? 'md' : 'sm'} glow spin />
             <BilingualLabel
               zh={`能量金幣 +${totalCoinsEarned || COIN_REWARD * totalQuestions}`}
               en={`+${totalCoinsEarned || COIN_REWARD * totalQuestions} effort coins`}
               size={isSEN ? 'md' : 'sm'}
+              center
             />
           </div>
           <button
             type="button"
             onClick={() => (onGoHome ? onGoHome() : onPassageFinished?.())}
-            className={`w-full max-w-xs mx-auto rounded-xl font-black border-2 transition
+            className={`block w-full max-w-sm shrink-0 rounded-xl font-black border-2 transition mt-1
               ${isNight
                 ? 'text-emerald-100 bg-emerald-800 hover:bg-emerald-700 border-emerald-600'
                 : 'text-emerald-800 bg-emerald-200 hover:bg-emerald-300 border-emerald-400'}
