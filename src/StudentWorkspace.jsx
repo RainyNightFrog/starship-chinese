@@ -1172,7 +1172,7 @@ function VocabCards({
   };
 
   const handleFinishPrestudy = () => {
-    if (!allRead || sessionSaved) return;
+    if (sessionSaved) return;
     onSessionComplete?.(cardSourceList);
     setSessionSaved(true);
   };
@@ -1354,14 +1354,20 @@ function VocabCards({
         </div>
         );
       })}
-      {allRead && onSessionComplete && (
+      {totalCount > 0 && onSessionComplete && (
         <div
           className={`rounded-2xl border-2 p-4 space-y-3 text-center animate-[fadeSlideIn_0.35s_ease-out]
             ${isNight ? 'border-emerald-600/60 bg-emerald-950/35' : 'border-emerald-300 bg-emerald-50'}`}
         >
           <BilingualLabel
-            zh={sessionSaved ? getDisplayText('✅ 溫習完成！詞語已同步至默書特訓', { language, studentType }) : getDisplayText('🎯 全部讀畢！按下方完成溫習', { language, studentType })}
-            en={sessionSaved ? 'Pre-study saved — ready for dictation!' : 'All words read — tap below to finish'}
+            zh={sessionSaved
+              ? getDisplayText('✅ 溫習完成！詞語已同步至默書特訓', { language, studentType })
+              : (allRead
+                ? getDisplayText('🎯 全部讀畢！按下方完成溫習', { language, studentType })
+                : getDisplayText('🎯 溫習夠了？隨時可按下方完成', { language, studentType }))}
+            en={sessionSaved
+              ? 'Pre-study saved — ready for dictation!'
+              : (allRead ? 'All words read — tap below to finish' : 'Done reviewing? Tap below to finish anytime')}
             size={isSEN ? 'md' : 'sm'}
             center
             className={`font-black ${isNight ? 'text-emerald-200' : 'text-emerald-800'}`}
