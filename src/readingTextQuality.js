@@ -415,3 +415,27 @@ export function splitPastedPages(text = '') {
     .filter((lines) => lines.length > 0);
   return parts.length ? parts : [splitPastedPassageText(text)];
 }
+
+/** 是否像閱讀理解文章（敘事／說明文），而非默書詞表 */
+export function looksLikeReadingPassageContent(rawText = '') {
+  const text = String(rawText ?? '').trim();
+  if (!text) return false;
+
+  if (/閱讀以下|閱讀下面的文字|根據文章|閱讀理解|請閱讀|根據以下/.test(text)) {
+    return true;
+  }
+
+  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const longLines = lines.filter((l) => {
+    const han = (l.match(/[\u4e00-\u9fff]/g) || []).length;
+    return han >= 12;
+  });
+  const sentenceEndings = (text.match(/[。！？；]/g) || []).length;
+  const plainHan = text.replace(/[^\u4e00-\u9fff]/g, '');
+
+  if (longLines.length >= 2) return true;
+  if (sentenceEndings >= 2 && longLines.length >= 1) return true;
+  if (plainHan.length >= 80 && sentenceEndings >= 1) return true;
+
+  return false;
+}

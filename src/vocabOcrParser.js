@@ -10,6 +10,7 @@ import { VOCAB_HINTS } from './vocabHints.js';
 import { PRESTUDY_IDIOM_COUNT } from './prestudyDictationBridge.js';
 import { resolveCustomVocabFromInput } from './customVocabMatcher.js';
 import { dedupeVocabWords, toTraditionalVocabWord } from './vocabWordNormalize.js';
+import { looksLikeReadingPassageContent } from './readingTextQuality.js';
 import {
   WORKSHEET_TITLE_PATTERN,
   ALL_WORKSHEET_WORDS,
@@ -21,6 +22,8 @@ import {
 } from './worksheetVocabLexicon.js';
 
 const VOCAB_SHEET_SIGNALS = /默書|默写|詞表|词表|詞語|词语|聽寫|听写|生字|默寫|新詞|新词|成語|成语|詞彙|词汇|校本詞|校本词|範文詞|范文词|溫習詞|温习词|字詞表/;
+/** 明確詞表標記 — 不含「詞語／成語」等閱讀卷常見字樣 */
+const STRONG_VOCAB_SHEET_SIGNALS = /默書|默写|詞表|词表|聽寫|听写|生字|默寫|新詞|新词|字詞表|溫習詞|温习词|校本詞|校本词|範文詞|范文词/;
 
 const NOISE_LINE = /姓名|班別|学号|學號|日期|分數|分数|滿分|满分|學校|学校|請在|请在|下列|造句|填空|改正|選出|选出|圈出|_{2,}|…{2,}|\.{4,}|^\(\s*\d+\s*分\s*\)/;
 
@@ -896,7 +899,14 @@ function isWorksheetUpload(rawText = '') {
   if (/lián|jié|huī|huáng|píng|fán|lián jié/i.test(rawText) && /廉|輝|烹|詞表|字詞表/.test(rawText)) return true;
   const hanCount = (rawText.match(/[\u4e00-\u9fff]/g) || []).length;
   const latinCount = (rawText.match(/[a-zA-Z]/g) || []).length;
-  return (hanCount >= 20 && latinCount >= 5) || (VOCAB_SHEET_SIGNALS.test(rawText) && hanCount >= 12);
+  const lines = String(rawText).split(/\n+/).filter((l) => l.trim());
+  const shortHanLines = lines.filter((l) => {
+    const h = (l.match(/[\u4e00-\u9fff]/g) || []).length;
+    return h > 0 && h <= 8;
+  }).length;
+  const latinTokens = (String(rawText).match(/[a-z]{2,}/gi) || []).length;
+  const pinyinGrid = hanCount >= 20 && latinTokens >= 8 && shortHanLines >= Math.ceil(lines.length * 0.45);
+  return pinyinGrid || (STRONG_VOCAB_SHEET_SIGNALS.test(rawText) && hanCount >= 12);
 }
 
 /** 家長貼上詞表 — 每行一詞 */
@@ -911,10 +921,24 @@ export function isVocabWorksheetContent(rawText = '') {
   const text = String(rawText ?? '').trim();
   if (!text) return false;
   if (WORKSHEET_TITLE_PATTERN.test(text)) return true;
-  if (VOCAB_SHEET_SIGNALS.test(text)) return true;
+  if (looksLikePastedWordList(text)) return true;
   if (isWorksheetUpload(text)) return true;
-  if (extractWorksheetWordsHybrid(text).length >= 3) return true;
+  const plainFull = toPlainHan(text);
+  const page = detectWorksheetPage(plainFull, text);
+  if (page) {
+    const hits = extractDetectedPageWords(plainFull, text);
+    const required = isIdiomWorksheetPage(page) ? 4 : 6;
+    if (hits.length >= required) return true;
+  }
   return false;
+}
+
+/** 閱讀上載誤導檢查 — 僅在高度確定為詞表時才攔截（避免誤判閱讀文章） */
+export function shouldRedirectToVocabUpload(rawText = '') {
+  const text = String(rawText ?? '').trim();
+  if (!text) return false;
+  if (looksLikeReadingPassageContent(text)) return false;
+  return isVocabWorksheetContent(text);
 }
 
 export function parseVocabFromOcrText(rawText = '', options = {}) {

@@ -12,7 +12,7 @@ import {
 } from './readingDualTrackEngine';
 import { splitPastedPages } from './readingTextQuality';
 import { advancedSanitizeOcrText, assertCleanArticleLines } from './readingAdvancedTextSanitizer';
-import { isVocabWorksheetContent } from './vocabOcrParser';
+import { shouldRedirectToVocabUpload } from './vocabOcrParser';
 import { generateQuestionsFromOcr } from './generateQuestionsFromOcr';
 import {
   analyzeReadingImageWithVision,
@@ -61,7 +61,7 @@ function buildParsedFromServerResponse(data = {}, fileName = '校本閱讀', met
 
 function buildExtractedFromPastedLines(lines = [], fileName = '貼上文章') {
   const pastedRaw = lines.join('\n');
-  if (isVocabWorksheetContent(pastedRaw)) {
+  if (shouldRedirectToVocabUpload(pastedRaw)) {
     const err = new Error('偵測到默書詞表／詞彙清單，請改用「📷 上載新詞表」，詞彙將同步至課文預習與默書特訓（不會變成閱讀理解題）。');
     err.code = 'vocab_worksheet_misroute';
     throw err;
@@ -130,7 +130,7 @@ export async function extractReadingPageFromImage(previewUrl, onProgress, fileNa
   onProgress?.(1);
 
   const rawText = data.rawText ?? data.articleLines?.join('\n') ?? '';
-  if (isVocabWorksheetContent(rawText)) {
+  if (shouldRedirectToVocabUpload(rawText)) {
     const err = new Error('偵測到默書詞表／詞彙清單，請改用「📷 上載新詞表」，詞彙將同步至課文預習與默書特訓（不會變成閱讀理解題）。');
     err.code = 'vocab_worksheet_misroute';
     throw err;
@@ -157,7 +157,7 @@ export async function extractReadingStitchedPagesOcr(uploadItems = [], onProgres
   onProgress?.(1);
 
   const rawText = data.rawText ?? data.articleLines?.join('\n') ?? '';
-  if (isVocabWorksheetContent(rawText)) {
+  if (shouldRedirectToVocabUpload(rawText)) {
     const err = new Error('偵測到默書詞表／詞彙清單，請改用「📷 上載新詞表」，詞彙將同步至課文預習與默書特訓（不會變成閱讀理解題）。');
     err.code = 'vocab_worksheet_misroute';
     throw err;
