@@ -102,6 +102,10 @@ export function applyVocabListUpload(currentConfig, uploadMeta = {}, wrongWordEn
           { source: uploadMeta.source ?? 'vocab_upload' },
         ).matchedQuestions;
     }
+    /** OCR 零命中時提示改貼文字，不寫入亂碼 */
+    if (!matchedQuestions.length) {
+      throw new Error('未能從圖片辨識出詞庫內的詞語。建議直接貼上詞表文字（每行一詞），或重新拍照確保清晰。');
+    }
     prestudy = toPrestudyCardList(matchedQuestions);
     dictation = cloneVocab(prestudy);
     if (wrongWordEntries.length) {

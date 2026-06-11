@@ -22,6 +22,7 @@ export const WORKSHEET_VOCAB_HINTS = {
   記載: { tc: '把事情寫下來留傳', sc: '把事情写下来留传', en: 'To record in writing' },
   汪洋: { tc: '形容水勢浩大廣闊', sc: '形容水势浩大广阔', en: 'Vast (of water)' },
   瞭解: { tc: '知道、明白', sc: '了解、明白', en: 'To understand' },
+  了解: { tc: '知道、明白', sc: '了解、明白', en: 'To understand' },
   學識: { tc: '知識與見解', sc: '知识与见解', en: 'Knowledge and learning' },
   預報: { tc: '預先報告（如天氣預報）', sc: '预先报告', en: 'Forecast; to predict in advance' },
   永恆: { tc: '永遠不變', sc: '永远不变', en: 'Eternal; everlasting' },
@@ -83,4 +84,5 @@ export const WORKSHEET_IDIOM_ANCHORS = [
 export const ALL_WORKSHEET_WORDS = new Set([
   ...Object.keys(WORKSHEET_VOCAB_HINTS),
   ...WORKSHEET_IDIOM_ANCHORS,
+  '了解',
 ]);
