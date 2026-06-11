@@ -230,13 +230,13 @@ export default function DashboardDemo() {
         className={`xh-app-header sticky top-0 z-[70] border-b overflow-x-clip overflow-y-visible transition-colors duration-500 ${theme.header}`}
         style={{ backgroundColor: surfaces.header }}
       >
-        {/* 手機：第一行 — 標題 + 連擊 + 金幣 */}
-        <div className="flex lg:hidden items-center justify-between gap-2 px-3 py-2 min-w-0">
+        {/* 手機：第一行 — 標題靠左，連擊 + 金幣置中 */}
+        <div className="relative flex lg:hidden items-center justify-center px-3 py-2 min-w-0 min-h-[2.75rem]">
           <button
             type="button"
             onClick={goHome}
             title={dt('返回學習首頁')}
-            className={`font-black tracking-wider text-left hover:opacity-90 transition-opacity shrink-0 ${isNight ? 'text-amber-300' : 'text-amber-900'} ${isSEN ? 'text-3xl' : 'text-2xl'}`}
+            className={`absolute left-3 top-1/2 -translate-y-1/2 font-black tracking-wider text-left hover:opacity-90 transition-opacity shrink-0 ${isNight ? 'text-amber-300' : 'text-amber-900'} ${isSEN ? 'text-3xl' : 'text-2xl'}`}
           >
             {dt('星航中文')} 🔥
           </button>
@@ -310,9 +310,9 @@ export default function DashboardDemo() {
           </div>
         </div>
 
-        {/* 桌面：三欄網格頂欄，避免 flex-wrap 與語音面板重疊 */}
-        <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center lg:gap-x-3 px-3 py-2 sm:px-4 md:px-6 md:py-3 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
+        {/* 桌面：三欄網格 — 左標題 / 中連擊金幣 / 右設定 */}
+        <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-x-3 px-3 py-2 sm:px-4 md:px-6 md:py-3 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 justify-self-start">
             <button
               type="button"
               onClick={goHome}
@@ -334,7 +334,7 @@ export default function DashboardDemo() {
             </span>
           </div>
 
-          <div className={`flex items-center shrink-0 ${isSEN ? 'gap-2 sm:gap-4' : 'gap-1.5 sm:gap-3'}`}>
+          <div className={`flex items-center justify-self-center shrink-0 ${isSEN ? 'gap-2 sm:gap-4' : 'gap-1.5 sm:gap-3'}`}>
             <StreakWidget
               streakCount={streakState.streakCount}
               streakClaimed={streakState.claimedToday}
@@ -362,7 +362,7 @@ export default function DashboardDemo() {
             </div>
           </div>
 
-          <div className={`flex items-center flex-nowrap justify-end gap-1 sm:gap-2 shrink-0 overflow-visible`}>
+          <div className={`flex items-center flex-nowrap justify-self-end justify-end gap-1 sm:gap-2 shrink-0 overflow-visible`}>
             <ColorModeToggle isSEN={isSEN} />
             {activeTask && (
               <SpeechVoiceHeaderMenu
