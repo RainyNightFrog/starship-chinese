@@ -1,11 +1,12 @@
 import { READING_PARSE_STEPS, parseReadingUploadItems } from '../readingPaperGenerator';
+import { MAX_UPLOAD_IMAGES } from '../uploadMetaUtils';
 
 /** 閱讀理解上載模態設定（後端 Tesseract OCR + 前端動態出題） */
 export const READING_UPLOAD_MODAL_CONFIG = {
   titleId: 'reading-upload-title',
   title: '📖 上載閱讀文章',
   subtitle: 'Tesseract OCR · 正文去噪 · 動態出題',
-  intro: '上載閱讀試卷或文章照片（可多張連續頁），本機伺服器以 Tesseract 辨識繁體中文，自動分離故事正文與考卷題目，並由前端引擎隨機生成 3 道理解題。亦可貼上文字作備援。',
+  intro: `上載閱讀試卷或文章照片（可一次選多張，最多 ${MAX_UPLOAD_IMAGES} 張連續頁），本機伺服器以 Tesseract 辨識繁體中文，自動分離故事正文與考卷題目，並由前端引擎隨機生成 3 道理解題。亦可貼上文字作備援。`,
   allowTextPaste: true,
   borderClass: 'border-indigo-500/60',
   previewAlt: '閱讀文章預覽',

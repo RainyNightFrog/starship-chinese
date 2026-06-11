@@ -1,6 +1,10 @@
 /** 上載元數據共用工具 — 多圖批量解析 */
 
+/** 單次上載圖片／PDF 頁數上限（詞表、閱讀、試卷共用） */
 export const MAX_UPLOAD_IMAGES = 12;
+
+export const UPLOAD_IMAGE_LIMIT_ZH = `最多 ${MAX_UPLOAD_IMAGES} 張`;
+export const UPLOAD_IMAGE_LIMIT_EN = `Up to ${MAX_UPLOAD_IMAGES} images`;
 
 export function getUploadImageCount(meta = {}) {
   const n = meta.fileCount ?? meta.files?.length ?? meta.images?.length ?? 1;

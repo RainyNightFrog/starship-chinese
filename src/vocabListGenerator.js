@@ -7,7 +7,7 @@
 
 import { cloneVocab, mergeWrongWordsIntoDictation } from './vocabService';
 import { DICTATION_VOCAB_POOL, PRESTUDY_VOCAB_POOL } from './mockDatabase';
-import { getUploadImageCount, mergeUploadImagesIntoContent } from './uploadMetaUtils';
+import { getUploadImageCount, mergeUploadImagesIntoContent, MAX_UPLOAD_IMAGES } from './uploadMetaUtils';
 import { parseVocabUploadItems } from './vocabOcrService';
 import {
   saveUploadedPreviewWords,
@@ -161,7 +161,7 @@ export const VOCAB_UPLOAD_MODAL_CONFIG = {
   titleId: 'vocab-upload-title',
   title: '📷 上載新詞表',
   subtitle: 'Upload Word List · Tesseract OCR 詞彙提取',
-  intro: '請上載默書單、範文詞表照片或 PDF（可一次選多張，最多 12 張）。Tesseract 將提取詞語清單，同步至「課文預習」與「默書特訓」——不會變成閱讀理解選擇題。',
+  intro: `請上載默書單、範文詞表照片或 PDF（可一次選多張，最多 ${MAX_UPLOAD_IMAGES} 張）。Tesseract 將提取詞語清單，同步至「課文預習」與「默書特訓」——不會變成閱讀理解選擇題。`,
   allowTextPaste: true,
   borderClass: 'border-emerald-500/60',
   previewAlt: '默書單預覽',

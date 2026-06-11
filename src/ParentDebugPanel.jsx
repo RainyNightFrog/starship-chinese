@@ -16,6 +16,7 @@ import { clearAllUploads, removeUploadImage } from './uploadContentManager';
 import ParentAnalyticsPanel from './components/parent/ParentAnalyticsPanel';
 import { useLearningAnalytics } from './context/LearningAnalyticsContext';
 import { useBodyScrollLock } from './useBodyScrollLock';
+import { UPLOAD_IMAGE_LIMIT_ZH, UPLOAD_IMAGE_LIMIT_EN } from './uploadMetaUtils';
 
 /**
  * 👨‍👩‍👦 家長端後台模擬器（Debug Panel）
@@ -313,7 +314,9 @@ export default function ParentDebugPanel({
                 />
                 <span className="block text-[10px] font-normal mt-2 opacity-90 leading-snug">
                   拍照 / 選檔 → OCR 提取詞彙 → 同步默書 & 預習
-                  <span className="block text-emerald-200/80">Multi-image · more pages = more vocab</span>
+                  <span className="block text-emerald-200/80">
+                    {UPLOAD_IMAGE_LIMIT_ZH} · 頁數愈多詞愈多 · {UPLOAD_IMAGE_LIMIT_EN}
+                  </span>
                 </span>
               </button>
 
@@ -340,7 +343,9 @@ export default function ParentDebugPanel({
                 />
                 <span className="block text-[10px] font-normal mt-2 opacity-90 leading-snug">
                   拍照 / 選檔 → AI 解析段落 → 同步閱讀理解
-                  <span className="block text-indigo-200/80">Multi-image · 3 questions per page</span>
+                  <span className="block text-indigo-200/80">
+                    {UPLOAD_IMAGE_LIMIT_ZH} · 每頁約 3 道理解題 · {UPLOAD_IMAGE_LIMIT_EN}
+                  </span>
                 </span>
               </button>
 
@@ -368,7 +373,7 @@ export default function ParentDebugPanel({
                 <span className="block text-[10px] font-normal mt-2 opacity-90 leading-snug">
                   拍照 / 選檔 → AI 解析 → 批量生成孿生類似題
                   <span className="block text-rose-200/80">
-                    Multi-image · more pages = more quiz & SSPA items
+                    {UPLOAD_IMAGE_LIMIT_ZH} · 頁數愈多測驗題愈多 · {UPLOAD_IMAGE_LIMIT_EN}
                   </span>
                 </span>
               </button>
