@@ -6,18 +6,17 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { stopMediaStream, compressImageDataUrl } from './aiUploadUtils';
 import { buildUploadSummaryName, MAX_UPLOAD_IMAGES } from '../uploadMetaUtils';
 import { preloadReadingOcrEngine } from '../readingOcrService';
+import { describeOcrEngineMode } from '../ocrRuntimeStrategy';
 
-/** 解析動畫 — OCR 完成後快速收尾，避免多等數秒 */
-const BASE_PARSE_MS = 2800;
-const PARSE_MS_PER_IMAGE = 600;
-const MAX_PARSE_MS = 14000;
-const MIN_PARSE_ERROR_MS = 900;
-/** OCR 完成後進度條跑完並關閉的最短尾段 */
-const POST_OCR_FINISH_MS = 450;
-/** 步驟動畫至少播放時長（避免閃一下就完成） */
-const MIN_PRE_OCR_ANIM_MS = 1200;
-/** OCR 請求最長等待 — 逾時後提示改用貼上文字或重試 */
-const MAX_OCR_WAIT_MS = 120000;
+/** 解析動畫 — OCR 完成後快速收尾 */
+const BASE_PARSE_MS = 2000;
+const PARSE_MS_PER_IMAGE = 400;
+const MAX_PARSE_MS = 9000;
+const MIN_PARSE_ERROR_MS = 600;
+const POST_OCR_FINISH_MS = 250;
+const MIN_PRE_OCR_ANIM_MS = 600;
+/** OCR 最長等待（本機模式通常 15–40 秒） */
+const MAX_OCR_WAIT_MS = 90000;
 
 function resolveMinParseDuration(imageCount = 1) {
   return Math.min(MAX_PARSE_MS, BASE_PARSE_MS + Math.max(1, imageCount) * PARSE_MS_PER_IMAGE);
@@ -48,10 +47,7 @@ function isAllowedUploadFile(file) {
 function resolveOcrStatusMessage({ ocrEngineError, ocrEngineReady, ocrEngineMode }) {
   if (ocrEngineError) return `⚠️ ${ocrEngineError}`;
   if (!ocrEngineReady) return '⏳ 正在載入 OCR 引擎…';
-  if (ocrEngineMode === 'backend') {
-    return '✓ 雲端 OCR 已就緒（失敗時自動改用本機辨識）';
-  }
-  if (ocrEngineMode === 'browser') return '✓ 瀏覽器 OCR 已就緒（chi_tra 繁體中文 · 無需雲端後端）';
+  if (ocrEngineReady && ocrEngineMode) return describeOcrEngineMode(ocrEngineMode);
   return '✓ OCR 已就緒';
 }
 
@@ -663,15 +659,19 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
                       : (config.parsingLabel ?? 'AI 解析中…')}
                 </p>
                 <p className="text-xs text-slate-400 mt-1 font-bold">
-                  {awaitingOcr
-                    ? '伺服器仍在辨識中，若超過 2 分鐘仍未完成請改用「貼上文章文字」…'
-                    : config.useOfflineOcr || config.useBackendOcr || config.useLocalOllama
-                      ? (stitchPage.total >= 2
-                        ? (config.parsingSubLabelMulti ?? '伺服器正在逐頁 OCR 辨識，請勿關閉視窗…')
-                        : '後端 Tesseract 辨識中，請勿重複點擊…')
-                      : stitchPage.total >= 2
-                        ? '跨頁文字合併中，請稍候…'
-                        : `正在處理 ${uploadItems.length} 張圖片…`}
+                  {ocrEngineMode === 'browser'
+                    ? (awaitingOcr
+                      ? '本機 OCR 辨識中，首次載入語言包約需 10–20 秒…'
+                      : '本機 Tesseract 辨識中，請勿關閉視窗…')
+                    : awaitingOcr
+                      ? '雲端較慢，已可改用「貼上文章文字」立即完成…'
+                      : config.useOfflineOcr || config.useBackendOcr || config.useLocalOllama
+                        ? (stitchPage.total >= 2
+                          ? (config.parsingSubLabelMulti ?? '伺服器正在逐頁 OCR 辨識，請勿關閉視窗…')
+                          : '後端 Tesseract 辨識中，請勿重複點擊…')
+                        : stitchPage.total >= 2
+                          ? '跨頁文字合併中，請稍候…'
+                          : `正在處理 ${uploadItems.length} 張圖片…`}
                 </p>
               </div>
               <div className="space-y-2">

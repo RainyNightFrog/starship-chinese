@@ -8,6 +8,7 @@ import {
   READING_BACKEND_UNAVAILABLE_CODE,
   READING_BACKEND_UNAVAILABLE_MESSAGE,
 } from './readingDualTrackEngine';
+import { shouldPreferBrowserOcr } from './ocrRuntimeStrategy.js';
 
 let ocrAvailableCache = null;
 let resolvedApiBase = null;
@@ -21,8 +22,8 @@ function getReadingApiBase() {
 }
 
 const OCR_HEALTH_PATH = '/api/reading/health';
-/** 略長於 Vercel serverless maxDuration(60)，逾時後改走瀏覽器 OCR 備援 */
-const OCR_FETCH_TIMEOUT_MS = 38000;
+/** 雲端 OCR 最長等待 — 逾時後改走瀏覽器備援 */
+const OCR_FETCH_TIMEOUT_MS = 12000;
 
 async function fetchHealthCheck() {
   const bases = [
@@ -194,6 +195,17 @@ export async function analyzeReadingImageWithVision({ imageDataUrl, fileName, on
 /** 詞表上載 — 後端 OCR，500/逾時時改走瀏覽器 Tesseract 備援（手機 / Vercel 必備） */
 export async function recognizeVocabImageText({ imageDataUrl, fileName, onProgress }) {
   onProgress?.(0.05);
+
+  if (shouldPreferBrowserOcr()) {
+    onProgress?.(0.12);
+    const { recognizeVocabImageToText } = await import('./tesseractOcr.js');
+    const text = await recognizeVocabImageToText(
+      imageDataUrl,
+      (ratio) => onProgress?.(0.12 + ratio * 0.86),
+    );
+    onProgress?.(1);
+    return text;
+  }
 
   try {
     const res = await fetchOcrApi('/api/reading/vocab-vision', {

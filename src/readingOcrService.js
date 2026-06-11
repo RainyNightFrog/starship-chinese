@@ -19,6 +19,7 @@ import {
   analyzeReadingImagesStitchedWithVision,
   checkReadingVisionAvailable,
 } from './readingVisionClient';
+import { shouldPreferBrowserOcr } from './ocrRuntimeStrategy.js';
 
 function isBackendOcrFailure(err) {
   const code = err?.code;
@@ -73,8 +74,18 @@ async function extractReadingPageFromImageBrowser(previewUrl, onProgress, fileNa
   };
 }
 
-/** 預載 OCR 引擎 — 優先雲端後端，並在背景預載瀏覽器 Tesseract 備援 */
+/** 預載 OCR 引擎 — Vercel／手機直接用本機 Tesseract，桌面 dev 可試雲端 */
 export async function preloadReadingOcrEngine() {
+  if (shouldPreferBrowserOcr()) {
+    try {
+      const { preloadTesseractEngine } = await import('./tesseractOcr');
+      await preloadTesseractEngine();
+      return { mode: 'browser', ready: true };
+    } catch {
+      return { mode: null, ready: false };
+    }
+  }
+
   const backendOk = await checkReadingVisionAvailable(true);
   if (backendOk) {
     import('./tesseractOcr')
@@ -196,6 +207,10 @@ export async function extractReadingPageFromImage(previewUrl, onProgress, fileNa
 
   onProgress?.(0.05);
 
+  if (shouldPreferBrowserOcr()) {
+    return extractReadingPageFromImageBrowser(previewUrl, onProgress, fileName);
+  }
+
   try {
     const data = await analyzeReadingImageWithVision({
       imageDataUrl: previewUrl,
@@ -228,6 +243,44 @@ export async function extractReadingPageFromImage(previewUrl, onProgress, fileNa
 /** 多張圖片 — 後端 OCR 合併，失敗時改走瀏覽器逐頁 OCR */
 export async function extractReadingStitchedPagesOcr(uploadItems = [], onProgress, onStitchPage) {
   onProgress?.(0.05);
+
+  if (shouldPreferBrowserOcr()) {
+    const total = uploadItems.length;
+    const mergedTexts = [];
+    for (let i = 0; i < total; i += 1) {
+      onStitchPage?.(i + 1, total);
+      const item = uploadItems[i];
+      const page = await extractReadingPageFromImageBrowser(
+        item.previewUrl,
+        (ratio) => onProgress?.(0.05 + ((i + ratio) / total) * 0.9),
+        item.fileName ?? `第${i + 1}頁`,
+      );
+      if (page.rawText?.trim()) mergedTexts.push(page.rawText.trim());
+    }
+    onProgress?.(1);
+    onStitchPage?.(total, total);
+    const mergedText = mergedTexts.join('\n\n');
+    const label = uploadItems.map((item) => item.fileName).filter(Boolean).join(' + ')
+      || `多頁 OCR（${uploadItems.length} 張）`;
+    const parsed = buildParsedFromBrowserOcr(mergedText, [], label, {
+      stitched: true,
+      imageCount: uploadItems.length,
+    });
+    return {
+      fileName: label,
+      lines: parsed.articleLines,
+      parsed,
+      rawText: parsed.rawText || parsed.articleLines.join('\n'),
+      source: 'browser-ocr-stitch',
+      qualityOk: parsed.qualityOk,
+      qualityReason: parsed.qualityReason,
+      passageTitle: parsed.articleTitle,
+      articleTitle: parsed.articleTitle,
+      stitched: true,
+      imageCount: uploadItems.length,
+      questionsFromAi: false,
+    };
+  }
 
   try {
     const data = await analyzeReadingImagesStitchedWithVision({
