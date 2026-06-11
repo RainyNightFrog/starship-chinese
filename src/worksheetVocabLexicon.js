@@ -139,6 +139,21 @@ export const WORKSHEET_VOCAB_HINTS = {
   興致勃勃: { tc: '形容興致很高，情緒旺盛', sc: '兴致勃勃', en: 'In high spirits; enthusiastic' },
   連綿不斷: { tc: '連續不斷，沒有間斷', sc: '连绵不断', en: 'Continuous and unbroken' },
   夜以繼日: { tc: '日夜不停地做某事', sc: '夜以继日', en: 'Day and night without stop' },
+
+  // ── 字詞表頁（四字成語 · 第三組）──
+  截然相反: { tc: '界限分明，完全相反', sc: '截然相反', en: 'Completely opposite' },
+  危機四伏: { tc: '到處潛藏危險', sc: '危机四伏', en: 'Dangers lurking on all sides' },
+  突如其來: { tc: '突然發生', sc: '突如其来', en: 'Sudden; unexpected' },
+  不由自主: { tc: '控制不住自己', sc: '不由自主', en: 'Involuntarily; against one\'s will' },
+  跪地求饒: { tc: '跪在地上請求寬恕', sc: '跪地求饶', en: 'To kneel and beg for mercy' },
+  開天闢地: { tc: '比喻創立偉業或前所未有', sc: '开天辟地', en: 'Groundbreaking; epoch-making' },
+  開天辟地: { tc: '比喻創立偉業或前所未有', sc: '开天辟地', en: 'Groundbreaking; epoch-making' },
+  易如反掌: { tc: '像翻手掌一樣容易', sc: '易如反掌', en: 'Very easy' },
+  無窮無盡: { tc: '沒有盡頭', sc: '无穷无尽', en: 'Endless; inexhaustible' },
+  不假思索: { tc: '不經思考', sc: '不假思索', en: 'Without thinking' },
+  重見天日: { tc: '重新見到光明；比喻擺脫困境', sc: '重见天日', en: 'To see the light again' },
+  神氣十足: { tc: '精神飽滿、得意洋洋', sc: '神气十足', en: 'Full of energy and confidence' },
+  不動聲色: { tc: '不流露感情或聲音', sc: '不动声色', en: 'Without showing emotion' },
 };
 
 /** 四字成語錨點 — 判斷該頁應以 4 字切分 */
@@ -148,6 +163,8 @@ export const WORKSHEET_IDIOM_ANCHORS = [
   '恍然大悟', '自暴自棄',
   '大發雷霆', '風吹雨打', '憤憤不平', '目不暇接', '波瀾壯闊', '不知不覺',
   '奔流不息', '永無止境', '星羅棋佈', '興致勃勃', '連綿不斷', '夜以繼日',
+  '截然相反', '危機四伏', '突如其來', '不由自主', '跪地求饒', '開天闢地', '開天辟地',
+  '易如反掌', '無窮無盡', '不假思索', '重見天日', '神氣十足', '不動聲色',
 ];
 
 export const ALL_WORKSHEET_WORDS = new Set([
@@ -180,6 +197,22 @@ export const WORKSHEET_PINYIN_PAIRS = {
 /** 同音拼音組合 — 依鎖定詞表頁 disambiguate（如 jingxi → 精細 / 驚喜） */
 export const WORKSHEET_PINYIN_COLLISIONS = {
   jingxi: ['精細', '驚喜'],
+};
+
+/** 四字成語 — 四節拼音連寫 → 詞語（OCR 拼音行配對） */
+export const WORKSHEET_PINYIN_IDIOMS = {
+  jieranxiangfan: '截然相反',
+  weijisifu: '危機四伏',
+  turuqilai: '突如其來',
+  buyouzizhu: '不由自主',
+  guidiqiurao: '跪地求饒',
+  kaitianpidi: '開天闢地',
+  yirufanzhang: '易如反掌',
+  wuqiongwujin: '無窮無盡',
+  bujiasisuo: '不假思索',
+  chongjiantianri: '重見天日',
+  shenqishizu: '神氣十足',
+  budongshengse: '不動聲色',
 };
 
 export const WORKSHEET_PAGES = [
@@ -235,6 +268,14 @@ export const WORKSHEET_PAGES = [
       '推薦', '闖禍', '倒霉', '珍藏', '溶解', '驚喜', '利誘', '威迫',
     ],
   },
+  {
+    id: 'idioms3',
+    anchors: ['截然相反', '危機四伏', '突如其來', '易如反掌', '神氣十足', '不動聲色'],
+    words: [
+      '截然相反', '危機四伏', '突如其來', '不由自主', '跪地求饒', '開天闢地',
+      '易如反掌', '無窮無盡', '不假思索', '重見天日', '神氣十足', '不動聲色',
+    ],
+  },
 ];
 
 /** 字詞表頁面順序 — 供 OCR 子串掃描（OCR 順序錯亂時仍能找回校本詞） */
@@ -255,4 +296,6 @@ export const WORKSHEET_ORDERED_WORDS = [
   '百折不撓', '眾目睽睽', '形形色色', '不約而同', '恍然大悟', '自暴自棄',
   '大發雷霆', '風吹雨打', '憤憤不平', '目不暇接', '波瀾壯闊', '不知不覺',
   '奔流不息', '永無止境', '星羅棋佈', '星羅棋布', '興致勃勃', '連綿不斷', '夜以繼日',
+  '截然相反', '危機四伏', '突如其來', '不由自主', '跪地求饒', '開天闢地', '開天辟地',
+  '易如反掌', '無窮無盡', '不假思索', '重見天日', '神氣十足', '不動聲色',
 ];

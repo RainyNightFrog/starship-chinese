@@ -17,6 +17,7 @@ import {
   WORKSHEET_PAGES,
   WORKSHEET_PINYIN_PAIRS,
   WORKSHEET_PINYIN_COLLISIONS,
+  WORKSHEET_PINYIN_IDIOMS,
 } from './worksheetVocabLexicon.js';
 
 const VOCAB_SHEET_SIGNALS = /默書|默写|詞表|词表|詞語|词语|聽寫|听写|生字|默寫|新詞|新词|成語|成语|詞彙|词汇|校本詞|校本词|範文詞|范文词|溫習詞|温习词|字詞表/;
@@ -499,11 +500,7 @@ function normalizeOcrPinyinLine(line = '') {
   return s;
 }
 
-/** 從 OCR 拼音行配對詞語（字表格上方常見 luò hòu 等） */
-function extractPinyinLinePairs(rawText = '', activePage = null) {
-  if (!activePage) return [];
-
-  const allowed = new Set(activePage.words);
+function collectLatinPinyinTokens(rawText = '') {
   const latinTokens = [];
 
   String(rawText).split(/\n+/).forEach((line) => {
@@ -519,22 +516,42 @@ function extractPinyinLinePairs(rawText = '', activePage = null) {
     });
   });
 
+  return latinTokens;
+}
+
+function resolvePinyinPairForPage(pairKey, allowed) {
+  const direct = WORKSHEET_PINYIN_PAIRS[pairKey];
+  if (direct && allowed.has(direct)) return direct;
+  const collision = WORKSHEET_PINYIN_COLLISIONS[pairKey];
+  if (Array.isArray(collision)) {
+    return collision.find((w) => allowed.has(w)) ?? null;
+  }
+  return direct ?? null;
+}
+
+/** 從 OCR 拼音 token 串配對指定頁內詞語 */
+function matchPinyinWordsForPage(latinTokens = [], page = null) {
+  if (!page?.words?.length) return [];
+
+  const allowed = new Set(page.words);
   const hits = [];
   const seen = new Set();
+  const idiomPage = isIdiomWorksheetPage(page);
 
-  const resolvePinyinPair = (pairKey) => {
-    const direct = WORKSHEET_PINYIN_PAIRS[pairKey];
-    if (direct && allowed.has(direct)) return direct;
-    const collision = WORKSHEET_PINYIN_COLLISIONS[pairKey];
-    if (Array.isArray(collision)) {
-      return collision.find((w) => allowed.has(w)) ?? null;
+  if (idiomPage) {
+    for (let i = 0; i + 3 < latinTokens.length; i += 1) {
+      const quadKey = latinTokens.slice(i, i + 4).join('');
+      const word = WORKSHEET_PINYIN_IDIOMS[quadKey];
+      if (!word || !allowed.has(word) || seen.has(word)) continue;
+      seen.add(word);
+      hits.push({ word, pos: i });
     }
-    return direct ?? null;
-  };
+    return hits;
+  }
 
   for (let i = 0; i + 1 < latinTokens.length; i += 1) {
     const pairKey = latinTokens[i] + latinTokens[i + 1];
-    const word = resolvePinyinPair(pairKey);
+    const word = resolvePinyinPairForPage(pairKey, allowed);
     if (!word || seen.has(word)) continue;
     seen.add(word);
     hits.push({ word, pos: i });
@@ -543,25 +560,69 @@ function extractPinyinLinePairs(rawText = '', activePage = null) {
   return hits;
 }
 
-/** 偵測最可能的詞表頁 — 依錨點詞命中數 */
-function detectWorksheetPage(plainHan = '') {
+/** 從 OCR 拼音行配對詞語（字表格上方常見 luò hòu 等） */
+function extractPinyinLinePairs(rawText = '', activePage = null) {
+  if (!activePage) return [];
+  return matchPinyinWordsForPage(collectLatinPinyinTokens(rawText), activePage);
+}
+
+function isIdiomWorksheetPage(page) {
+  return Boolean(page?.words?.length && page.words.every((w) => w.length === 4));
+}
+
+function countLexiconHitsByLength(plainHan = '', len = 4) {
+  return KNOWN_WORDS_SORTED.filter(
+    (w) => w.length === len && isKnownWord(w) && fuzzyFindWord(plainHan, w, 0) >= 0,
+  ).length;
+}
+
+/** 偵測最可能的詞表頁 — 漢字命中 + 拼音配對，成語頁與雙字頁分流 */
+function detectWorksheetPage(plainHan = '', rawText = '') {
+  const latinTokens = collectLatinPinyinTokens(rawText);
+  const fourCharHits = countLexiconHitsByLength(plainHan, 4);
+  const twoCharHits = countLexiconHitsByLength(plainHan, 2);
+
+  let bestIdiomPinyinHits = 0;
+  let bestTwoCharPinyinHits = 0;
+  WORKSHEET_PAGES.forEach((page) => {
+    const pinyinHits = matchPinyinWordsForPage(latinTokens, page).length;
+    if (isIdiomWorksheetPage(page)) {
+      bestIdiomPinyinHits = Math.max(bestIdiomPinyinHits, pinyinHits);
+    } else {
+      bestTwoCharPinyinHits = Math.max(bestTwoCharPinyinHits, pinyinHits);
+    }
+  });
+
+  const preferIdiomPages = fourCharHits >= Math.max(3, twoCharHits + 1)
+    || bestIdiomPinyinHits >= Math.max(4, bestTwoCharPinyinHits + 2);
+
   let bestPage = null;
   let bestScore = 0;
 
   WORKSHEET_PAGES.forEach((page) => {
-    const score = page.anchors.filter((anchor) => fuzzyFindWord(plainHan, anchor, 0) >= 0).length;
-    if (score > bestScore) {
+    const idiomPage = isIdiomWorksheetPage(page);
+    if (preferIdiomPages && !idiomPage) return;
+    if (!preferIdiomPages && idiomPage && twoCharHits >= 4 && bestIdiomPinyinHits < 4) return;
+
+    const wordHits = page.words.filter(
+      (w) => isKnownWord(w) && fuzzyFindWord(plainHan, w, 0) >= 0,
+    ).length;
+    const anchorHits = page.anchors.filter((anchor) => fuzzyFindWord(plainHan, anchor, 0) >= 0).length;
+    const pinyinHits = matchPinyinWordsForPage(latinTokens, page).length;
+    const score = wordHits * 4 + anchorHits * 2 + pinyinHits * 6;
+    const confident = anchorHits >= 2 || pinyinHits >= 4 || wordHits >= 3;
+    if (score > bestScore && confident) {
       bestScore = score;
       bestPage = page;
     }
   });
 
-  return bestScore >= 2 ? bestPage : null;
+  return bestPage;
 }
 
 /** 鎖定詞表頁後 — 依頁內順序找回所有可辨識詞（容忍 OCR 錯字 + 拼音配對） */
 function extractDetectedPageWords(plainHan = '', rawText = '') {
-  const page = detectWorksheetPage(plainHan);
+  const page = detectWorksheetPage(plainHan, rawText);
   if (!page) return [];
 
   const byWord = new Map();
@@ -588,14 +649,12 @@ function extractDetectedPageWords(plainHan = '', rawText = '') {
  * 鎖定校本詞表頁 — 只輸出該頁命中詞（拼音 + 模糊），禁止盲切亂碼雙字
  */
 function extractLockedPageWordList(plainHan = '', rawText = '', minWords = 3) {
-  const page = detectWorksheetPage(plainHan);
+  const page = detectWorksheetPage(plainHan, rawText);
   if (!page) return null;
 
-  const anchorHits = page.anchors.filter((anchor) => fuzzyFindWord(plainHan, anchor, 0) >= 0).length;
-  if (anchorHits < 2) return null;
-
   const hits = extractDetectedPageWords(plainHan, rawText);
-  if (hits.length < minWords) return null;
+  const required = isIdiomWorksheetPage(page) ? Math.min(minWords, 4) : minWords;
+  if (hits.length < required) return null;
 
   return hits
     .sort((a, b) => a.pos - b.pos)
@@ -734,7 +793,7 @@ export function parseVocabFromOcrText(rawText = '', options = {}) {
       recoverOrderedWorksheetWords(plainFull),
       extractDetectedPageWords(plainFull, rawText),
       scanWorksheetLexiconPresence(plainFull),
-      extractPinyinLinePairs(rawText, detectWorksheetPage(plainFull)),
+      extractPinyinLinePairs(rawText, detectWorksheetPage(plainFull, rawText)),
     );
   } else {
     candidates = extractWorksheetWordsHybrid(rawText);
