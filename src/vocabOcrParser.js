@@ -111,6 +111,29 @@ function isValidExtractedWord(word) {
   return true;
 }
 
+/** 從一行 OCR 抽出全部漢字（拼音混排時不可只取首字） */
+function pushHanCharsFromSegment(seg, charStream) {
+  const hanOnly = String(seg).replace(/[^\u4e00-\u9fff]/g, '');
+  if (!hanOnly) return;
+
+  if (hanOnly.length === 1) {
+    charStream.push(hanOnly);
+    return;
+  }
+
+  if (hanOnly.length === 2) {
+    charStream.push(hanOnly[0], hanOnly[1]);
+    return;
+  }
+
+  if (hanOnly.length === 4 && isKnownWord(hanOnly)) {
+    charStream.push(hanOnly[0], hanOnly[1], hanOnly[2], hanOnly[3]);
+    return;
+  }
+
+  hanOnly.split('').forEach((ch) => charStream.push(ch));
+}
+
 /** 從 OCR 行收集逐字主字流（格子字表） */
 function buildCharStream(rawText = '') {
   const charStream = [];
@@ -120,22 +143,9 @@ function buildCharStream(rawText = '') {
     const line = rawLine.trim();
     if (!line) return;
 
-    /** OCR 常輸出「風 | 吹 | 雨 | 打」— 先拆 | 再取主字 */
+    /** OCR 常輸出「風 | 吹 | 雨 | 打」— 先拆 | 再取全部漢字 */
     line.split(/\|/).forEach((segment) => {
-      const seg = segment.trim();
-      if (!seg) return;
-      const leading = seg.match(/^[\s\d.·\-*•]*([\u4e00-\u9fff])/);
-      if (leading) {
-        charStream.push(leading[1]);
-        return;
-      }
-      const hanOnly = seg.replace(/[^\u4e00-\u9fff]/g, '');
-      if (hanOnly.length === 1) charStream.push(hanOnly);
-      else if (hanOnly.length === 2) {
-        charStream.push(hanOnly[0], hanOnly[1]);
-      } else if (hanOnly.length <= 4) {
-        hanOnly.split('').forEach((ch) => charStream.push(ch));
-      }
+      pushHanCharsFromSegment(segment.trim(), charStream);
     });
   });
 
@@ -267,26 +277,23 @@ function extractGridHeadChars(rawText = '') {
     const line = rawLine.trim();
     if (!line) return;
 
-    const leading = line.match(/^[\s\d.·\-*•]*([\u4e00-\u9fff])/);
-    if (leading) {
-      charStream.push(leading[1]);
-      return;
-    }
-
     const hanOnly = line.replace(/[^\u4e00-\u9fff]/g, '');
-    if (hanOnly.length === 1) {
-      charStream.push(hanOnly);
-    } else if (hanOnly.length === 2 && isKnownWord(hanOnly)) {
+    if (hanOnly.length === 2 && isKnownWord(hanOnly)) {
       if (!seen.has(hanOnly)) {
         seen.add(hanOnly);
         hits.push({ word: hanOnly, pos: charStream.length });
       }
-      charStream.push(hanOnly[0], hanOnly[1]);
     } else if (hanOnly.length === 4 && isKnownWord(hanOnly)) {
       if (!seen.has(hanOnly)) {
         seen.add(hanOnly);
         hits.push({ word: hanOnly, pos: charStream.length });
       }
+    }
+
+    const before = charStream.length;
+    pushHanCharsFromSegment(line, charStream);
+    if (charStream.length === before && hanOnly.length === 1) {
+      charStream.push(hanOnly);
     }
   });
 
@@ -401,6 +408,19 @@ function scanWorksheetLexiconPresence(plainHan = '') {
 }
 
 /** 多層校本詞表提取 */
+/** 連續漢字流 — 每 2 字切詞（字詞表 OCR 常輸出「廉潔輝煌…」連串） */
+function extractSequentialPairsFromPlain(plainHan = '') {
+  const body = removeTitleFromPlain(plainHan);
+  const hits = [];
+  for (let i = 0; i + 2 <= body.length; i += 2) {
+    const word = body.slice(i, i + 2);
+    if (isValidExtractedWord(word)) {
+      hits.push({ word, pos: i });
+    }
+  }
+  return hits;
+}
+
 function extractWorksheetWordsHybrid(rawText = '') {
   const plainFull = toPlainHan(rawText);
   const plainBody = removeTitleFromPlain(plainFull);
@@ -420,6 +440,7 @@ function extractWorksheetWordsHybrid(rawText = '') {
     slidingWindowLexiconScan(plainBody),
     fuzzyLexiconScan(plainBody),
     fuzzyLexiconScan(plainFull),
+    extractSequentialPairsFromPlain(plainFull),
     extractSingleCharLinePairs(rawText),
     extractGridHeadChars(rawText),
     scanWorksheetLexiconPresence(plainFull),

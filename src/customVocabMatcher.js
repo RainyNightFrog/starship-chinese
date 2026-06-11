@@ -8,6 +8,7 @@
 
 import { VOCAB_HINTS } from './vocabHints.js';
 import { IDIOM_EXAM_POOL } from './idiomExamPool.js';
+import { WORKSHEET_VOCAB_HINTS } from './worksheetVocabLexicon.js';
 import { extractPreviewWord } from './previewWordFormat.js';
 import {
   toTraditionalVocabWord,
@@ -39,7 +40,7 @@ export function normalizeCustomWordList(input = [], options = {}) {
     if (!word || !/^[\u4e00-\u9fff]{2,8}$/.test(word)) return;
     /** 拒絕 OCR 長串亂碼與標題 */
     if (/字詞表|词表|年級|年级|高年級|默書|封面|目錄/.test(word)) return;
-    if (!POOL_BY_WORD.has(word) && !VOCAB_HINTS[word] && word.length > 4) return;
+    if (!POOL_BY_WORD.has(word) && !VOCAB_HINTS[word] && !WORKSHEET_VOCAB_HINTS[word] && word.length > 4) return;
     if (seen.has(word)) return;
     seen.add(word);
     words.push(word);
@@ -70,7 +71,7 @@ export function normalizeCustomWordList(input = [], options = {}) {
  */
 export function buildFallbackIdiomEntry(userWord, index = 0) {
   const word = toTraditionalVocabWord(userWord);
-  const hintEntry = VOCAB_HINTS[word] ?? VOCAB_HINTS[userWord];
+  const hintEntry = VOCAB_HINTS[word] ?? WORKSHEET_VOCAB_HINTS[word] ?? VOCAB_HINTS[userWord];
   const correctMeaning = hintEntry?.tc
     ?? `（家長自訂詞彙「${word}」— 請向老師請教準確字義）`;
 
