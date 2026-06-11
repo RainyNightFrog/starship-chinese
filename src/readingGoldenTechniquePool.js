@@ -176,6 +176,10 @@ export const PRIORITY_TEMPLATE_IDS = [
   'sspa_author_main_purpose',
   'sspa_para_main_idea',
   'sspa_emotion_express',
+  'ws43_four_char_meaning',
+  'ws43_quoted_term_reason',
+  'ws43_poem_citation_purpose',
+  'ws43_author_purpose_aspects',
 ];
 
 /** 依文體判斷寫作手法題是否適用（說明文不宜出借物抒情） */

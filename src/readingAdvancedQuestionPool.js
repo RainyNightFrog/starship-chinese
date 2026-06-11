@@ -30,6 +30,11 @@ export {
   PRIORITY_TEMPLATE_IDS,
 } from './readingGoldenTechniquePool.js';
 export { SSPA_EXAM_TEMPLATES, SSPA_EXAM_TEMPLATE_IDS } from './readingSspaExamTemplates.js';
+export {
+  WORKSHEET_TECHNIQUE_TAGS,
+  WORKSHEET43_TEMPLATE_IDS,
+  RICE_EXPOSITORY_PASSAGE,
+} from './readingWorksheetReferencePool.js';
 
 export const QUESTION_CATEGORIES = {
   MAIN_THEME: 'main_theme',

@@ -4,6 +4,10 @@
  */
 
 import { getReadingReferencePassage } from './readingReferencePassages.js';
+import {
+  WORKSHEET43_IDIOM_TRANSFER_TEMPLATE,
+  WORKSHEET43_READING_FIXED_TEMPLATES,
+} from './readingWorksheetReferencePool.js';
 
 export const REFERENCE_CATEGORIES = {
   LANGUAGE_KNOWLEDGE: 'language_knowledge',
@@ -195,6 +199,11 @@ export const LANGUAGE_KNOWLEDGE_TEMPLATES = [
     trapProfile: 'vocab',
     source: 'sspa_reference',
   },
+  {
+    ...WORKSHEET43_IDIOM_TRANSFER_TEMPLATE,
+    category: REFERENCE_CATEGORIES.LANGUAGE_KNOWLEDGE,
+    subType: '成語運用',
+  },
 ];
 
 /** 固定閱讀理解選擇題（對標真題，無需 OCR） */
@@ -330,6 +339,11 @@ export const READING_FIXED_REFERENCE_TEMPLATES = [
     trapProfile: 'technique',
     source: 'sspa_reference',
   },
+  ...WORKSHEET43_READING_FIXED_TEMPLATES.map((tpl) => ({
+    category: REFERENCE_CATEGORIES.READING_FIXED,
+    subType: '閱讀理解',
+    ...tpl,
+  })),
 ];
 
 /** 全部參考樣版 */

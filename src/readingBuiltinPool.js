@@ -3,6 +3,8 @@
  * 由 mockDatabase READING_POOL 匯入使用
  */
 
+import { RICE_EXPOSITORY_PASSAGE } from './readingWorksheetReferencePool.js';
+
 /** @typedef {{ question: string, options: string[], correctIndex: number, explanation: string }} ReadingQuestionDef */
 
 /**
@@ -575,6 +577,53 @@ export const READING_PASSAGE_PACKS = [
       },
     ],
   },
+  {
+    passageId: 'read-19',
+    passageTitle: '說明文：米',
+    genre: '說明文',
+    passage: [...RICE_EXPOSITORY_PASSAGE],
+    questions: [
+      {
+        question: 'Q1. 文中哪一個四字詞語有「變化極多、變化很大」的意思？',
+        options: ['變化多端', '不勝枚舉', '粒粒皆辛苦', '五花八門'],
+        correctIndex: 0,
+        explanation: '文末以「變化多端」形容米作為食材用途廣泛。',
+      },
+      {
+        question: 'Q2. 作者認為糯米是「一米多用」，因為',
+        options: [
+          '糯米的黏性最高。',
+          '糯米既能做成食物，又能治病。',
+          '糯米可以製成多種美食。',
+          '糯米的種植地方與其他米不同。',
+        ],
+        correctIndex: 1,
+        explanation: '第三段指出糯米可製成各種食物，亦可搭配其他食物治病。',
+      },
+      {
+        question: 'Q3. 作者引用「誰知盤中飧，粒粒皆辛苦」，目的是',
+        options: [
+          '表達作者對人們浪費米的不滿。',
+          '說明古人已知道米有多種用途。',
+          '證明古人也明白不應隨意浪費米。',
+          '總結米是有多元用途，不應浪費。',
+        ],
+        correctIndex: 3,
+        explanation: '結尾引用古詩，呼應全文並提醒珍惜食糧。',
+      },
+      {
+        question: 'Q4. 作者寫這篇文章的主要目的是',
+        options: [
+          '從不同方面介紹米。',
+          '說明米的食用價值。',
+          '探討米的營養價值。',
+          '指責人們對米的浪費。',
+        ],
+        correctIndex: 0,
+        explanation: '全文從定義、分類、加工到製成食品多方面介紹米。',
+      },
+    ],
+  },
 ];
 
 /**
@@ -603,5 +652,5 @@ export function buildReadingPoolFromPacks(packs = READING_PASSAGE_PACKS) {
   return items;
 }
 
-/** 內建閱讀理解完整題池（18 篇 × 3 題 = 54 題） */
+/** 內建閱讀理解完整題池（19 篇 × 3–4 題） */
 export const BUILTIN_READING_POOL = buildReadingPoolFromPacks();
