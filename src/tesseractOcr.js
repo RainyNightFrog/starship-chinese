@@ -21,6 +21,7 @@ const LANG_PATH = 'https://tessdata.projectnaptha.com/4.0.0';
 
 /** 模組是否已通過自檢 */
 let engineReady = false;
+let warmupPromise = null;
 
 /**
  * 預載 OCR 引擎（AiUploadModal 開啟時呼叫，避免首次辨識才載入而卡住）
@@ -38,7 +39,25 @@ export async function preloadTesseractEngine() {
     err.code = 'tesseract_module_not_found';
     throw err;
   }
-  engineReady = true;
+
+  if (!warmupPromise) {
+    warmupPromise = (async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2;
+      canvas.height = 2;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, 2, 2);
+      const tiny = canvas.toDataURL('image/png');
+      await tesseractRecognize(tiny, OCR_LANG, {
+        workerPath: WORKER_PATH,
+        langPath: LANG_PATH,
+      });
+      engineReady = true;
+    })();
+  }
+
+  await warmupPromise;
   return true;
 }
 

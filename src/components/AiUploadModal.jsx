@@ -139,13 +139,25 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
           setOcrEngineMode(null);
           setOcrEngineError('OCR 引擎載入失敗，請重新整理頁面，或改用「貼上文章文字」。');
         });
+    } else if (config.useOfflineOcr) {
+      setOcrEngineError(null);
+      import('../tesseractOcr')
+        .then(({ preloadTesseractEngine }) => preloadTesseractEngine())
+        .then(() => {
+          setOcrEngineReady(true);
+          setOcrEngineMode('browser');
+        })
+        .catch(() => {
+          setOcrEngineReady(false);
+          setOcrEngineError('本機 OCR 引擎載入失敗，請重新整理頁面。');
+        });
     }
 
     return () => {
       stopCamera();
       if (parseTimerRef.current) clearInterval(parseTimerRef.current);
     };
-  }, [open, resetModal, stopCamera, config.useBackendOcr]);
+  }, [open, resetModal, stopCamera, config.useBackendOcr, config.useOfflineOcr]);
 
   const addUploadItem = useCallback((item) => {
     setUploadItems((prev) => {

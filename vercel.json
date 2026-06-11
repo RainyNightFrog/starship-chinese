@@ -4,9 +4,27 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
+  "functions": {
+    "api/reading/vision.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/reading/vision-stitch.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/reading/vocab-vision.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/speech/synthesize.js": {
+      "maxDuration": 30,
+      "memory": 512
+    }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

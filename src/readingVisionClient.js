@@ -35,6 +35,8 @@ async function fetchHealthCheck() {
   for (const base of bases) {
     try {
       const res = await fetch(`${base}${OCR_HEALTH_PATH}`);
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) continue;
       if (res.ok) {
         const data = await res.json();
         if (data.ok) {
