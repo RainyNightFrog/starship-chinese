@@ -116,7 +116,7 @@ function throwOcrError(data, status) {
     err.code = 'tesseract_module_not_found';
   } else if (data.code === READING_BACKEND_UNAVAILABLE_CODE) {
     err.code = READING_BACKEND_UNAVAILABLE_CODE;
-  } else if (status === 503 || status === 502) {
+  } else if (status === 503 || status === 502 || status === 504 || status === 500) {
     err.code = READING_BACKEND_UNAVAILABLE_CODE;
     err.message = READING_BACKEND_UNAVAILABLE_MESSAGE;
   }
@@ -124,12 +124,21 @@ function throwOcrError(data, status) {
   throw err;
 }
 
+function isBackendOcrFailure(err) {
+  const code = err?.code;
+  if (code === READING_BACKEND_UNAVAILABLE_CODE || code === 'tesseract_module_not_found') {
+    return true;
+  }
+  const msg = String(err?.message ?? err ?? '');
+  return /failed to fetch|networkerror|load failed|abort|逾時|後端未連接|後端 OCR API|HTTP 5\d\d/i.test(msg);
+}
+
 async function parseOcrResponse(res, { allowPartial = false } = {}) {
   const data = await res.json().catch(() => ({}));
   const rawText = String(data.rawText ?? data.articleLines?.join('\n') ?? '').trim();
 
   if (!res.ok) {
-    if (res.status === 502 || res.status === 503 || res.status === 504) {
+    if (res.status === 502 || res.status === 503 || res.status === 504 || res.status === 500) {
       throwBackendUnavailable(new Error(`HTTP ${res.status}`));
     }
     if (allowPartial && rawText.length >= 2 && data.code !== READING_BLUR_ERROR_CODE) {
@@ -182,32 +191,46 @@ export async function analyzeReadingImageWithVision({ imageDataUrl, fileName, on
   return data;
 }
 
-/** 詞表上載 — 專用 OCR（前處理 + sparse text，不走閱讀理解品質檢查） */
+/** 詞表上載 — 後端 OCR，500/逾時時改走瀏覽器 Tesseract 備援（手機 / Vercel 必備） */
 export async function recognizeVocabImageText({ imageDataUrl, fileName, onProgress }) {
-  onProgress?.(0.15);
+  onProgress?.(0.05);
 
-  const res = await fetchOcrApi('/api/reading/vocab-vision', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageDataUrl, fileName }),
-  });
+  try {
+    const res = await fetchOcrApi('/api/reading/vocab-vision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageDataUrl, fileName }),
+    });
 
-  onProgress?.(0.85);
-  const data = await res.json().catch(() => ({}));
+    onProgress?.(0.85);
+    const data = await res.json().catch(() => ({}));
 
-  if (!res.ok) {
-    if (res.status === 502 || res.status === 503 || res.status === 504) {
-      throwBackendUnavailable(new Error(`HTTP ${res.status}`));
+    if (!res.ok) {
+      if (res.status === 502 || res.status === 503 || res.status === 504 || res.status === 500) {
+        throwBackendUnavailable(new Error(`HTTP ${res.status}`));
+      }
+      if (data.rawText?.trim()) {
+        onProgress?.(1);
+        return String(data.rawText).trim();
+      }
+      throwOcrError(data, res.status);
     }
-    if (data.rawText?.trim()) {
-      onProgress?.(1);
-      return String(data.rawText).trim();
-    }
-    throwOcrError(data, res.status);
+
+    onProgress?.(1);
+    return String(data.rawText ?? '').trim();
+  } catch (err) {
+    if (err?.code === 'payload_too_large' || err?.code === READING_BLUR_ERROR_CODE) throw err;
+    if (!isBackendOcrFailure(err)) throw err;
   }
 
+  onProgress?.(0.12);
+  const { recognizeVocabImageToText } = await import('./tesseractOcr.js');
+  const text = await recognizeVocabImageToText(
+    imageDataUrl,
+    (ratio) => onProgress?.(0.12 + ratio * 0.86),
+  );
   onProgress?.(1);
-  return String(data.rawText ?? '').trim();
+  return text;
 }
 
 /** 多張圖片 — 後端 OCR 合併 */

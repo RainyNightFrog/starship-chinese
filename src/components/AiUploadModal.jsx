@@ -3,7 +3,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { stopMediaStream } from './aiUploadUtils';
+import { stopMediaStream, compressImageDataUrl } from './aiUploadUtils';
 import { buildUploadSummaryName, MAX_UPLOAD_IMAGES } from '../uploadMetaUtils';
 import { preloadReadingOcrEngine } from '../readingOcrService';
 
@@ -48,7 +48,9 @@ function isAllowedUploadFile(file) {
 function resolveOcrStatusMessage({ ocrEngineError, ocrEngineReady, ocrEngineMode }) {
   if (ocrEngineError) return `⚠️ ${ocrEngineError}`;
   if (!ocrEngineReady) return '⏳ 正在載入 OCR 引擎…';
-  if (ocrEngineMode === 'backend') return '✓ 雲端 OCR 已就緒（chi_tra 繁體中文）';
+  if (ocrEngineMode === 'backend') {
+    return '✓ 雲端 OCR 已就緒（失敗時自動改用本機辨識）';
+  }
   if (ocrEngineMode === 'browser') return '✓ 瀏覽器 OCR 已就緒（chi_tra 繁體中文 · 無需雲端後端）';
   return '✓ OCR 已就緒';
 }
@@ -65,7 +67,9 @@ async function fileToUploadItem(file) {
     mimeType: file.type || (file.name?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
     source: 'file',
     size: file.size,
-    previewUrl: isImageUploadFile(file) ? await readFileAsDataUrl(file) : null,
+    previewUrl: isImageUploadFile(file)
+      ? await compressImageDataUrl(await readFileAsDataUrl(file))
+      : null,
   };
 }
 
@@ -247,7 +251,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
     stopCamera();
-    const previewUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const previewUrl = await compressImageDataUrl(canvas.toDataURL('image/jpeg', 0.92));
     addUploadItem({
       fileName: `${config.capturePrefix}_${Date.now()}.jpg`,
       mimeType: 'image/jpeg',

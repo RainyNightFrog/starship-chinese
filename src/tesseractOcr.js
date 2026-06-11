@@ -154,6 +154,15 @@ export function buildOcrLinesFromResult(data = {}) {
 }
 
 /**
+ * 詞表圖片 OCR — 瀏覽器備援（雲端 500 時使用）
+ * @returns {Promise<string>}
+ */
+export async function recognizeVocabImageToText(previewUrl, onProgress) {
+  const { rawText } = await recognizeImageToText(previewUrl, onProgress);
+  return String(rawText ?? '').trim();
+}
+
+/**
  * 對單張考卷圖片執行 OCR（核心入口，等同 Tesseract.recognize(image, 'chi_tra')）
  * @param {string} previewUrl — 圖片 data URL
  * @param {(ratio: number) => void} [onProgress] — 0~1 進度回調
