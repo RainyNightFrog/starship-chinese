@@ -202,6 +202,19 @@ export default function StudentWorkspace({
     resetPractice();
   }, [advanceToNext, resetPractice]);
 
+  /** 測驗／呈分試／重組句子 — 答對後自動跳下一題（與閱讀理解一致） */
+  const AUTO_ADVANCE_MS = 1400;
+  const autoAdvanceTimerRef = useRef(null);
+  useEffect(() => {
+    if (!showCelebrate || activeTask === 'reading') return undefined;
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      handleCelebrateDismiss();
+    }, AUTO_ADVANCE_MS);
+    return () => {
+      if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+    };
+  }, [showCelebrate, activeTask, handleCelebrateDismiss]);
+
   const buildShuffledSentencePool = useCallback((sent) => {
     if (!sent) return [];
     const pool = sent.words || sent.correctOrder || [];
@@ -1013,9 +1026,11 @@ export default function StudentWorkspace({
           />
         )}
         engineMeta={<QuestionEngineMeta todayProgress={todayProgress} isSEN={isSEN} isNight={isNight} dt={dt} />}
-        aiBadge={(reading?.isAiGenerated || assignedContent.readingUploadSession) && (
+        aiBadge={reading?.isAiGenerated ? (
           <AiGeneratedBadge isSEN={isSEN} isNight={isNight} dt={dt} />
-        )}
+        ) : assignedContent.readingUploadSession ? (
+          <UploadedReadingBadge isSEN={isSEN} isNight={isNight} dt={dt} />
+        ) : null}
       />,
     );
   }
@@ -1026,19 +1041,37 @@ export default function StudentWorkspace({
 /** 題庫載入失敗 / 牌堆為空 — 自動重試並提供手動按鈕 */
 function DeckEmptyRecovery({ isNight, isSEN, dt = (t) => t, totalPool = 0, onReload }) {
   const reloadAttempts = useRef(0);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (totalPool <= 0 || reloadAttempts.current >= 2) return;
     reloadAttempts.current += 1;
+    setRetrying(true);
     onReload?.();
+    const t = setTimeout(() => setRetrying(false), 800);
+    return () => clearTimeout(t);
   }, [totalPool, onReload]);
 
   return (
     <div className="text-center py-12 space-y-4">
-      <p className="text-4xl">📭</p>
+      {totalPool > 0 ? (
+        <div
+          className={`inline-flex items-center justify-center w-14 h-14 rounded-full border-2 animate-pulse
+            ${isNight ? 'border-amber-500/60 bg-stone-800' : 'border-amber-300 bg-amber-50'}`}
+          aria-hidden
+        >
+          <span className="text-2xl">🔀</span>
+        </div>
+      ) : (
+        <p className="text-4xl">📭</p>
+      )}
       <BilingualLabel
-        zh={dt(totalPool > 0 ? '題庫載入中，請稍候…' : '暫無可用題目，請稍後再試')}
-        en={totalPool > 0 ? 'Loading question deck…' : 'No questions available right now'}
+        zh={dt(totalPool > 0
+          ? (retrying ? `正在洗牌題庫（第 ${reloadAttempts.current} 次）…` : '題庫載入中，請稍候…')
+          : '暫無可用題目，請稍後再試')}
+        en={totalPool > 0
+          ? (retrying ? `Shuffling deck (attempt ${reloadAttempts.current})…` : 'Loading question deck…')
+          : 'No questions available right now'}
         size={isSEN ? 'md' : 'sm'}
         center
         className={`font-bold ${getMutedTextClass(isNight)}`}
@@ -1046,8 +1079,13 @@ function DeckEmptyRecovery({ isNight, isSEN, dt = (t) => t, totalPool = 0, onRel
       {totalPool > 0 && (
         <button
           type="button"
-          onClick={() => onReload?.()}
-          className={`mx-auto block rounded-xl border-2 font-black transition-all
+          disabled={retrying}
+          onClick={() => {
+            setRetrying(true);
+            onReload?.();
+            setTimeout(() => setRetrying(false), 800);
+          }}
+          className={`mx-auto block rounded-xl border-2 font-black transition-all disabled:opacity-60
             ${isNight ? 'border-amber-500/60 bg-stone-800 text-amber-200 hover:bg-stone-700' : 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'}
             ${isSEN ? 'px-6 py-3 text-base' : 'px-5 py-2.5 text-sm'}`}
         >
@@ -1095,6 +1133,20 @@ function AiGeneratedBadge({ isSEN, isNight, dt = (t) => t }) {
       center
       className={`rounded-xl border-2 font-bold animate-[fadeSlideIn_0.35s_ease-out]
         ${isNight ? 'border-indigo-500/50 bg-indigo-950/40 [&_span:first-child]:text-indigo-200 [&_span:last-child]:text-indigo-400/80' : 'border-indigo-200 bg-indigo-50 [&_span:first-child]:text-indigo-800 [&_span:last-child]:text-indigo-600/80'}
+        ${isSEN ? 'p-3' : 'p-2'}`}
+    />
+  );
+}
+
+function UploadedReadingBadge({ isSEN, isNight, dt = (t) => t }) {
+  return (
+    <BilingualLabel
+      zh={dt('📖 家長上載閱讀文章 · 校本專屬練習')}
+      en="Parent-uploaded reading passage · school-specific practice"
+      size={isSEN ? 'md' : 'sm'}
+      center
+      className={`rounded-xl border-2 font-bold animate-[fadeSlideIn_0.35s_ease-out]
+        ${isNight ? 'border-sky-500/50 bg-sky-950/40 [&_span:first-child]:text-sky-200 [&_span:last-child]:text-sky-400/80' : 'border-sky-200 bg-sky-50 [&_span:first-child]:text-sky-800 [&_span:last-child]:text-sky-600/80'}
         ${isSEN ? 'p-3' : 'p-2'}`}
     />
   );
@@ -1232,24 +1284,14 @@ function VocabCards({
         return (
         <div
           key={vocab.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => markVocabRead(vocab)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              markVocabRead(vocab);
-            }
-          }}
-          className={`rounded-xl border-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between transition-all duration-300 cursor-pointer
+          className={`rounded-xl border-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between transition-all duration-300
             ${isSEN ? 'p-4 sm:p-5' : 'p-3 sm:p-4'}
             ${isRead
               ? (isNight
                 ? 'bg-emerald-950/35 border-emerald-600/70 ring-2 ring-emerald-700/40'
                 : 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-200/80')
               : theme.hint}
-            ${vocab.isReview && !isRead ? (isNight ? 'ring-2 ring-rose-500/70' : 'ring-2 ring-rose-200') : ''}
-            hover:shadow-md active:scale-[0.995]`}
+            ${vocab.isReview && !isRead ? (isNight ? 'ring-2 ring-rose-500/70' : 'ring-2 ring-rose-200') : ''}`}
         >
           <div className="min-w-0 flex-1">
             {isRead && (
@@ -1312,7 +1354,25 @@ function VocabCards({
               ))}
             </div>
           )}
-          <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto sm:shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto sm:shrink-0">
+            {!isRead && (
+              <button
+                type="button"
+                onClick={() => markVocabRead(vocab)}
+                className={`font-black transition-all active:scale-[0.98] rounded-full border-2
+                  ${isNight
+                    ? 'bg-emerald-800 hover:bg-emerald-700 border-emerald-500 text-emerald-50'
+                    : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-400 text-white'}
+                  ${isSEN ? 'text-base px-4 py-2' : 'text-sm px-3 py-1.5'}`}
+              >
+                <BilingualLabel
+                  zh={getDisplayText('✓ 標記已讀', { language, studentType })}
+                  en="Mark as read"
+                  size={isSEN ? 'md' : 'sm'}
+                  center
+                />
+              </button>
+            )}
             <SpeechPlayButton
               label="🔊 聽詞"
               labelEn="Hear Word"

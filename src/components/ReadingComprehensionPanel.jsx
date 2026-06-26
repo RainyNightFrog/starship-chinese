@@ -243,8 +243,21 @@ export default function ReadingComprehensionPanel({
 
   if (!currentQuestion && !passageFinished) {
     return (
-      <div className="text-center py-12">
-        <p className={`font-bold ${getMutedTextClass(isNight)}`}>{dt('未能載入閱讀題目，請重新上載文章。')}</p>
+      <div className="text-center py-12 space-y-4">
+        <div
+          className={`inline-flex items-center justify-center w-14 h-14 rounded-full border-2 animate-pulse mx-auto
+            ${isNight ? 'border-indigo-500/60 bg-stone-800' : 'border-indigo-300 bg-indigo-50'}`}
+          aria-hidden
+        >
+          <span className="text-2xl">📖</span>
+        </div>
+        <BilingualLabel
+          zh={dt('正在載入閱讀題目…')}
+          en="Loading reading questions…"
+          size={isSEN ? 'md' : 'sm'}
+          center
+          className={`font-bold ${getMutedTextClass(isNight)}`}
+        />
       </div>
     );
   }
@@ -396,8 +409,8 @@ export default function ReadingComprehensionPanel({
         <p className={`text-center font-black leading-relaxed ${isNight ? 'text-stone-100' : 'text-slate-800'} ${isSEN ? 'text-lg' : 'text-base'}`}>
           {dt(currentQuestion.question)}
         </p>
-        {!showShield && (
-          <div className="flex justify-center">
+        {!showShield && contributorBadge?.isCommunityShared && (
+          <div className="flex justify-center -mt-1">
             <ContributorHonorBadge badge={contributorBadge} isSEN={isSEN} isNight={isNight} />
           </div>
         )}

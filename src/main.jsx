@@ -3,12 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import { getColorMode, syncDocumentTheme } from './colorMode'
 import App from './App.jsx'
-import { preloadTesseractEngine } from './tesseractOcr.js'
 
 syncDocumentTheme({ colorMode: getColorMode() })
 
-/** 應用程式啟動時預載 Singleton Tesseract Worker — chi_tra 僅下載一次 */
-preloadTesseractEngine().catch(() => {})
+/** OCR 引擎改為上載模態開啟時懶載 — 學生端首屏更快 */
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

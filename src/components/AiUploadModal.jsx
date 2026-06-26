@@ -179,6 +179,16 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
     setUploadItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
+  const moveUploadItem = useCallback((index, direction) => {
+    setUploadItems((prev) => {
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }, []);
+
   const goToGallery = useCallback(() => {
     stopCamera();
     setPhase('gallery');
@@ -562,7 +572,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
                 </p>
                 <p className="text-xs text-slate-400 mt-1 font-bold">
                   {uploadItems.length > 1
-                    ? (config.galleryMultiSubLabel ?? '請確認縮圖順序（1→2→…），再開始 AI 解析')
+                    ? (config.galleryMultiSubLabel ?? '請確認順序（1→2→…），可用 ↑↓ 調整，再開始 AI 解析')
                     : (config.gallerySingleSubLabel ?? '可繼續添加，或開始 AI 解析')}
                 </p>
               </div>
@@ -581,6 +591,28 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
                     <span className="absolute top-1 left-1 text-[10px] font-black bg-black/60 text-amber-200 px-1.5 py-0.5 rounded">
                       {idx + 1}
                     </span>
+                    {uploadItems.length > 1 && (
+                      <div className="absolute bottom-1 left-1 right-1 flex gap-0.5 justify-center">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => moveUploadItem(idx, 'up')}
+                          className="flex-1 py-0.5 rounded bg-slate-900/80 text-[10px] font-black text-amber-200 disabled:opacity-30 hover:bg-slate-800"
+                          aria-label={`第 ${idx + 1} 張前移`}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === uploadItems.length - 1}
+                          onClick={() => moveUploadItem(idx, 'down')}
+                          className="flex-1 py-0.5 rounded bg-slate-900/80 text-[10px] font-black text-amber-200 disabled:opacity-30 hover:bg-slate-800"
+                          aria-label={`第 ${idx + 1} 張後移`}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => removeUploadItem(item.id)}
@@ -675,8 +707,16 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
                 </p>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between text-xs font-bold text-slate-400"><span>解析進度</span><span>{parseProgress}%</span></div>
-                <div className="h-2.5 rounded-full bg-slate-700 overflow-hidden"><div className="h-full bg-gradient-to-r from-emerald-500 to-amber-400 transition-all duration-200" style={{ width: `${parseProgress}%` }} /></div>
+                <div className="flex justify-between text-xs font-bold text-slate-400">
+                  <span>{awaitingOcr ? '仍在辨識中…' : '解析進度'}</span>
+                  <span>{awaitingOcr ? '⏳' : `${parseProgress}%`}</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-slate-700 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-200 ${awaitingOcr ? 'bg-amber-400 animate-pulse' : 'bg-gradient-to-r from-emerald-500 to-amber-400'}`}
+                    style={{ width: `${awaitingOcr ? 92 : parseProgress}%` }}
+                  />
+                </div>
               </div>
               <div className="min-h-[120px] space-y-2 text-center">
                 {steps.slice(0, parseStep + 1).map((step, i) => (

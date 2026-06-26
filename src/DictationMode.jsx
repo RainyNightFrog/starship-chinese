@@ -91,11 +91,19 @@ export default function DictationMode({
     speak(meaning.text, { lang: meaning.lang, kind: 'meaning' });
   }, [current, meaning, speak]);
 
-  /** 換詞時重置狀態並停止播放 — 不自動朗讀，需學生按 🔊 按鈕 */
+  /** 換詞時重置狀態 — SEN 學生自動播放詞語 */
   useEffect(() => {
     setRevealed(false);
     cancel();
-  }, [currentIndex, current?.id, cancel]);
+    if (!isSEN || !current) return;
+    const t = setTimeout(() => playWordOnly(), 400);
+    return () => clearTimeout(t);
+  }, [currentIndex, current?.id, cancel, isSEN, playWordOnly]);
+
+  const handleTimeUp = useCallback(() => {
+    if (!current || speaking) return;
+    playWordOnly();
+  }, [current, speaking, playWordOnly]);
 
   useEffect(() => {
     if (allDone) onComplete?.();
@@ -164,6 +172,7 @@ export default function DictationMode({
         isSEN={isSEN}
         speaking={speaking}
         paused={allDone}
+        onTimeUp={handleTimeUp}
       />
 
       <BilingualLabel
@@ -182,8 +191,17 @@ export default function DictationMode({
         aria-live="polite"
       >
         <p className={`mb-4 ${isSEN ? 'text-6xl' : 'text-5xl'}`} aria-hidden>
-          {speakingKind === 'word' ? '🔊' : '🎧'}
+          {loadingKind === 'word' ? '⏳' : speakingKind === 'word' ? '🔊' : '🎧'}
         </p>
+        {loadingKind === 'word' && (
+          <BilingualLabel
+            zh={dt('正在載入語音…')}
+            en="Loading voice…"
+            size={isSEN ? 'md' : 'sm'}
+            center
+            className={`mb-2 font-bold ${getMutedTextClass(isNight)}`}
+          />
+        )}
         <p className={`font-black ${isNight ? 'text-stone-100' : ''} opacity-80 ${isSEN ? 'text-xl' : 'text-lg'}`}>
           {revealed ? getVocabChar(current, { language, studentType }) : '？？？'}
         </p>

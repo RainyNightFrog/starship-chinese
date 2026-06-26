@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { applyExamPaperUpload } from './examPaperGenerator';
 import { applyVocabListUpload } from './vocabListGenerator';
-import { recordWrongWord, getReviewReminders, clearWrongWords } from './wrongWordStore';
+import { getReviewReminders, clearWrongWords } from './wrongWordStore';
 import { STUDENT_TYPE_OPTIONS, TASK_OPTIONS } from './parentI18n';
 import { BilingualLabel, SectionHeading } from './BilingualLabel';
 import UploadStatusPanel from './UploadStatusPanel';
@@ -44,6 +44,13 @@ export default function ParentDebugPanel({
     onConfigChange({ ...parentConfig, activeTask: taskId });
   };
 
+  /** 上載完成後一鍵指派並返回學生端 */
+  const assignAndReturn = useCallback((taskId) => {
+    assignTask(taskId);
+    onOpenChange?.(false);
+    onReturnToStudy?.();
+  }, [parentConfig, onConfigChange, onOpenChange, onReturnToStudy]);
+
   /** 詞表上載完成 — OCR 提取詞彙並同步學生端 */
   const handleVocabUploadComplete = useCallback((uploadMeta) => {
     const reminders = getReviewReminders();
@@ -56,6 +63,7 @@ export default function ParentDebugPanel({
       fileName: uploadMeta.fileName,
       at: new Date().toLocaleString('zh-HK'),
     });
+    setVocabModalOpen(false);
   }, [parentConfig, onConfigChange]);
 
   /** 試卷上載完成 — 生成孿生題並同步學生端 */
@@ -70,11 +78,8 @@ export default function ParentDebugPanel({
       fileName: uploadMeta.fileName,
       at: new Date().toLocaleString('zh-HK'),
     });
-    const updated = recordWrongWord({
-      tc: '語', sc: '语', context: '形近錯別字 悟/語', relatedCorrect: '悟', taskId: 'quiz',
-    });
-    onWrongWordsChange?.(updated);
-  }, [parentConfig, onConfigChange, onWrongWordsChange]);
+    setExamModalOpen(false);
+  }, [parentConfig, onConfigChange]);
 
   /** 閱讀理解上載完成 — 生成理解題並同步學生端 */
   const handleReadingUploadComplete = useCallback((uploadMeta) => {
@@ -94,6 +99,7 @@ export default function ParentDebugPanel({
       totalSharedPassages: variants.globalIngest?.totalPassages ?? 0,
       at: new Date().toLocaleString('zh-HK'),
     });
+    setReadingModalOpen(false);
   }, [onConfigChange]);
 
   const handleRemoveUploadImage = useCallback(async (imageId) => {
@@ -266,9 +272,27 @@ export default function ParentDebugPanel({
               </button>
 
               {lastVocabSummary && (
-                <p className="text-sm font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-800 rounded-xl p-4 leading-relaxed text-center">
-                  ✅ 已完成 · 默書 {lastVocabSummary.dictationCount} 詞 · 預習 {lastVocabSummary.prestudyCount} 詞
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-800 rounded-xl p-4 leading-relaxed text-center">
+                    ✅ 已完成 · 默書 {lastVocabSummary.dictationCount} 詞 · 預習 {lastVocabSummary.prestudyCount} 詞
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => assignAndReturn('prestudy')}
+                      className="py-3 px-4 rounded-xl font-black text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-900 border-2 border-emerald-300 transition active:scale-[0.98]"
+                    >
+                      📚 指派課文預習 →
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => assignAndReturn('dictation')}
+                      className="py-3 px-4 rounded-xl font-black text-sm bg-emerald-700 hover:bg-emerald-600 text-white border-2 border-emerald-500 transition active:scale-[0.98]"
+                    >
+                      🎧 前往默書特訓 →
+                    </button>
+                  </div>
+                </div>
               )}
 
               <button
@@ -291,9 +315,18 @@ export default function ParentDebugPanel({
               </button>
 
               {lastReadingSummary && (
-                <p className="text-sm font-bold text-indigo-300 bg-indigo-950/40 border border-indigo-800 rounded-xl p-4 leading-relaxed text-center">
-                  ✅ 已完成 · {lastReadingSummary.questionCount} 道理解題
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm font-bold text-indigo-300 bg-indigo-950/40 border border-indigo-800 rounded-xl p-4 leading-relaxed text-center">
+                    ✅ 已完成 · {lastReadingSummary.questionCount} 道理解題
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => assignAndReturn('reading')}
+                    className="w-full py-3 px-4 rounded-xl font-black text-sm bg-indigo-500 hover:bg-indigo-400 text-white border-2 border-indigo-300 transition active:scale-[0.98]"
+                  >
+                    📖 指派閱讀理解 →
+                  </button>
+                </div>
               )}
 
               <button
@@ -316,9 +349,27 @@ export default function ParentDebugPanel({
               </button>
 
               {lastExamSummary && (
-                <p className="text-sm font-bold text-rose-300 bg-rose-950/40 border border-rose-800 rounded-xl p-4 leading-relaxed text-center">
-                  ✅ 已完成 · 測驗 {lastExamSummary.quizCount} 題 · 呈分試 {lastExamSummary.sspaCount} 題
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm font-bold text-rose-300 bg-rose-950/40 border border-rose-800 rounded-xl p-4 leading-relaxed text-center">
+                    ✅ 已完成 · 測驗 {lastExamSummary.quizCount} 題 · 呈分試 {lastExamSummary.sspaCount} 題
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => assignAndReturn('quiz')}
+                      className="py-3 px-4 rounded-xl font-black text-sm bg-rose-500 hover:bg-rose-400 text-white border-2 border-rose-300 transition active:scale-[0.98]"
+                    >
+                      📝 開始測驗練習 →
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => assignAndReturn('sspa')}
+                      className="py-3 px-4 rounded-xl font-black text-sm bg-rose-700 hover:bg-rose-600 text-white border-2 border-rose-500 transition active:scale-[0.98]"
+                    >
+                      📋 呈分試特訓 →
+                    </button>
+                  </div>
+                </div>
               )}
 
               <UploadStatusPanel
