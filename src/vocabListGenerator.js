@@ -19,8 +19,8 @@ import { resolveCustomVocabFromInput } from './customVocabMatcher';
 export { parseVocabUploadItems };
 
 export const VOCAB_PARSE_STEPS = [
-  { text: '正在掃描默書單版面...', progress: 10 },
-  { text: 'OCR 擷取詞語列表...', progress: 25 },
+  { text: 'AI 正在高速讀取考卷（已解鎖本地加速）...', progress: 10 },
+  { text: 'Canvas 去噪 + OCR 擷取詞語列表...', progress: 25 },
   { text: '辨識部首與字形結構...', progress: 40 },
   { text: '匹配粵語 / 普通話讀音標籤...', progress: 55 },
   { text: '偵測校本重點：成語與易混字...', progress: 68 },

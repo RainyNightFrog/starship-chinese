@@ -46,7 +46,7 @@ function isAllowedUploadFile(file) {
 
 function resolveOcrStatusMessage({ ocrEngineError, ocrEngineReady, ocrEngineMode }) {
   if (ocrEngineError) return `⚠️ ${ocrEngineError}`;
-  if (!ocrEngineReady) return '⏳ 正在載入 OCR 引擎…';
+  if (!ocrEngineReady) return '⏳ 正在載入 OCR 引擎（首次下載 chi_tra）…';
   if (ocrEngineReady && ocrEngineMode) return describeOcrEngineMode(ocrEngineMode);
   return '✓ OCR 已就緒';
 }
@@ -653,7 +653,7 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-950 border-2 border-indigo-500 animate-pulse text-3xl">🧠</div>
                 <p className="mt-3 font-black text-indigo-200 text-lg">
                   {config.useOfflineOcr || config.useBackendOcr || config.useLocalOllama
-                    ? (config.parsingLabel ?? 'AI 正在讀取考卷文字（伺服器安全辨識中）...')
+                    ? (config.parsingLabel ?? 'AI 正在高速讀取考卷（已解鎖本地加速）...')
                     : stitchPage.total >= 2
                       ? `正在逐頁辨識考卷（${stitchPage.current || 1}/${stitchPage.total}）…`
                       : (config.parsingLabel ?? 'AI 解析中…')}
@@ -661,8 +661,8 @@ export default function AiUploadModal({ open, onClose, onComplete, config }) {
                 <p className="text-xs text-slate-400 mt-1 font-bold">
                   {ocrEngineMode === 'browser'
                     ? (awaitingOcr
-                      ? '本機 OCR 辨識中，首次載入語言包約需 10–20 秒…'
-                      : '本機 Tesseract 辨識中，請勿關閉視窗…')
+                      ? 'Singleton Worker 高速辨識中（chi_tra 已快取則瞬間完成）…'
+                      : '本機 Tesseract + Canvas 去噪辨識中，請勿關閉視窗…')
                     : awaitingOcr
                       ? '雲端較慢，已可改用「貼上文章文字」立即完成…'
                       : config.useOfflineOcr || config.useBackendOcr || config.useLocalOllama

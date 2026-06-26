@@ -13,9 +13,9 @@ import { ingestReadingBankToGlobalPool } from './globalSharedReadingPool.js';
 export { parseReadingUploadItems } from './readingOcrService';
 
 export const READING_PARSE_STEPS = [
-  { text: 'AI 正在讀取考卷文字（伺服器安全辨識中）...', progress: 10 },
-  { text: '連接本機 Node.js OCR 引擎...', progress: 22 },
-  { text: 'Tesseract 逐頁辨識繁體中文（chi_tra）...', progress: 40 },
+  { text: 'AI 正在高速讀取考卷（已解鎖本地加速）...', progress: 10 },
+  { text: 'Singleton Worker 就緒（chi_tra 已快取）...', progress: 22 },
+  { text: 'Canvas 去噪 + Tesseract 辨識繁體中文...', progress: 40 },
   { text: '清洗雜訊（校名、分數欄、無意義英文）...', progress: 55 },
   { text: '關鍵詞匹配與考點擴寫...', progress: 70 },
   { text: '動態樣版池隨機生成 8 道呈分試理解題...', progress: 85 },

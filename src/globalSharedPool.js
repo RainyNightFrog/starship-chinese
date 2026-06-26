@@ -17,6 +17,10 @@ import {
   isPlayableVocabExamItem,
   isScannableIdiomCandidate,
 } from './sharedIdiomQuality.js';
+import {
+  fuzzyMatchIdiomWord,
+  fuzzyMatchIdiomsFromText,
+} from './idiomFuzzyMatcher.js';
 
 export const LS_GLOBAL_IDIOMS = 'starship_global_idioms';
 export const LS_GLOBAL_METHODS = 'starship_global_methods';
@@ -290,7 +294,7 @@ export function scanIdiomCandidatesFromText(cleanText = '') {
 
 /**
  * UGC Auto-Ingestor — Tesseract 清洗後呼叫
- * 掃描正文 → 包裝標準題 → 去重 push → 立刻寫入 localStorage
+ * 掃描正文 → Fuse.js 模糊配對 IDIOM_EXAM_POOL → 去重 push → 立刻寫入 localStorage
  */
 export function syncAndExpandSharedPool(cleanText = '', meta = {}) {
   const contributorLabel = meta.contributorLabel ?? generateContributorLabel(meta.seed ?? Date.now());
@@ -298,27 +302,67 @@ export function syncAndExpandSharedPool(cleanText = '', meta = {}) {
   let addedCount = 0;
   let skippedCount = 0;
 
+  /** ① Fuse.js 全文模糊撈取黃金 30 題（容忍 OCR 錯字） */
+  const fuseMatched = fuzzyMatchIdiomsFromText(cleanText);
   const scanned = scanIdiomCandidatesFromText(cleanText);
   const customWords = (meta.customIdioms ?? [])
     .map((item) => (typeof item === 'string' ? item : item?.word))
     .filter(Boolean);
 
-  const allCandidates = [...new Set([...scanned, ...customWords])];
+  /** canonicalWord → 合併後的題目 metadata（優先保留 IDIOM_EXAM_POOL 完整四選一） */
+  const resolvedEntries = new Map();
 
-  allCandidates.forEach((word) => {
+  fuseMatched.forEach((poolItem) => {
+    resolvedEntries.set(poolItem.word, { ...poolItem, matchedVia: poolItem.matchedVia ?? 'fuse_text' });
+  });
+
+  scanned.forEach((rawWord) => {
+    const fuseResult = fuzzyMatchIdiomWord(rawWord);
+    if (fuseResult?.item) {
+      const canonical = fuseResult.item.word;
+      if (!resolvedEntries.has(canonical)) {
+        resolvedEntries.set(canonical, {
+          ...fuseResult.item,
+          matchedVia: fuseResult.matchedVia,
+          ocrCorrectedFrom: fuseResult.matchedVia !== 'exact' ? rawWord : undefined,
+        });
+      }
+      return;
+    }
+    if (!resolvedEntries.has(rawWord)) {
+      resolvedEntries.set(rawWord, { word: rawWord });
+    }
+  });
+
+  customWords.forEach((rawWord) => {
     const customMeta = Array.isArray(meta.customIdioms)
-      ? meta.customIdioms.find((i) => i?.word === word) ?? {}
+      ? meta.customIdioms.find((i) => i?.word === rawWord) ?? {}
       : {};
+    const fuseResult = fuzzyMatchIdiomWord(rawWord);
+    const canonical = fuseResult?.item?.word ?? rawWord;
 
-    const wrapped = wrapIdiomAsStandardQuestion(word, {
+    resolvedEntries.set(canonical, {
+      ...(fuseResult?.item ?? { word: rawWord }),
+      ...customMeta,
+      word: canonical,
+      matchedVia: fuseResult?.matchedVia,
+      ocrCorrectedFrom: fuseResult?.matchedVia === 'fuse' ? rawWord : undefined,
+    });
+  });
+
+  resolvedEntries.forEach((entryMeta, canonicalWord) => {
+    const wrapped = wrapIdiomAsStandardQuestion(canonicalWord, {
       contributorLabel,
       seed: meta.seed,
       source: meta.source ?? 'ugc_photo_scan',
-      ...customMeta,
+      questionText: entryMeta.questionText,
+      options: entryMeta.options,
+      correctAnswerIndex: entryMeta.correctAnswerIndex,
+      hint: entryMeta.hint,
     });
 
     if (saveToGlobalPool(wrapped)) {
-      addedWords.push(word);
+      addedWords.push(canonicalWord);
       addedCount += 1;
     } else {
       skippedCount += 1;
