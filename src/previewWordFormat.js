@@ -162,7 +162,7 @@ export function resolveIdiomCardMeaning(item) {
       item.options.length - 1,
       Math.max(0, Number(item.correctAnswerIndex ?? 0)),
     );
-    const fromOpt = stripHintPrefix(String(item.options[idx] ?? '').trim());
+    const fromOpt = stripHintPrefix(sanitizeDisplayText(item.options[idx]));
     if (fromOpt && !looksLikeJsonLeak(fromOpt)) return fromOpt;
   }
 

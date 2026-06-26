@@ -30,14 +30,16 @@ export {
   parseStudiedWordsJson,
 } from './previewWordFormat.js';
 
-/** 最近一次溫習完成的詞語（純文字陣列）— 默書特訓直接讀取 */
-export const STUDIED_WORDS_STORAGE_KEY = 'starship_last_studied_words';
-
-/** 家長 OCR 上載的詞彙清單（含字卡、拼音、意思）— 課文預習優先讀取 */
-export const PREVIEW_WORDS_STORAGE_KEY = 'starship_preview_words';
+import {
+  PREVIEW_WORDS_STORAGE_KEY,
+  STUDIED_WORDS_STORAGE_KEY,
+  VOCAB_UPLOADED_EVENT,
+} from './dataPipelineKeys.js';
 
 /** 本次預習 session 的 15 詞（避免刷新重新洗牌） */
 const PRESTUDY_SESSION_KEY = 'starship_prestudy_idiom_session';
+
+export { STUDIED_WORDS_STORAGE_KEY, PREVIEW_WORDS_STORAGE_KEY } from './dataPipelineKeys.js';
 
 export const PRESTUDY_IDIOM_COUNT = 15;
 
@@ -126,7 +128,7 @@ export function saveUploadedPreviewWords(vocabItems = []) {
     );
     sessionStorage.setItem(PRESTUDY_SESSION_KEY, JSON.stringify(cardList));
     try {
-      window.dispatchEvent(new CustomEvent('starship-vocab-uploaded'));
+      window.dispatchEvent(new CustomEvent(VOCAB_UPLOADED_EVENT));
     } catch {
       /* ignore */
     }

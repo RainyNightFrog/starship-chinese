@@ -21,9 +21,12 @@ import {
   fuzzyMatchIdiomWord,
   fuzzyMatchIdiomsFromText,
 } from './idiomFuzzyMatcher.js';
+import {
+  LS_GLOBAL_IDIOMS,
+  LS_GLOBAL_METHODS,
+} from './dataPipelineKeys.js';
 
-export const LS_GLOBAL_IDIOMS = 'starship_global_idioms';
-export const LS_GLOBAL_METHODS = 'starship_global_methods';
+export { LS_GLOBAL_IDIOMS, LS_GLOBAL_METHODS } from './dataPipelineKeys.js';
 export const LS_GLOBAL_STUDY_STATS = 'starship_global_study_stats';
 
 const LEGACY_LS_IDIOMS = 'global_shared_idioms';

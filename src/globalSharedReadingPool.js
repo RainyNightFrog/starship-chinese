@@ -6,7 +6,9 @@
 import { generateContributorLabel } from './globalSharedPool.js';
 import { sanitizeReadingBankItem } from './readingDisplayGuard.js';
 
-export const LS_GLOBAL_READING = 'starship_global_reading';
+import { LS_GLOBAL_READING } from './dataPipelineKeys.js';
+
+export { LS_GLOBAL_READING } from './dataPipelineKeys.js';
 const LEGACY_LS_READING = 'global_shared_reading';
 
 function readJsonStorage(key, fallback = null) {

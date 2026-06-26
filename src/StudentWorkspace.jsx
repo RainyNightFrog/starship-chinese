@@ -43,11 +43,13 @@ import {
   swapPrestudyVocab,
   resolveIdiomCardWord,
   resolveIdiomCardMeaning,
+  getPrestudyCardMeaning,
   previewWordToVocabItem,
   PRESTUDY_IDIOM_COUNT,
   PREVIEW_WORDS_STORAGE_KEY,
   STUDIED_WORDS_STORAGE_KEY,
 } from './prestudyDictationBridge';
+import { VOCAB_UPLOADED_EVENT } from './dataPipelineKeys.js';
 import ContributorHonorBadge from './ContributorHonorBadge';
 import { useContributorBadge } from './useContributorBadge';
 
@@ -303,10 +305,10 @@ export default function StudentWorkspace({
       if (e.key === PREVIEW_WORDS_STORAGE_KEY || e.key === STUDIED_WORDS_STORAGE_KEY) bump();
     };
     window.addEventListener('storage', onStorage);
-    window.addEventListener('starship-vocab-uploaded', bump);
+    window.addEventListener(VOCAB_UPLOADED_EVENT, bump);
     return () => {
       window.removeEventListener('storage', onStorage);
-      window.removeEventListener('starship-vocab-uploaded', bump);
+      window.removeEventListener(VOCAB_UPLOADED_EVENT, bump);
     };
   }, []);
 
@@ -1203,18 +1205,10 @@ function VocabCards({
     return getVocabChar({ ...item, word, tc: word }, { language, studentType });
   };
 
-  /** 字卡解釋 — 僅在有真實字義時顯示 */
+  /** 字卡解釋 — 僅渲染安全中文欄位，禁止 JSON 裸奔 */
   const renderCardMeaning = (item) => {
     if (!hasRealVocabMeaning(item)) return null;
-    if (Array.isArray(item?.options) && item.options.length) {
-      const idx = Math.min(
-        item.options.length - 1,
-        Math.max(0, Number(item.correctAnswerIndex ?? 0)),
-      );
-      const fromOpt = String(item.options[idx] ?? '').trim();
-      if (fromOpt && !fromOpt.includes('"id"')) return fromOpt.replace(/^提示：/, '');
-    }
-    return resolveIdiomCardMeaning(item);
+    return getPrestudyCardMeaning(item) || resolveIdiomCardMeaning(item) || null;
   };
 
   return (
