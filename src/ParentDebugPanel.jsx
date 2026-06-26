@@ -143,6 +143,14 @@ export default function ParentDebugPanel({
     return () => el.removeEventListener('touchmove', stopBubble);
   }, [isOpen]);
 
+  const togglePanel = useCallback(() => {
+    onOpenChange?.(!isOpen);
+  }, [isOpen, onOpenChange]);
+
+  const collapsePanel = useCallback(() => {
+    onOpenChange?.(false);
+  }, [onOpenChange]);
+
   return (
     <>
       <VocabUploadModal
@@ -184,7 +192,9 @@ export default function ParentDebugPanel({
           </button>
           <button
             type="button"
-            onClick={() => onOpenChange?.(!isOpen)}
+            onClick={togglePanel}
+            aria-expanded={isOpen}
+            aria-label={isOpen ? '收起家長端後台' : '展開家長端後台'}
             className="relative flex-1 flex items-center justify-between gap-3 px-4 sm:px-6 py-3 lg:py-3.5 hover:bg-slate-700 transition-colors min-w-0"
           >
             <div className="flex items-center gap-3 text-left min-w-0 flex-1">
@@ -211,16 +221,20 @@ export default function ParentDebugPanel({
               : 'max-h-0 opacity-0 overflow-hidden pointer-events-none'}`}
         >
           {isOpen && (
-            <div className="lg:hidden sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3 bg-slate-800 border-b border-slate-700">
-              <span className="text-base font-black text-white">👨‍👩‍👦 家長端後台</span>
-              <button
-                type="button"
-                onClick={() => onOpenChange?.(false)}
-                className="shrink-0 rounded-xl bg-slate-600 px-4 py-2 text-sm font-black text-white"
-              >
-                收起
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={collapsePanel}
+              aria-label="收起家長端後台（頂部）"
+              className="sticky top-0 z-10 w-full flex items-center justify-between gap-3 px-4 py-3.5 bg-slate-800 border-b border-slate-700 hover:bg-slate-700 active:bg-slate-600 transition-colors text-left"
+            >
+              <span className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <span className="text-xl">👨‍👩‍👦</span>
+                家長端後台
+              </span>
+              <span className="shrink-0 bg-slate-600 px-4 py-2 rounded-xl text-sm font-black text-white">
+                收起 ▲
+              </span>
+            </button>
           )}
           <p className="text-center py-3 px-4 bg-slate-800/80 border-b border-slate-700 text-sm text-slate-300">
             <span className="font-bold text-amber-300">設定即時同步至學生端</span>
@@ -406,6 +420,17 @@ export default function ParentDebugPanel({
 
             {/* ⑤ 成績分析 — 置底，寬屏全寬 */}
             <ParentAnalyticsPanel parentConfig={parentConfig} />
+
+            {/* 底部收起列 — 捲到底也可一鍵收起 */}
+            <button
+              type="button"
+              onClick={collapsePanel}
+              aria-label="收起家長端後台（底部）"
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-slate-800 border-2 border-slate-600 hover:bg-slate-700 active:bg-slate-600 transition-colors text-sm font-black text-slate-200"
+            >
+              <span>收起家長端後台</span>
+              <span aria-hidden>▼</span>
+            </button>
           </div>
         </div>
       </div>
