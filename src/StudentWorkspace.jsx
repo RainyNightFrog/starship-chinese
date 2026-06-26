@@ -139,6 +139,17 @@ export default function StudentWorkspace({
     questionStartedAt.current = Date.now();
   }, [activeTask, currentItem?.id]);
 
+  /** 默書 / 預習完成一詞 — 同步家長成績分析 */
+  const handleVocabStudyProgress = useCallback((taskId, vocabId, stem) => {
+    markComplete(vocabId);
+    analytics?.recordStudyProgress?.({
+      taskId,
+      questionId: String(vocabId),
+      stem,
+      uploadScope: uploadScopeLabel || undefined,
+    });
+  }, [markComplete, analytics, uploadScopeLabel]);
+
   const { meaningVoiceLang } = useVoicePreferences();
   const { speak, speaking, speechBusy } = useSpeechContext();
 
@@ -563,7 +574,11 @@ export default function StudentWorkspace({
           isNCS={isNCS}
           theme={theme}
           onAwardCoins={onAwardCoins}
-          onWordComplete={markComplete}
+          onWordComplete={(id) => {
+            const word = dictationVocabList.find((v) => v.id === id);
+            const char = word ? getVocabChar(word, { language, studentType }) : '';
+            handleVocabStudyProgress('dictation', id, char ? `默書：${char}` : '默書詞彙');
+          }}
           linkedFromPrestudy={Boolean(linkedDictationList?.length)}
           linkedWordCount={linkedStudiedWords?.length ?? 0}
         />
@@ -599,7 +614,11 @@ export default function StudentWorkspace({
           isNight={isNight}
           studentType={studentType}
           language={language}
-          onMarkRead={markComplete}
+          onMarkRead={(vocabId) => {
+            const word = prestudyVocabList.find((v) => v.id === vocabId);
+            const char = word ? getVocabChar(word, { language, studentType }) : '';
+            handleVocabStudyProgress('prestudy', vocabId, char ? `預習：${char}` : '課文預習詞彙');
+          }}
           onSwapVocab={prestudyUsesSessionPool ? handleSwapPrestudyVocab : undefined}
           onSessionComplete={handlePrestudyComplete}
           onGoToDictation={onSwitchTask ? () => onSwitchTask('dictation') : undefined}

@@ -216,6 +216,7 @@ export default function DashboardDemo() {
   return (
     <LearningAnalyticsProvider
       parentConfig={parentConfig}
+      parentPanelOpen={parentPanelOpen}
       onWrongAnswerReviewsChange={setWrongAnswerReviews}
       studentName={displayName.includes('同學') ? displayName : `${displayName.split(/\s+/)[0]}同學`}
     >

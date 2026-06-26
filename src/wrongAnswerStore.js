@@ -1,6 +1,8 @@
 /**
  * 答錯題目記錄 — localStorage 持久化，供錯誤重溫 + 家長錯題本
  */
+import { notifyAnalyticsChanged } from './analyticsSync.js';
+
 const STORAGE_KEY = 'xinghang_wrong_answers';
 const MAX_PER_TASK = 40;
 
@@ -16,6 +18,7 @@ function loadAll() {
 function saveAll(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    notifyAnalyticsChanged('wrong_answer');
   } catch {
     /* ignore */
   }

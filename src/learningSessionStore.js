@@ -3,6 +3,8 @@
  * 供家長端成績趨勢圖、AI 歸因分析使用
  */
 
+import { notifyAnalyticsChanged } from './analyticsSync.js';
+
 const STORAGE_KEY = 'xinghang_learning_sessions';
 const MAX_SESSIONS = 120;
 
@@ -51,6 +53,7 @@ export function recordLearningSession(entry = {}) {
   };
   sessions.unshift(session);
   saveSessions(sessions);
+  notifyAnalyticsChanged('learning_session');
   return session;
 }
 

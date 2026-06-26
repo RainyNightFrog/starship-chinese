@@ -1,6 +1,8 @@
 /**
  * 常錯字記錄 — localStorage 持久化，供下次溫習提醒
  */
+import { notifyAnalyticsChanged } from './analyticsSync.js';
+
 const STORAGE_KEY = 'xinghang_wrong_words';
 
 function loadAll() {
@@ -15,6 +17,7 @@ function loadAll() {
 function saveAll(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    notifyAnalyticsChanged('wrong_word');
   } catch {
     /* 忽略儲存失敗 */
   }
