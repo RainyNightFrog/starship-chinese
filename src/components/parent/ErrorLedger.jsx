@@ -47,22 +47,22 @@ export default function ErrorLedger({ entries = [], uploadScopeLabel = '' }) {
 
   if (!entries.length) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-600 p-5 text-center">
-        <p className="text-3xl mb-3">📒</p>
-        <p className="text-sm font-bold text-slate-400 leading-relaxed">錯題本尚空 — 學生答錯後會自動同步</p>
+      <div className="rounded-xl border border-dashed border-slate-600 p-5 text-center space-y-2">
+        <h3 className="font-black text-lg text-slate-100">📒 錯題本</h3>
+        <p className="text-sm font-bold text-slate-400 leading-relaxed">尚空 — 學生答錯後會自動同步</p>
       </div>
     );
   }
 
   return (
     <div className="rounded-xl border border-slate-600/80 bg-slate-800/50 p-5 space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="text-center space-y-1">
         <h3 className="font-black text-lg text-slate-100">📒 錯題本</h3>
-        <span className="text-sm font-bold text-slate-500 tabular-nums">{entries.length} 項</span>
+        <span className="inline-block text-sm font-bold text-slate-500 tabular-nums">{entries.length} 項</span>
       </div>
 
       {uploadScopeLabel && (
-        <p className="text-sm text-amber-300/80 font-bold truncate" title={uploadScopeLabel}>
+        <p className="text-sm text-amber-300/80 font-bold truncate text-center mx-auto max-w-full" title={uploadScopeLabel}>
           校本範圍：{uploadScopeLabel}
         </p>
       )}

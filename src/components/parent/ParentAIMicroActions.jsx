@@ -13,18 +13,21 @@ const PRIORITY_STYLES = {
 export default function ParentAIMicroActions({ microActions = [], uploadScope = null }) {
   if (!microActions.length) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-600 p-5 text-center text-sm text-slate-500 font-medium">
-        完成一組練習後，AI 會依錯題生成建議
+      <div className="rounded-xl border border-dashed border-slate-600 p-5 text-center space-y-2">
+        <h3 className="font-black text-lg text-indigo-200">🤖 AI 專業建議</h3>
+        <p className="text-sm text-slate-500 font-medium">
+          完成一組練習後，AI 會依錯題生成建議
+        </p>
       </div>
     );
   }
 
   return (
     <div className="rounded-xl border border-indigo-500/40 bg-slate-800/60 p-5 space-y-4">
-      <div>
+      <div className="text-center">
         <h3 className="font-black text-lg text-indigo-200">🤖 AI 專業建議</h3>
         {uploadScope?.label && (
-          <p className="text-sm text-amber-300/90 font-bold mt-2 truncate" title={uploadScope.label}>
+          <p className="text-sm text-amber-300/90 font-bold mt-2 truncate mx-auto max-w-full" title={uploadScope.label}>
             📎 {uploadScope.label}
           </p>
         )}
