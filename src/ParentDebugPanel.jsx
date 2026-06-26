@@ -1,11 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { applyExamPaperUpload } from './examPaperGenerator';
 import { applyVocabListUpload } from './vocabListGenerator';
-import { getQuestionBankStats } from './mockDatabase';
 import { recordWrongWord, getReviewReminders, clearWrongWords } from './wrongWordStore';
 import { STUDENT_TYPE_OPTIONS, TASK_OPTIONS } from './parentI18n';
 import { BilingualLabel, SectionHeading } from './BilingualLabel';
-import ParentWeeklyReport from './ParentWeeklyReport';
 import UploadStatusPanel from './UploadStatusPanel';
 import { CoinAmount } from './CoinIcon';
 import ExamUploadModal from './components/ExamUploadModal';
@@ -14,9 +12,7 @@ import ReadingUploadModal from './components/ReadingUploadModal';
 import { applyReadingPaperUpload } from './readingPaperGenerator';
 import { clearAllUploads, removeUploadImage } from './uploadContentManager';
 import ParentAnalyticsPanel from './components/parent/ParentAnalyticsPanel';
-import { useLearningAnalytics } from './context/LearningAnalyticsContext';
 import { useBodyScrollLock } from './useBodyScrollLock';
-import { UPLOAD_IMAGE_LIMIT_ZH, UPLOAD_IMAGE_LIMIT_EN } from './uploadMetaUtils';
 
 /**
  * 👨‍👩‍👦 家長端後台模擬器（Debug Panel）
@@ -119,12 +115,9 @@ export default function ParentDebugPanel({
   }, [parentConfig, onConfigChange]);
 
   const hasAiAnalysis = Boolean(parentConfig.aiAnalysis);
-  const bankStats = getQuestionBankStats();
   const aiQuizCount = parentConfig.assignedContent.quizBank?.length || 0;
   const aiSspaCount = parentConfig.assignedContent.sspaBank?.length || 0;
   const aiReadingCount = parentConfig.assignedContent.readingBank?.length || 0;
-  const analytics = useLearningAnalytics();
-  const liveAiAnalysis = analytics?.snapshot?.aiAnalysis ?? parentConfig.aiAnalysis;
 
   const backdropRef = useRef(null);
   const panelScrollRef = useRef(null);
@@ -179,37 +172,34 @@ export default function ParentDebugPanel({
       )}
 
       <div className="fixed bottom-0 left-0 right-0 z-[68] border-t-4 border-slate-700 shadow-2xl pb-[env(safe-area-inset-bottom,0px)] flex flex-col-reverse touch-manipulation">
-        <div className="relative flex items-stretch bg-slate-800 text-white min-h-[2.75rem] lg:min-h-[3rem] shrink-0">
+        <div className="relative flex items-stretch bg-slate-800 text-white min-h-[3.25rem] lg:min-h-[3.5rem] shrink-0">
           <button
             type="button"
             onClick={() => {
               onReturnToStudy?.();
             }}
-            className="hidden lg:flex shrink-0 px-3 sm:px-4 py-3 bg-amber-600/90 hover:bg-amber-500 text-xs font-black text-slate-900 border-r border-slate-700"
+            className="hidden lg:flex shrink-0 px-4 py-3.5 bg-amber-600/90 hover:bg-amber-500 text-sm font-black text-slate-900 border-r border-slate-700"
           >
             ↑ 學習區
           </button>
           <button
             type="button"
             onClick={() => onOpenChange?.(!isOpen)}
-            className="relative flex-1 flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 lg:py-3 hover:bg-slate-700 transition-colors min-w-0"
+            className="relative flex-1 flex items-center justify-between gap-3 px-4 sm:px-6 py-3 lg:py-3.5 hover:bg-slate-700 transition-colors min-w-0"
           >
-            <div className="flex items-center gap-2 sm:gap-3 text-left min-w-0 flex-1">
-              <span className="text-base sm:text-lg shrink-0">👨‍👩‍👦</span>
+            <div className="flex items-center gap-3 text-left min-w-0 flex-1">
+              <span className="text-xl sm:text-2xl shrink-0">👨‍👩‍👦</span>
               <BilingualLabel
                 zh="家長端後台"
                 en="Parent Dashboard"
-                size="sm"
-                className="text-white [&_span:last-child]:hidden sm:[&_span:last-child]:block [&_span:last-child]:text-slate-400"
+                size="parent"
+                hideEnOnMobile
+                className="text-white [&_span:last-child]:text-slate-400"
               />
             </div>
-            <BilingualLabel
-              zh={isOpen ? '收起' : '展開'}
-              en={isOpen ? 'Collapse' : 'Expand'}
-              size="sm"
-              center
-              className="shrink-0 bg-slate-600 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg [&_span:first-child]:text-white [&_span:last-child]:hidden sm:[&_span:last-child]:block [&_span:last-child]:text-slate-300"
-            />
+            <span className="shrink-0 bg-slate-600 px-3 py-2 rounded-xl text-sm font-black text-white">
+              {isOpen ? '收起 ▼' : '展開 ▲'}
+            </span>
           </button>
         </div>
 
@@ -217,175 +207,103 @@ export default function ParentDebugPanel({
           ref={panelScrollRef}
           className={`xh-parent-panel-scroll overflow-y-auto overscroll-contain xh-scroll xh-scroll--dark transition-all duration-300 ease-in-out bg-slate-900 text-slate-100 min-h-0
             ${isOpen
-              ? 'max-h-[min(560px,calc(100vh-11rem-env(safe-area-inset-bottom,0px)))] lg:max-h-[min(560px,58vh)] opacity-100 touch-pan-y'
+              ? 'max-h-[min(680px,calc(100vh-10rem-env(safe-area-inset-bottom,0px)))] lg:max-h-[min(680px,72vh)] opacity-100 touch-pan-y'
               : 'max-h-0 opacity-0 overflow-hidden pointer-events-none'}`}
         >
           {isOpen && (
-            <div className="lg:hidden sticky top-0 z-10 flex items-center justify-between gap-2 px-3 py-2 bg-slate-800 border-b border-slate-700">
-              <span className="text-sm font-black text-white">👨‍👩‍👦 家長端後台</span>
+            <div className="lg:hidden sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3 bg-slate-800 border-b border-slate-700">
+              <span className="text-base font-black text-white">👨‍👩‍👦 家長端後台</span>
               <button
                 type="button"
                 onClick={() => onOpenChange?.(false)}
-                className="shrink-0 rounded-lg bg-slate-600 px-3 py-1.5 text-xs font-black text-white"
+                className="shrink-0 rounded-xl bg-slate-600 px-4 py-2 text-sm font-black text-white"
               >
                 收起
               </button>
             </div>
           )}
-          <p className="text-center py-2 px-4 bg-slate-800/80 border-b border-slate-700 text-xs">
-            <span className="font-bold text-amber-300">中文為主 · English shown alongside</span>
-            <span className="text-slate-500 mx-2">|</span>
-            <span className="text-slate-400">設定會即時同步至上方學生端 · Changes sync instantly to student view</span>
+          <p className="text-center py-3 px-4 bg-slate-800/80 border-b border-slate-700 text-sm text-slate-300">
+            <span className="font-bold text-amber-300">設定即時同步至學生端</span>
+            <span className="hidden sm:inline text-slate-500"> · Syncs instantly to student view</span>
           </p>
 
-          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-            {/* 操作區 — 選擇功能在上 */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-
-            {/* ① 學生類型 */}
-            <section className="text-center">
-              <SectionHeading step="①" zh="推送學生類型" en="Set Student Profile Type" />
-              <div className="space-y-2">
-                {STUDENT_TYPE_OPTIONS.map((type) => (
-                  <label
-                    key={type.id}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-lg cursor-pointer border-2 transition-all text-center
-                      ${parentConfig.studentType === type.id ? 'border-amber-400 bg-slate-800' : 'border-slate-700 hover:border-slate-500'}`}
-                  >
-                    <input
-                      type="radio"
-                      name="studentType"
-                      checked={parentConfig.studentType === type.id}
-                      onChange={() => setStudentType(type.id)}
-                      className="accent-amber-400 w-4 h-4 shrink-0"
-                    />
-                    <div className="min-w-0 w-full">
-                      <BilingualLabel zh={type.zh} en={type.en} size="md" center />
-                      <p className="text-[10px] text-slate-500 mt-1 leading-snug">
-                        {type.descZh}
-                        <span className="block text-slate-600">{type.descEn}</span>
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </section>
-
-            {/* ② 指派任務 */}
-            <section className="text-center">
-              <SectionHeading step="②" zh="指派溫習科目" en="Assign Study Task" />
-              <div className="grid grid-cols-2 gap-2">
-                {TASK_OPTIONS.map((task) => (
-                  <button
-                    key={task.id}
-                    type="button"
-                    onClick={() => assignTask(task.id)}
-                    className={`p-3 rounded-lg text-center flex flex-col items-center justify-center gap-1 border-2 transition-all
-                      ${parentConfig.activeTask === task.id
-                        ? 'bg-amber-500 border-amber-400 text-slate-900'
-                        : 'bg-slate-800 border-slate-600 hover:border-slate-400'}`}
-                  >
-                    <span className="text-lg">{task.icon}</span>
-                    <BilingualLabel
-                      zh={task.zh}
-                      en={task.en}
-                      size="sm"
-                      center
-                      className={parentConfig.activeTask === task.id ? '[&_span:last-child]:text-slate-700' : '[&_span:last-child]:text-slate-500'}
-                    />
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* ③ 模擬上載 */}
-            <section className="space-y-3 text-center">
-              <SectionHeading step="③" zh="模擬 AI 上載與同步" en="Simulate AI Upload & Sync" />
+          <div className="p-4 sm:p-6 lg:p-8 space-y-8 sm:space-y-10 max-w-3xl mx-auto">
+            {/* ① 上載 — 家長最常用，置頂且加大 */}
+            <section className="space-y-4">
+              <SectionHeading step="①" zh="上載教材" en="Upload Materials" size="lg" />
 
               <button
                 type="button"
                 onClick={() => setVocabModalOpen(true)}
-                className="w-full p-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-400 transition active:scale-[0.98] text-center"
+                className="w-full p-5 sm:p-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-400 transition active:scale-[0.98] text-center"
               >
+                <span className="block text-2xl mb-2">📷</span>
                 <BilingualLabel
-                  zh="📷 上載新詞表"
-                  en="Upload New Word List"
-                  size="sm"
+                  zh="上載新詞表"
+                  en="Upload Word List"
+                  size="xl"
                   center
+                  hideEnOnMobile
                   className="[&_span:first-child]:text-white [&_span:last-child]:text-emerald-100"
                 />
-                <span className="block text-[10px] font-normal mt-2 opacity-90 leading-snug">
-                  拍照 / 選檔 → OCR 提取詞彙 → 同步默書 & 預習
-                  <span className="block text-emerald-200/80">
-                    {UPLOAD_IMAGE_LIMIT_ZH} · 頁數愈多詞愈多 · {UPLOAD_IMAGE_LIMIT_EN}
-                  </span>
+                <span className="block text-sm font-medium mt-3 opacity-95 leading-relaxed">
+                  拍照或選檔 → 自動辨識詞彙 → 同步默書與預習
                 </span>
               </button>
 
               {lastVocabSummary && (
-                <p className="text-[10px] font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-800 rounded-lg p-2 leading-snug text-center">
-                  ✅ {lastVocabSummary.at} · {lastVocabSummary.fileName}
-                  <span className="block text-emerald-200/80">
-                    {lastVocabSummary.imageCount} 張圖 · 默書 {lastVocabSummary.dictationCount} 詞 · 預習 {lastVocabSummary.prestudyCount} 詞
-                  </span>
+                <p className="text-sm font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-800 rounded-xl p-4 leading-relaxed text-center">
+                  ✅ 已完成 · 默書 {lastVocabSummary.dictationCount} 詞 · 預習 {lastVocabSummary.prestudyCount} 詞
                 </p>
               )}
 
               <button
                 type="button"
                 onClick={() => setReadingModalOpen(true)}
-                className="w-full p-3 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white border-2 border-indigo-400 transition active:scale-[0.98] text-center"
+                className="w-full p-5 sm:p-6 rounded-2xl bg-indigo-700 hover:bg-indigo-600 text-white border-2 border-indigo-400 transition active:scale-[0.98] text-center"
               >
+                <span className="block text-2xl mb-2">📖</span>
                 <BilingualLabel
-                  zh="📖 上載閱讀文章"
+                  zh="上載閱讀文章"
                   en="Upload Reading Passage"
-                  size="sm"
+                  size="xl"
                   center
+                  hideEnOnMobile
                   className="[&_span:first-child]:text-white [&_span:last-child]:text-indigo-100"
                 />
-                <span className="block text-[10px] font-normal mt-2 opacity-90 leading-snug">
-                  拍照 / 選檔 → AI 解析段落 → 同步閱讀理解
-                  <span className="block text-indigo-200/80">
-                    {UPLOAD_IMAGE_LIMIT_ZH} · 每頁約 3 道理解題 · {UPLOAD_IMAGE_LIMIT_EN}
-                  </span>
+                <span className="block text-sm font-medium mt-3 opacity-95 leading-relaxed">
+                  拍照或選檔 → 自動出閱讀理解題
                 </span>
               </button>
 
               {lastReadingSummary && (
-                <p className="text-[10px] font-bold text-indigo-300 bg-indigo-950/40 border border-indigo-800 rounded-lg p-2 leading-snug text-center">
-                  ✅ {lastReadingSummary.at} · {lastReadingSummary.fileName}
-                  <span className="block text-indigo-200/80">
-                    {lastReadingSummary.imageCount} 張圖 · {lastReadingSummary.questionCount} 題 · {lastReadingSummary.passageTitle}
-                  </span>
+                <p className="text-sm font-bold text-indigo-300 bg-indigo-950/40 border border-indigo-800 rounded-xl p-4 leading-relaxed text-center">
+                  ✅ 已完成 · {lastReadingSummary.questionCount} 道理解題
                 </p>
               )}
 
               <button
                 type="button"
                 onClick={() => setExamModalOpen(true)}
-                className="w-full p-3 rounded-xl bg-rose-700 hover:bg-rose-600 text-white border-2 border-rose-400 transition active:scale-[0.98] text-center"
+                className="w-full p-5 sm:p-6 rounded-2xl bg-rose-700 hover:bg-rose-600 text-white border-2 border-rose-400 transition active:scale-[0.98] text-center"
               >
+                <span className="block text-2xl mb-2">📋</span>
                 <BilingualLabel
-                  zh="📋 上載試卷"
+                  zh="上載試卷"
                   en="Upload Exam Paper"
-                  size="sm"
+                  size="xl"
                   center
+                  hideEnOnMobile
                   className="[&_span:first-child]:text-white [&_span:last-child]:text-rose-100"
                 />
-                <span className="block text-[10px] font-normal mt-2 opacity-90 leading-snug">
-                  拍照 / 選檔 → AI 解析 → 批量生成孿生類似題
-                  <span className="block text-rose-200/80">
-                    {UPLOAD_IMAGE_LIMIT_ZH} · 頁數愈多測驗題愈多 · {UPLOAD_IMAGE_LIMIT_EN}
-                  </span>
+                <span className="block text-sm font-medium mt-3 opacity-95 leading-relaxed">
+                  拍照或選檔 → 生成類似練習題
                 </span>
               </button>
 
               {lastExamSummary && (
-                <p className="text-[10px] font-bold text-rose-300 bg-rose-950/40 border border-rose-800 rounded-lg p-2 leading-snug text-center">
-                  ✅ {lastExamSummary.at} · {lastExamSummary.fileName}
-                  <span className="block text-rose-200/80">
-                    {lastExamSummary.imageCount} 張圖 · 測驗 {lastExamSummary.quizCount} 題 · 呈分試 {lastExamSummary.sspaCount} 題 · 句子 {lastExamSummary.sentenceCount} 題
-                  </span>
+                <p className="text-sm font-bold text-rose-300 bg-rose-950/40 border border-rose-800 rounded-xl p-4 leading-relaxed text-center">
+                  ✅ 已完成 · 測驗 {lastExamSummary.quizCount} 題 · 呈分試 {lastExamSummary.sspaCount} 題
                 </p>
               )}
 
@@ -394,52 +312,99 @@ export default function ParentDebugPanel({
                 onRemoveImage={handleRemoveUploadImage}
                 onClearAllUploads={handleClearAllUploads}
               />
+            </section>
 
-              <div className="p-3 rounded-lg bg-slate-800 border border-slate-600 space-y-2 text-xs text-center">
-                <BilingualLabel zh="即時同步狀態" en="Live Sync Status" size="sm" center className="border-b border-slate-700 pb-2 block" />
-                <p><span className="text-slate-400">AI 分析</span> {hasAiAnalysis ? '✅ 已生成' : '—'}</p>
-                <p><span className="text-slate-400">AI 孿生測驗</span> {aiQuizCount} 題 · <span className="text-slate-400">呈分試</span> {aiSspaCount} 題 · <span className="text-slate-400">閱讀</span> {aiReadingCount} 題</p>
-                {parentConfig.assignedContent.vocabUploadSession && (
-                  <p><span className="text-slate-400">AI 詞表</span> 默{parentConfig.assignedContent.vocabByTask?.dictation?.length ?? 0} · 預{parentConfig.assignedContent.vocabByTask?.prestudy?.length ?? 0}</p>
-                )}
-                <p><span className="text-slate-400">本地題庫</span> 默{bankStats.dictation} · 預{bankStats.prestudy} · 測{bankStats.quiz} · 呈{bankStats.sspa} · 句{bankStats.sentence} · 閱{bankStats.reading}</p>
-                <p><span className="text-amber-400/90">🌐 全港共享題庫</span> 四字詞 {bankStats.globalSharedIdioms ?? 0}（UGC +{bankStats.ugcIdioms ?? 0}）· 寫作手法 {bankStats.globalSharedMethods ?? 0}（UGC +{bankStats.ugcMethods ?? 0}）· 閱讀文章 {bankStats.globalSharedReadingPassages ?? 0} 篇</p>
-                <p><span className="text-slate-400">詞表方案</span> {parentConfig.uploadLabel ?? '—'}</p>
-                <p><span className="text-slate-400">常錯字</span> {wrongWordReminders?.length ?? 0} 個</p>
-                {(parentRedemptions?.length ?? 0) > 0 && (
-                  <div className="pt-2 border-t border-slate-700 space-y-1">
-                    <p className="text-amber-300 font-bold">🎁 學生兌換通知</p>
-                    {parentRedemptions.slice(0, 3).map((r) => (
-                      <p key={r.id} className="text-amber-200/90 text-[10px] leading-snug flex items-center justify-center gap-1 flex-wrap">
-                        <span>{r.at} · 兌換「{r.name}」−</span>
-                        <CoinAmount amount={r.cost} size="xs" className="text-amber-300" />
-                      </p>
-                    ))}
-                  </div>
-                )}
-                {(wrongWordReminders?.length ?? 0) > 0 && (
-                  <p className="text-rose-300 text-[10px]">
-                    {wrongWordReminders.slice(0, 3).map((w) => `${w.tc}(×${w.count})`).join('、')}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onWrongWordsChange?.(clearWrongWords())}
-                  className="text-[10px] text-slate-500 underline hover:text-slate-300 mx-auto block"
-                >
-                  清除常錯字記錄 / Clear wrong-word log
-                </button>
+            {/* ② 指派科目 — 大按鈕、兩欄 */}
+            <section>
+              <SectionHeading step="②" zh="指派溫習科目" en="Assign Study Task" size="lg" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {TASK_OPTIONS.map((task) => (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => assignTask(task.id)}
+                    className={`p-4 sm:p-5 rounded-xl text-center flex flex-col items-center justify-center gap-2 border-2 transition-all min-h-[5.5rem]
+                      ${parentConfig.activeTask === task.id
+                        ? 'bg-amber-500 border-amber-400 text-slate-900 shadow-md scale-[1.02]'
+                        : 'bg-slate-800 border-slate-600 hover:border-slate-400'}`}
+                  >
+                    <span className="text-2xl">{task.icon}</span>
+                    <span className={`text-sm sm:text-base font-black leading-snug ${parentConfig.activeTask === task.id ? 'text-slate-900' : 'text-white'}`}>
+                      {task.zh}
+                    </span>
+                  </button>
+                ))}
               </div>
             </section>
 
-            {/* ④ AI 週報 */}
-            <section className="text-center">
-              <SectionHeading step="④" zh="AI 專家週報" en="AI Expert Weekly Report" />
-              <ParentWeeklyReport aiAnalysis={liveAiAnalysis} />
+            {/* ③ 學生類型 — 精簡兩欄 */}
+            <section>
+              <SectionHeading step="③" zh="學生類型" en="Student Profile" size="lg" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {STUDENT_TYPE_OPTIONS.map((type) => (
+                  <label
+                    key={type.id}
+                    className={`flex items-start gap-3 p-4 rounded-xl cursor-pointer border-2 transition-all
+                      ${parentConfig.studentType === type.id ? 'border-amber-400 bg-slate-800' : 'border-slate-700 hover:border-slate-500'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="studentType"
+                      checked={parentConfig.studentType === type.id}
+                      onChange={() => setStudentType(type.id)}
+                      className="accent-amber-400 w-5 h-5 shrink-0 mt-0.5"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-base font-black text-white">{type.zh}</p>
+                      <p className="text-sm text-slate-400 mt-1 leading-relaxed">{type.descZh}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </section>
-            </div>
 
-            {/* 分析區 — 學生成績分析在下 */}
+            {/* ④ 同步狀態 — 可折疊，預設收起 */}
+            <section>
+              <details className="rounded-xl border border-slate-600 bg-slate-800 overflow-hidden group">
+                <summary className="cursor-pointer p-4 text-base font-black text-slate-200 hover:bg-slate-750 list-none flex items-center justify-between gap-2">
+                  <span>④ 同步狀態與題庫概覽</span>
+                  <span className="text-slate-500 text-sm group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="px-4 pb-4 space-y-3 text-sm border-t border-slate-700 pt-3">
+                  <p><span className="text-slate-400">AI 分析</span> · {hasAiAnalysis ? '✅ 已生成' : '尚未上載試卷'}</p>
+                  <p><span className="text-slate-400">AI 題目</span> · 測驗 {aiQuizCount} · 呈分試 {aiSspaCount} · 閱讀 {aiReadingCount}</p>
+                  {parentConfig.assignedContent.vocabUploadSession && (
+                    <p><span className="text-slate-400">詞表</span> · 默書 {parentConfig.assignedContent.vocabByTask?.dictation?.length ?? 0} · 預習 {parentConfig.assignedContent.vocabByTask?.prestudy?.length ?? 0}</p>
+                  )}
+                  <p><span className="text-slate-400">常錯字</span> · {wrongWordReminders?.length ?? 0} 個</p>
+                  {(parentRedemptions?.length ?? 0) > 0 && (
+                    <div className="pt-2 border-t border-slate-700 space-y-2">
+                      <p className="text-amber-300 font-bold">🎁 學生兌換通知</p>
+                      {parentRedemptions.slice(0, 3).map((r) => (
+                        <p key={r.id} className="text-amber-200/90 text-sm flex items-center gap-1 flex-wrap">
+                          <span>{r.at} · 「{r.name}」−</span>
+                          <CoinAmount amount={r.cost} size="xs" className="text-amber-300" />
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {(wrongWordReminders?.length ?? 0) > 0 && (
+                    <p className="text-rose-300">
+                      {wrongWordReminders.slice(0, 5).map((w) => `${w.tc}(×${w.count})`).join('、')}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onWrongWordsChange?.(clearWrongWords())}
+                    className="text-sm text-slate-500 underline hover:text-slate-300"
+                  >
+                    清除常錯字記錄
+                  </button>
+                </div>
+              </details>
+            </section>
+
+            {/* ⑤ 成績分析 — 置底，寬屏全寬 */}
             <ParentAnalyticsPanel parentConfig={parentConfig} />
           </div>
         </div>

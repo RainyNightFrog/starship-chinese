@@ -14,10 +14,19 @@ const TASK_COLORS = {
   prestudy: '#82a8b8',
 };
 
+const TASK_LABELS = {
+  dictation: '默書特訓',
+  reading: '閱讀理解',
+  quiz: '單元測驗',
+  sspa: '呈分試',
+  sentence: '重組句子',
+  prestudy: '課文預習',
+};
+
 function AnimatedBar({ heightPct, color, label, valueLabel, delay = 0 }) {
   return (
     <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-      <span className="text-[9px] font-bold text-slate-400 tabular-nums h-4">
+      <span className="text-xs font-bold text-slate-400 tabular-nums h-4">
         {valueLabel ?? ''}
       </span>
       <div className="w-full h-28 flex items-end justify-center">
@@ -31,7 +40,7 @@ function AnimatedBar({ heightPct, color, label, valueLabel, delay = 0 }) {
           title={valueLabel}
         />
       </div>
-      <span className="text-[9px] font-bold text-slate-500 truncate w-full text-center">
+      <span className="text-xs font-bold text-slate-500 truncate w-full text-center">
         {label}
       </span>
     </div>
@@ -53,16 +62,16 @@ export default function ParentTrendChart({ accuracyTrend = [], todayByTask = [] 
     : null;
 
   return (
-    <div className="rounded-xl border border-slate-600/80 bg-slate-800/60 p-4 space-y-4">
-      <div className="flex items-start justify-between gap-2">
+    <div className="rounded-xl border border-slate-600/80 bg-slate-800/60 p-5 space-y-5">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-black text-sm text-slate-100">📈 成績趨勢</h3>
-          <p className="text-[10px] text-slate-500 font-bold mt-0.5">近 7 日正確率 · 即時同步</p>
+          <h3 className="font-black text-lg text-slate-100">📈 成績趨勢</h3>
+          <p className="text-sm text-slate-500 font-medium mt-1">近 7 日正確率</p>
         </div>
         {todayAccuracy != null && (
           <div className="text-right shrink-0">
-            <p className="text-[10px] text-slate-500 font-bold">今日</p>
-            <p className="text-lg font-black text-emerald-300 tabular-nums">{todayAccuracy}%</p>
+            <p className="text-sm text-slate-500 font-bold">今日</p>
+            <p className="text-2xl font-black text-emerald-300 tabular-nums">{todayAccuracy}%</p>
           </div>
         )}
       </div>
@@ -82,7 +91,7 @@ export default function ParentTrendChart({ accuracyTrend = [], todayByTask = [] 
       </div>
 
       {!hasTrend && (
-        <p className="text-[10px] text-slate-500 text-center font-bold">
+        <p className="text-sm text-slate-500 text-center font-medium">
           完成一組練習後，趨勢圖會自動更新
         </p>
       )}
@@ -90,21 +99,21 @@ export default function ParentTrendChart({ accuracyTrend = [], todayByTask = [] 
       {/* 今日各科完成進度條 */}
       {todayByTask.length > 0 && (
         <div className="space-y-2 pt-2 border-t border-slate-700/60">
-          <p className="text-[10px] font-black text-slate-400">今日科目進度</p>
+          <p className="text-sm font-black text-slate-400">今日科目進度</p>
           {todayByTask.map((task) => {
             const pct = task.attempted > 0
               ? Math.round((task.correct / task.attempted) * 100)
               : 0;
             const color = TASK_COLORS[task.taskId] ?? '#94a3b8';
             return (
-              <div key={task.taskId} className="space-y-1">
-                <div className="flex justify-between text-[10px] font-bold">
-                  <span className="text-slate-400">{task.taskId}</span>
+              <div key={task.taskId} className="space-y-1.5">
+                <div className="flex justify-between text-sm font-bold">
+                  <span className="text-slate-400">{TASK_LABELS[task.taskId] ?? task.taskId}</span>
                   <span className="text-slate-300 tabular-nums">
                     {task.correct}/{task.attempted} · {pct}%
                   </span>
                 </div>
-                <div className="h-2 rounded-full bg-slate-700/80 overflow-hidden">
+                <div className="h-2.5 rounded-full bg-slate-700/80 overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-700 ease-out"
                     style={{ width: `${pct}%`, backgroundColor: color }}

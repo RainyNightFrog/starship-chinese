@@ -16,7 +16,7 @@ export default function ParentAnalyticsPanel({ parentConfig }) {
 
   if (!snapshot) {
     return (
-      <div className="rounded-xl border border-slate-600 p-4 text-center text-xs text-slate-500">
+      <div className="rounded-xl border border-slate-600 p-5 text-center text-sm text-slate-500">
         分析模組載入中…
       </div>
     );
@@ -28,16 +28,15 @@ export default function ParentAnalyticsPanel({ parentConfig }) {
     ?? '校本範圍';
 
   return (
-    <section className="col-span-full space-y-4">
-      <div className="text-center pb-1 border-b border-slate-700/80">
-        <h2 className="font-black text-base text-amber-200">📊 學生成績分析 · 雙端即時同步</h2>
-        <p className="text-[10px] text-slate-500 font-bold mt-1">
-          學生完成練習 → 圖表 / AI 建議 / 錯題本自動更新
+    <section className="space-y-6 pt-4 border-t border-slate-700">
+      <div className="text-center pb-2">
+        <h2 className="font-black text-xl text-amber-200">📊 學生成績分析</h2>
+        <p className="text-sm text-slate-400 font-medium mt-2">
+          學生完成練習後自動更新
         </p>
       </div>
 
-      {/* 左：趨勢圖 · 右：AI 微行動 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-6">
         <ParentTrendChart
           accuracyTrend={accuracyTrend}
           todayByTask={todayByTask}
@@ -48,14 +47,13 @@ export default function ParentAnalyticsPanel({ parentConfig }) {
         />
       </div>
 
-      {/* 錯題本 + 完整週報 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-6">
         <ErrorLedger
           entries={wrongAnswerReviews}
           uploadScopeLabel={uploadLabel}
         />
-        <div className="space-y-2">
-          <p className="text-[10px] font-black text-slate-400 text-center">完整 AI 週報</p>
+        <div className="space-y-3">
+          <p className="text-base font-black text-slate-300 text-center">AI 專家週報</p>
           <ParentWeeklyReport aiAnalysis={aiAnalysis} />
         </div>
       </div>

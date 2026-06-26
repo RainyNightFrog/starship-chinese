@@ -13,10 +13,19 @@ html[data-parent-panel-open="true"] {
   overscroll-behavior: none;
 }
 
-/* 家長端面板內滾動 —  containment 防止 scroll chaining 至背景頁 */
+/* 家長端面板內滾動 — containment + 加大字級 */
 .xh-parent-panel-scroll {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  font-size: 15px;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+}
+
+.xh-parent-panel-scroll .parent-muted {
+  color: rgb(148 163 184);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 /* ── 星航中文 · 全局自訂滾軸（日間 / 夜間 / SEN 加寬） ── */
