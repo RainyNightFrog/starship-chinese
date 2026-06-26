@@ -1,11 +1,11 @@
 ---
-description: 每次完成程式修改後自動推送到 GitHub
+description: 家長偏好 — 所有程式修改完成後自動 commit 並 push 至 GitHub
 alwaysApply: true
 ---
 
-# 自動推送到 GitHub
+# 自動推送到 GitHub（用戶明確要求）
 
-完成本專案的任何程式修改後，**在結束回合前**必須執行：
+**用戶偏好：本專案所有修改皆應自動推上 Git。** 完成任何程式修改後，**在結束回合前**必須執行：
 
 ```powershell
 cd "c:\Users\Chung Wai Kin\Desktop\星級中文"
@@ -19,4 +19,7 @@ git push
 - **絕不**提交 `.env` 或含機密的檔案（已由 `.gitignore` 排除）。
 - push 失敗時告知用戶並保留本地 commit，不要 force push。
 
-專案已設定 Cursor `stop` hook（`.cursor/hooks/auto-push.ps1`）作為備援自動推送。
+## 雙重保障
+
+1. **Agent 回合結束前** — 由本規則要求手動執行上述 git 指令。
+2. **Cursor stop hook** — `.cursor/hooks/auto-push.ps1` 會在 Agent 停止時自動 commit + push 未提交的變更（備援）。
